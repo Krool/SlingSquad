@@ -1,0 +1,10 @@
+[
+  { "id": "warrior", "class": "WARRIOR", "name": "Sir Brom", "unlocked": true },
+  { "id": "ranger",  "class": "RANGER",  "name": "Sylva",    "unlocked": true },
+  { "id": "mage",    "class": "MAGE",    "name": "Aldric",   "unlocked": true },
+  { "id": "priest",  "class": "PRIEST",  "name": "Seraph",   "unlocked": true },
+  { "id": "bard",    "class": "BARD",    "name": "Lyric",    "unlocked": false },
+  { "id": "rogue",   "class": "ROGUE",   "name": "Shade",    "unlocked": false },
+  { "id": "paladin", "class": "PALADIN", "name": "Auriel",   "unlocked": false },
+  { "id": "druid",   "class": "DRUID",   "name": "Thorn",    "unlocked": false }
+]

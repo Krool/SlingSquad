@@ -1,0 +1,227 @@
+[
+  {
+    "id": "iron_shield",
+    "name": "Iron Shield",
+    "desc": "All heroes gain +20 max HP.",
+    "effect": "FLAT_HP",
+    "value": 20,
+    "cost": 30,
+    "rarity": "common"
+  },
+  {
+    "id": "war_drum",
+    "name": "War Drum",
+    "desc": "Launch cooldown reduced by 0.3s.",
+    "effect": "COOLDOWN_REDUCE",
+    "value": 300,
+    "cost": 35,
+    "rarity": "common"
+  },
+  {
+    "id": "explosion_rune",
+    "name": "Explosion Rune",
+    "desc": "Mage AoE radius +30px.",
+    "effect": "MAGE_AOE_RADIUS",
+    "value": 30,
+    "cost": 30,
+    "rarity": "common"
+  },
+  {
+    "id": "steel_boots",
+    "name": "Steel Boots",
+    "desc": "Warrior impact force +25%.",
+    "effect": "WARRIOR_IMPACT_BONUS",
+    "value": 0.25,
+    "cost": 35,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "quiver",
+    "name": "Enchanted Quiver",
+    "desc": "Ranger spawns 5 arrows instead of 3.",
+    "effect": "RANGER_ARROW_COUNT",
+    "value": 2,
+    "cost": 35,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "tome_of_healing",
+    "name": "Tome of Healing",
+    "desc": "Priest heal radius +40px and +10 heal.",
+    "effect": "PRIEST_HEAL_BONUS",
+    "value": 40,
+    "cost": 40,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "blood_crystal",
+    "name": "Blood Crystal",
+    "desc": "All heroes deal +4 combat damage.",
+    "effect": "FLAT_COMBAT_DAMAGE",
+    "value": 4,
+    "cost": 45,
+    "rarity": "rare"
+  },
+  {
+    "id": "banner_of_rage",
+    "name": "Banner of Rage",
+    "desc": "Heroes in combat attack 15% faster.",
+    "effect": "COMBAT_SPEED_MULT",
+    "value": 0.85,
+    "cost": 50,
+    "rarity": "rare"
+  },
+  {
+    "id": "giant_sling",
+    "name": "Giant Sling",
+    "desc": "Max launch distance +25px.",
+    "effect": "MAX_DRAG_BONUS",
+    "value": 25,
+    "cost": 30,
+    "rarity": "common"
+  },
+  {
+    "id": "lucky_coin",
+    "name": "Lucky Coin",
+    "desc": "Earn +3 bonus gold per battle.",
+    "effect": "GOLD_ON_WIN",
+    "value": 3,
+    "cost": 25,
+    "rarity": "common"
+  },
+  {
+    "id": "featherweight_charm",
+    "name": "Featherweight Charm",
+    "desc": "Heroes have 20% less air friction (fly farther).",
+    "effect": "AIR_FRICTION_REDUCE",
+    "value": 0.20,
+    "cost": 30,
+    "rarity": "common"
+  },
+  {
+    "id": "thick_hide",
+    "name": "Thick Hide",
+    "desc": "All heroes take 15% less combat damage.",
+    "effect": "DAMAGE_REDUCTION",
+    "value": 0.15,
+    "cost": 35,
+    "rarity": "common"
+  },
+  {
+    "id": "thorn_mail",
+    "name": "Thorn Mail",
+    "desc": "Enemies take 5 damage when they hit a hero.",
+    "effect": "THORNS",
+    "value": 5,
+    "cost": 35,
+    "rarity": "common"
+  },
+  {
+    "id": "critical_eye",
+    "name": "Critical Eye",
+    "desc": "Heroes have 15% chance to deal double combat damage.",
+    "effect": "CRIT_CHANCE",
+    "value": 0.15,
+    "cost": 40,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "impact_rune",
+    "name": "Impact Rune",
+    "desc": "All impact damage +20%.",
+    "effect": "IMPACT_DAMAGE_BONUS",
+    "value": 0.20,
+    "cost": 40,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "phoenix_feather",
+    "name": "Phoenix Feather",
+    "desc": "One hero per battle cheats death with 1 HP.",
+    "effect": "DEATH_SAVE",
+    "value": 1,
+    "cost": 50,
+    "rarity": "rare"
+  },
+  {
+    "id": "fifth_sling",
+    "name": "Fifth Sling",
+    "desc": "Launch one extra hero per battle.",
+    "effect": "EXTRA_LAUNCH",
+    "value": 1,
+    "cost": 55,
+    "rarity": "rare"
+  },
+  {
+    "id": "gold_magnet",
+    "name": "Gold Magnet",
+    "desc": "+2 gold for every enemy killed.",
+    "effect": "GOLD_ON_KILL",
+    "value": 2,
+    "cost": 35,
+    "rarity": "common"
+  },
+  {
+    "id": "warrior_charge",
+    "name": "Warrior's Charge",
+    "desc": "Warrior knocks back all nearby enemies on combat entry.",
+    "effect": "WARRIOR_KNOCKBACK",
+    "value": 80,
+    "cost": 40,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "chain_lightning",
+    "name": "Chain Lightning",
+    "desc": "Mage impact chains to 2 additional enemies for 50% damage.",
+    "effect": "MAGE_CHAIN",
+    "value": 2,
+    "cost": 45,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "poison_arrows",
+    "name": "Poison Arrows",
+    "desc": "Ranger arrows apply 8 damage over 2 seconds.",
+    "effect": "RANGER_POISON",
+    "value": 8,
+    "cost": 40,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "resurrection_tome",
+    "name": "Resurrection Tome",
+    "desc": "Priest revives the first fallen hero at 50% HP.",
+    "effect": "PRIEST_RESURRECT",
+    "value": 0.50,
+    "cost": 50,
+    "rarity": "rare"
+  },
+  {
+    "id": "bard_encore",
+    "name": "Bard's Encore",
+    "desc": "Bard charm duration +2 seconds.",
+    "effect": "BARD_CHARM_BONUS",
+    "value": 2000,
+    "cost": 40,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "stone_breaker",
+    "name": "Stone Breaker",
+    "desc": "Impact deals +30% damage to stone blocks.",
+    "effect": "STONE_DAMAGE_BONUS",
+    "value": 0.30,
+    "cost": 35,
+    "rarity": "common"
+  },
+  {
+    "id": "berserker_helm",
+    "name": "Berserker Helm",
+    "desc": "Heroes below 30% HP deal double combat damage.",
+    "effect": "LOW_HP_DAMAGE",
+    "value": 2.0,
+    "cost": 45,
+    "rarity": "rare"
+  }
+]

@@ -1,0 +1,72 @@
+{
+  "_comment": "SlingSquad asset manifest. Run from Art/_catalog/: python export.py --manifest C:/Users/junk7/KroolWorld/SlingSquad/assets.manifest.json",
+  "dest": "C:/Users/junk7/KroolWorld/SlingSquad/assets/sprites",
+  "assets": [
+    {
+      "label": "characters — Warrior hero / Warrior enemy",
+      "pack": "medievalrpgpack",
+      "query": "WARRIOR",
+      "ext": "png"
+    },
+    {
+      "label": "characters — Ranger hero (Assassin)",
+      "pack": "medievalrpgpack",
+      "query": "ASSASIN",
+      "ext": "png"
+    },
+    {
+      "label": "characters — Mage hero (Sorceress)",
+      "pack": "medievalrpgpack",
+      "query": "SORCERESS",
+      "ext": "png"
+    },
+    {
+      "label": "characters — Priest hero (Necromancer)",
+      "pack": "medievalrpgpack",
+      "query": "NECROMANCER",
+      "ext": "png"
+    },
+    {
+      "label": "characters — Grunt enemy (Barbarian)",
+      "pack": "medievalrpgpack",
+      "query": "BARBARIAN",
+      "ext": "png"
+    },
+    {
+      "label": "characters — Heavy enemy (Centaur)",
+      "pack": "medievalrpgpack",
+      "query": "CENTAUR",
+      "ext": "png"
+    },
+    {
+      "label": "relic icons — armor (defense relics)",
+      "pack": "rpggame1700plusicons",
+      "query": "Pack 1A-Renamed/armor",
+      "ext": "png"
+    },
+    {
+      "label": "relic icons — potions (heal/buff relics)",
+      "pack": "rpggame1700plusicons",
+      "query": "Pack 1A-Renamed/potion",
+      "ext": "png"
+    },
+    {
+      "label": "relic icons — rings (stat relics)",
+      "pack": "rpggame1700plusicons",
+      "query": "Pack 1A-Renamed/ring",
+      "ext": "png"
+    },
+    {
+      "label": "relic icons — skills (ability relics)",
+      "pack": "rpggame1700plusicons",
+      "query": "Pack 1A-Renamed/skill",
+      "ext": "png"
+    },
+    {
+      "label": "relic icons — accessories (misc relics)",
+      "pack": "rpggame1700plusicons",
+      "query": "Pack 1A-Renamed/accessory",
+      "ext": "png"
+    }
+  ]
+}

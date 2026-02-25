@@ -1,0 +1,142 @@
+[
+  {
+    "id": "first_blood",
+    "name": "First Blood",
+    "desc": "Win your first battle.",
+    "category": "completion",
+    "shardReward": 1
+  },
+  {
+    "id": "wrecking_ball",
+    "name": "Wrecking Ball",
+    "desc": "Destroy 10 blocks in a single launch.",
+    "category": "combat",
+    "shardReward": 2
+  },
+  {
+    "id": "sharpshooter",
+    "name": "Sharpshooter",
+    "desc": "Kill an enemy with a Ranger arrow.",
+    "category": "combat",
+    "shardReward": 1
+  },
+  {
+    "id": "goblin_slayer",
+    "name": "Goblin Slayer",
+    "desc": "Clear The Goblin Wastes.",
+    "category": "completion",
+    "shardReward": 3
+  },
+  {
+    "id": "frost_conqueror",
+    "name": "Frost Conqueror",
+    "desc": "Clear The Frozen Peaks.",
+    "category": "completion",
+    "shardReward": 3
+  },
+  {
+    "id": "infernal_victor",
+    "name": "Infernal Victor",
+    "desc": "Clear The Infernal Keep.",
+    "category": "completion",
+    "shardReward": 3
+  },
+  {
+    "id": "conqueror",
+    "name": "Conqueror",
+    "desc": "Clear all three maps.",
+    "category": "completion",
+    "shardReward": 5
+  },
+  {
+    "id": "collector",
+    "name": "Collector",
+    "desc": "Own 10 or more relics in a single run.",
+    "category": "meta",
+    "shardReward": 2
+  },
+  {
+    "id": "cursed_run",
+    "name": "Cursed",
+    "desc": "Finish a run with 3 or more curses.",
+    "category": "meta",
+    "shardReward": 2
+  },
+  {
+    "id": "pacifist",
+    "name": "Pacifist",
+    "desc": "Win a battle with 0 combat kills (all environmental).",
+    "category": "challenge",
+    "shardReward": 3
+  },
+  {
+    "id": "speedrun",
+    "name": "Speed Demon",
+    "desc": "Clear a battle in under 8 seconds.",
+    "category": "challenge",
+    "shardReward": 2
+  },
+  {
+    "id": "gold_hoarder",
+    "name": "Gold Hoarder",
+    "desc": "Accumulate 200 or more gold in a single run.",
+    "category": "meta",
+    "shardReward": 2
+  },
+  {
+    "id": "no_relics",
+    "name": "Minimalist",
+    "desc": "Win a battle without any relics.",
+    "category": "challenge",
+    "shardReward": 2
+  },
+  {
+    "id": "full_squad",
+    "name": "Full House",
+    "desc": "Have 6 heroes in your squad.",
+    "category": "meta",
+    "shardReward": 2
+  },
+  {
+    "id": "chain_reaction",
+    "name": "Chain Reaction",
+    "desc": "Trigger 3 barrel explosions in a single battle.",
+    "category": "combat",
+    "shardReward": 2
+  },
+  {
+    "id": "boss_rush",
+    "name": "Boss Slayer",
+    "desc": "Defeat 3 boss enemies across all runs.",
+    "category": "combat",
+    "shardReward": 3
+  },
+  {
+    "id": "ten_runs",
+    "name": "Veteran",
+    "desc": "Complete 10 runs.",
+    "category": "meta",
+    "shardReward": 2
+  },
+  {
+    "id": "forge_master",
+    "name": "Forge Master",
+    "desc": "Upgrade a relic at the forge 5 times across all runs.",
+    "category": "meta",
+    "shardReward": 2
+  },
+  {
+    "id": "event_explorer",
+    "name": "Event Explorer",
+    "desc": "Visit 10 event nodes across all runs.",
+    "category": "meta",
+    "shardReward": 1
+  },
+  {
+    "id": "wealthy",
+    "name": "Wealthy",
+    "desc": "Earn 500 total gold across all runs.",
+    "category": "meta",
+    "shardReward": 2
+  }
+]

@@ -1,0 +1,528 @@
+import Phaser from 'phaser';
+import { Hero } from '@/entities/Hero';
+import { Enemy } from '@/entities/Enemy';
+import { Block } from '@/entities/Block';
+import { Barrel } from '@/entities/Barrel';
+import { Projectile } from '@/entities/Projectile';
+import { CombatSystem } from './CombatSystem';
+import { HERO_STATS } from '@/config/constants';
+import { getRelicModifiers } from '@/systems/RunState';
+
+type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
+
+export class ImpactSystem {
+  private scene: MatterScene;
+  private combatSystem: CombatSystem;
+  private readonly relicMods: ReturnType<typeof getRelicModifiers>;
+  private _impactForce = 0;
+
+  onDamageEvent?: () => void;
+  /** Emit 'blockDamage' or 'unitDamage' events so BattleScene shows floating numbers */
+  private emitDamage(x: number, y: number, amount: number, isUnit = false) {
+    this.scene.events.emit(isUnit ? 'unitDamage' : 'blockDamage', x, y, Math.round(amount));
+  }
+
+  constructor(scene: MatterScene, combatSystem: CombatSystem) {
+    this.scene = scene;
+    this.combatSystem = combatSystem;
+    this.relicMods = getRelicModifiers();
+  }
+
+  /** Floor: 20 * mult. Cap: 70 * mult. Force-scaled landing damage helper. */
+  private calcImpact(multiplier: number): number {
+    const base = Math.min(70, this._impactForce * 0.4 + 20) * multiplier;
+    return base * (1 + this.relicMods.impactDamageBonus);
+  }
+
+  /**
+   * Called when a flying hero body collides with something.
+   * Returns true if impact was handled (hero should enter combat).
+   */
+  handleHeroImpact(
+    hero: Hero,
+    impactForce: number,
+    blocks: Block[],
+    enemies: Enemy[],
+    barrels: Barrel[],
+  ): boolean {
+    if (hero.state !== 'flying') return false;
+    hero.lastImpactTime = this.scene.time.now;
+
+    this._impactForce = impactForce;
+    switch (hero.heroClass) {
+      case 'WARRIOR': this.warriorImpact(hero, blocks, enemies); break;
+      case 'RANGER':  this.rangerImpact(hero, blocks, enemies); break;
+      case 'MAGE':    this.mageImpact(hero, blocks, enemies, barrels); break;
+      case 'PRIEST':  this.priestImpact(hero, blocks, enemies); break;
+      case 'BARD':    this.bardImpact(hero, blocks, enemies); break;
+      case 'ROGUE':   this.rogueImpact(hero, blocks, enemies); break;
+      case 'PALADIN': this.paladinImpact(hero, blocks, enemies); break;
+      case 'DRUID':   this.druidImpact(hero, blocks, enemies); break;
+    }
+
+    this.onDamageEvent?.();
+    return true;
+  }
+
+  // ─── WARRIOR ──────────────────────────────────────────────────────────────
+  private warriorImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
+    const { x, y } = hero.body!.position;
+    const stats = HERO_STATS.WARRIOR;
+    const dmg = this.calcImpact(stats.impactMultiplier);
+
+    // Extra force applied to nearby blocks
+    for (const b of blocks) {
+      const bx = b.body.position.x, by = b.body.position.y;
+      const d = Math.hypot(bx - x, by - y);
+      if (d > 80) continue;
+      const mult = stats.impactDamageBonus * this.relicMods.warriorImpactMult;
+      const dealt = dmg * mult * (1 - d / 80);
+      b.applyDamage(dealt);
+      this.emitDamage(bx, by, dealt);
+      // Push block outward
+      if (!b.destroyed) {
+        const nx = (bx - x) / Math.max(d, 1);
+        const ny = (by - y) / Math.max(d, 1);
+        this.scene.matter.applyForce(b.body, { x: nx * 0.08, y: ny * 0.06 });
+      }
+    }
+    // Damage nearby enemies
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < 80) {
+        const dealt = dmg * (1 - d / 80);
+        e.applyDamage(dealt);
+        this.emitDamage(e.x, e.y, dealt, true);
+      }
+    }
+
+    this.spawnImpactParticles(x, y, 0xc0392b, 12);
+    this.spawnShockwave(x, y, 80, 0xc0392b);
+  }
+
+  // ─── RANGER ───────────────────────────────────────────────────────────────
+  private rangerImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
+    const { x, y } = hero.body!.position;
+    const stats = HERO_STATS.RANGER;
+
+    // Body-crash landing damage (1x warrior baseline, 70px radius)
+    const crashDmg = this.calcImpact(stats.impactMultiplier);
+    for (const b of blocks) {
+      const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
+      if (d < 70) {
+        const dealt = crashDmg * (1 - d / 70);
+        b.applyDamage(dealt);
+        this.emitDamage(b.body.position.x, b.body.position.y, dealt);
+      }
+    }
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < 70) {
+        const dealt = crashDmg * (1 - d / 70);
+        e.applyDamage(dealt);
+        this.emitDamage(e.x, e.y, dealt, true);
+      }
+    }
+
+    const totalArrows = stats.arrowCount + this.relicMods.rangerArrowBonus;
+    const spreadAngles = totalArrows === 1
+      ? [0]
+      : Array.from({ length: totalArrows }, (_, i) => -25 + (i / (totalArrows - 1)) * 50);
+
+    // Aim toward nearest living enemy; default rightward if none
+    let aimAngle = 0;
+    let closestDist = Infinity;
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < closestDist) { closestDist = d; aimAngle = Math.atan2(e.y - y, e.x - x); }
+    }
+
+    for (const spreadDeg of spreadAngles) {
+      const angleRad = aimAngle + Phaser.Math.DegToRad(spreadDeg);
+      const speed = stats.arrowSpeed / 60;
+      const vx = Math.cos(angleRad) * speed;
+      const vy = Math.sin(angleRad) * speed;
+      const p = new Projectile(this.scene, x, y, vx, vy, stats.arrowDamage, 0x27ae60);
+      this.combatSystem.addProjectile(p);
+    }
+
+    this.spawnImpactParticles(x, y, 0x27ae60, 6);
+  }
+
+  // ─── MAGE ─────────────────────────────────────────────────────────────────
+  private mageImpact(hero: Hero, blocks: Block[], enemies: Enemy[], barrels: Barrel[]) {
+    const { x, y } = hero.body!.position;
+    const stats = HERO_STATS.MAGE;
+    const r = stats.aoeRadius + this.relicMods.mageAoeRadiusBonus;
+    const mageDmg = this.calcImpact(stats.impactMultiplier);
+
+    // Damage blocks in radius
+    for (const b of blocks) {
+      const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
+      if (d < r) {
+        const dealt = mageDmg * (1 - d / r);
+        b.applyDamage(dealt);
+        this.emitDamage(b.body.position.x, b.body.position.y, dealt);
+      }
+    }
+    // Damage enemies in radius
+    const hitEnemies: Enemy[] = [];
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < r) {
+        const dealt = mageDmg * (1 - d / r);
+        e.applyDamage(dealt);
+        this.emitDamage(e.x, e.y, dealt, true);
+        hitEnemies.push(e);
+      }
+    }
+    // Trigger barrels in radius
+    for (const barrel of barrels) {
+      if (barrel.exploded) continue;
+      const d = Math.hypot(barrel.body.position.x - x, barrel.body.position.y - y);
+      if (d < r) barrel.explode();
+    }
+
+    // Chain Lightning relic: chain to additional enemies outside the AoE
+    if (this.relicMods.mageChainTargets > 0) {
+      let chains = this.relicMods.mageChainTargets;
+      const chainDmg = mageDmg * 0.5;
+      for (const e of enemies) {
+        if (chains <= 0) break;
+        if (e.state === 'dead' || hitEnemies.includes(e)) continue;
+        e.applyDamage(chainDmg);
+        this.emitDamage(e.x, e.y, chainDmg, true);
+        this.spawnChainLightning(x, y, e.x, e.y);
+        chains--;
+      }
+    }
+
+    this.spawnExplosion(x, y, r, 0x8e44ad);
+  }
+
+  private spawnChainLightning(fromX: number, fromY: number, toX: number, toY: number) {
+    const g = this.scene.add.graphics().setDepth(21);
+    g.lineStyle(2, 0x7ec8e3, 0.8);
+    g.lineBetween(fromX, fromY, toX, toY);
+    this.scene.tweens.add({ targets: g, alpha: 0, duration: 300, onComplete: () => g.destroy() });
+  }
+
+  // ─── PRIEST ───────────────────────────────────────────────────────────────
+  private priestImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
+    const { x, y } = hero.body!.position;
+    const stats = HERO_STATS.PRIEST;
+
+    // Small landing impact (0.5x warrior baseline, 90px radius)
+    const crashDmg = this.calcImpact(stats.impactMultiplier);
+    for (const b of blocks) {
+      const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
+      if (d < 90) {
+        const dealt = crashDmg * (1 - d / 90);
+        b.applyDamage(dealt);
+        this.emitDamage(b.body.position.x, b.body.position.y, dealt);
+      }
+    }
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < 90) {
+        const dealt = crashDmg * (1 - d / 90);
+        e.applyDamage(dealt);
+        this.emitDamage(e.x, e.y, dealt, true);
+      }
+    }
+    this.spawnImpactParticles(x, y, 0xffe066, 8);  // gold particles
+
+    const healRadius = stats.healRadius + this.relicMods.priestHealRadiusBonus;
+    const healAmount = stats.healAmount + this.relicMods.priestHealBonus;
+    this.scene.events.emit('priestHealAura', x, y, healRadius, healAmount);
+    this.spawnHealAura(x, y, healRadius);
+  }
+
+  // ─── BARD ────────────────────────────────────────────────────────────────
+  private bardImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
+    const { x, y } = hero.body!.position;
+    const stats = hero.stats as any;
+    const charmRadius = stats.charmRadius ?? 100;
+    const charmDuration = stats.charmDurationMs ?? 3000;
+
+    // Small landing damage (0.8x base, 80px radius)
+    const crashDmg = this.calcImpact(stats.impactMultiplier ?? 0.8);
+    for (const b of blocks) {
+      const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
+      if (d < 80) {
+        const dealt = crashDmg * (1 - d / 80);
+        b.applyDamage(dealt);
+        this.emitDamage(b.body.position.x, b.body.position.y, dealt);
+      }
+    }
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < 80) {
+        const dealt = crashDmg * (1 - d / 80);
+        e.applyDamage(dealt);
+        this.emitDamage(e.x, e.y, dealt, true);
+      }
+    }
+
+    // Charm: enemies in radius attack other enemies for duration
+    const now = this.scene.time.now;
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < charmRadius) {
+        e.charmed = true;
+        e.charmEndTime = now + charmDuration;
+        // Visual: purple tint while charmed
+        e.sprite?.setTint(0xcc66ff);
+      }
+    }
+
+    this.spawnCharmWave(x, y, charmRadius);
+    this.spawnImpactParticles(x, y, 0x1abc9c, 10);
+  }
+
+  private spawnCharmWave(x: number, y: number, radius: number) {
+    const g = this.scene.add.graphics().setDepth(19);
+    this.scene.tweens.add({
+      targets: { r: 0 },
+      r: radius,
+      duration: 400,
+      onUpdate: (t, obj) => {
+        g.clear();
+        g.fillStyle(0xcc66ff, 0.15 * (1 - t.progress));
+        g.fillCircle(x, y, (obj as any).r);
+        g.lineStyle(2, 0xcc66ff, 0.6 * (1 - t.progress));
+        g.strokeCircle(x, y, (obj as any).r);
+      },
+      onComplete: () => g.destroy(),
+    });
+  }
+
+  // ─── ROGUE ───────────────────────────────────────────────────────────────
+  private rogueImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
+    const { x, y } = hero.body!.position;
+    const stats = HERO_STATS.ROGUE;
+    const crashDmg = this.calcImpact(stats.impactMultiplier);
+
+    // Piercing: Rogue continues flying through first block (handled elsewhere via piercing flag)
+    // Landing damage in small radius
+    for (const b of blocks) {
+      const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
+      if (d < 60) {
+        const dealt = crashDmg * (1 - d / 60);
+        b.applyDamage(dealt);
+        this.emitDamage(b.body.position.x, b.body.position.y, dealt);
+      }
+    }
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < 60) {
+        const dealt = crashDmg * (1 - d / 60);
+        e.applyDamage(dealt);
+        this.emitDamage(e.x, e.y, dealt, true);
+      }
+    }
+    this.spawnImpactParticles(x, y, 0x2c3e50, 8);
+    this.spawnShockwave(x, y, 60, 0x2c3e50);
+  }
+
+  // ─── PALADIN ─────────────────────────────────────────────────────────────
+  private paladinImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
+    const { x, y } = hero.body!.position;
+    const stats = HERO_STATS.PALADIN;
+    const crashDmg = this.calcImpact(stats.impactMultiplier);
+
+    // Heavy impact in 80px radius
+    for (const b of blocks) {
+      const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
+      if (d < 80) {
+        const dealt = crashDmg * (1 - d / 80);
+        b.applyDamage(dealt);
+        this.emitDamage(b.body.position.x, b.body.position.y, dealt);
+      }
+    }
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < 80) {
+        const dealt = crashDmg * (1 - d / 80);
+        e.applyDamage(dealt);
+        this.emitDamage(e.x, e.y, dealt, true);
+      }
+    }
+
+    // Spawn temporary shield wall (3 blocks in front)
+    const wallCount = stats.shieldWallBlocks;
+    for (let i = 0; i < wallCount; i++) {
+      const wx = x + 30 + i * 28;
+      const wy = y - 20;
+      // Spawn a temporary wood block via scene event
+      this.scene.events.emit('spawnTempBlock', wx, wy, 'WOOD');
+    }
+
+    this.spawnImpactParticles(x, y, 0xf1c40f, 12);
+    this.spawnShockwave(x, y, 80, 0xf1c40f);
+  }
+
+  // ─── DRUID ──────────────────────────────────────────────────────────────
+  private druidImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
+    const { x, y } = hero.body!.position;
+    const stats = HERO_STATS.DRUID;
+    const crashDmg = this.calcImpact(stats.impactMultiplier);
+
+    // Landing damage
+    for (const b of blocks) {
+      const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
+      if (d < 70) {
+        const dealt = crashDmg * (1 - d / 70);
+        b.applyDamage(dealt);
+        this.emitDamage(b.body.position.x, b.body.position.y, dealt);
+      }
+    }
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < 70) {
+        const dealt = crashDmg * (1 - d / 70);
+        e.applyDamage(dealt);
+        this.emitDamage(e.x, e.y, dealt, true);
+      }
+    }
+
+    // Spawn wolf minions — emitted to BattleScene for entity creation
+    const wolfCount = stats.wolfCount;
+    for (let i = 0; i < wolfCount; i++) {
+      const wx = x + Phaser.Math.Between(-40, 40);
+      const wy = y - Phaser.Math.Between(10, 30);
+      this.scene.events.emit('spawnWolf', wx, wy, stats.wolfDamage, stats.wolfHp);
+    }
+
+    this.spawnImpactParticles(x, y, 0x16a085, 10);
+    this.spawnShockwave(x, y, 70, 0x16a085);
+  }
+
+  // ─── Barrel explosion handler ──────────────────────────────────────────────
+  handleBarrelExplosion(
+    bx: number, by: number, radius: number, damage: number,
+    blocks: Block[], enemies: Enemy[], heroes: Hero[], barrels: Barrel[],
+  ) {
+    for (const b of blocks) {
+      if (b.destroyed) continue;
+      const d = Math.hypot(b.body.position.x - bx, b.body.position.y - by);
+      if (d < radius) b.applyDamage(damage * (1 - d / radius));
+    }
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - bx, e.y - by);
+      if (d < radius) e.applyDamage(damage * (1 - d / radius));
+    }
+    for (const h of heroes) {
+      if (h.state === 'dead') continue;
+      const d = Math.hypot(h.x - bx, h.y - by);
+      if (d < radius) h.applyDamage(damage * 0.5 * (1 - d / radius));
+    }
+    // Chain-detonate adjacent barrels
+    for (const barrel of barrels) {
+      if (barrel.exploded) continue;
+      const d = Math.hypot(barrel.body.position.x - bx, barrel.body.position.y - by);
+      if (d < radius) {
+        this.scene.time.delayedCall(150, () => barrel.explode());
+      }
+    }
+    this.spawnExplosion(bx, by, radius, 0xe74c3c);
+    this.onDamageEvent?.();
+  }
+
+  // ─── Environmental crush ──────────────────────────────────────────────────
+  handleBlockCrush(block: Block, heroes: Hero[], enemies: Enemy[]) {
+    // Ignore spawn-time overlaps — only crush when the block is actually moving
+    const blockSpeed = Math.hypot(block.body.velocity.x, block.body.velocity.y);
+    if (blockSpeed < 0.8) return;
+
+    const { x, y } = block.body.position;
+    const crushRadius = 55;
+    const crushDmg = 40;
+    for (const h of heroes) {
+      if (h.state === 'dead') continue;
+      const d = Math.hypot(h.x - x, h.y - y);
+      if (d < crushRadius) {
+        h.applyDamage(crushDmg);
+        this.emitDamage(h.x, h.y, crushDmg, true);
+        this.onDamageEvent?.();
+      }
+    }
+    for (const e of enemies) {
+      if (e.state === 'dead') continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < crushRadius) { e.applyDamage(crushDmg); this.onDamageEvent?.(); }
+    }
+  }
+
+  // ─── Particle helpers ─────────────────────────────────────────────────────
+  private spawnImpactParticles(x: number, y: number, color: number, count: number) {
+    for (let i = 0; i < count; i++) {
+      const g = this.scene.add.graphics().setDepth(20);
+      g.fillStyle(color, 1);
+      const px = x + Phaser.Math.Between(-20, 20);
+      const py = y + Phaser.Math.Between(-20, 20);
+      g.fillCircle(px, py, Phaser.Math.Between(2, 6));
+      this.scene.tweens.add({
+        targets: g,
+        alpha: 0,
+        y: py - 30,
+        duration: 400,
+        ease: 'Power2',
+        onComplete: () => g.destroy(),
+      });
+    }
+  }
+
+  private spawnShockwave(x: number, y: number, radius: number, color: number) {
+    const g = this.scene.add.graphics().setDepth(19);
+    this.scene.tweens.add({
+      targets: { r: 0 },
+      r: radius,
+      duration: 300,
+      onUpdate: (t, obj) => {
+        g.clear();
+        g.lineStyle(3, color, 1 - t.progress);
+        g.strokeCircle(x, y, (obj as any).r);
+      },
+      onComplete: () => g.destroy(),
+    });
+  }
+
+  private spawnExplosion(x: number, y: number, radius: number, color: number) {
+    // Flash
+    const flash = this.scene.add.graphics().setDepth(25);
+    flash.fillStyle(color, 0.5);
+    flash.fillCircle(x, y, radius);
+    this.scene.tweens.add({
+      targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy(),
+    });
+    // Particles
+    this.spawnImpactParticles(x, y, color, 20);
+    this.spawnShockwave(x, y, radius, color);
+  }
+
+  private spawnHealAura(x: number, y: number, radius: number) {
+    for (let i = 0; i < 3; i++) {
+      this.scene.time.delayedCall(i * 150, () => {
+        const g = this.scene.add.graphics().setDepth(20);
+        g.fillStyle(0x2ecc71, 0.3);
+        g.fillCircle(x, y, radius);
+        this.scene.tweens.add({
+          targets: g, alpha: 0, scaleX: 1.3, scaleY: 1.3, duration: 600,
+          onComplete: () => g.destroy(),
+        });
+      });
+    }
+  }
+}

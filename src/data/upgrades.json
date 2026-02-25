@@ -1,0 +1,144 @@
+{
+  "upgrades": [
+    {
+      "id": "starting_gold",
+      "name": "Mercenary Cache",
+      "desc": "Begin each run with +20 gold.",
+      "effect": "STARTING_GOLD",
+      "value": 20,
+      "maxStack": 3,
+      "shardCost": 3,
+      "rarity": "common"
+    },
+    {
+      "id": "hp_boost",
+      "name": "Veteran's Grit",
+      "desc": "All heroes start with +15% max HP.",
+      "effect": "FLAT_HP_PCT",
+      "value": 0.15,
+      "maxStack": 3,
+      "shardCost": 4,
+      "rarity": "common"
+    },
+    {
+      "id": "gold_gain",
+      "name": "Plunderer's Eye",
+      "desc": "Earn +25% gold from all sources per run.",
+      "effect": "GOLD_GAIN_PCT",
+      "value": 0.25,
+      "maxStack": 2,
+      "shardCost": 4,
+      "rarity": "common"
+    },
+    {
+      "id": "damage_bonus",
+      "name": "Blood Pact",
+      "desc": "All hero combat damage +10%.",
+      "effect": "DAMAGE_PCT",
+      "value": 0.10,
+      "maxStack": 3,
+      "shardCost": 5,
+      "rarity": "uncommon"
+    },
+    {
+      "id": "starting_relic",
+      "name": "Fortunate Start",
+      "desc": "Begin each run with a random common relic.",
+      "effect": "STARTING_RELIC",
+      "value": 1,
+      "maxStack": 1,
+      "shardCost": 6,
+      "rarity": "uncommon"
+    },
+    {
+      "id": "launch_power",
+      "name": "Giant's Arm",
+      "desc": "Sling launch power +10% per run.",
+      "effect": "LAUNCH_POWER_PCT",
+      "value": 0.10,
+      "maxStack": 2,
+      "shardCost": 5,
+      "rarity": "uncommon"
+    },
+    {
+      "id": "unlock_bard",
+      "name": "Wandering Minstrel",
+      "desc": "Unlock the Bard hero class.",
+      "effect": "UNLOCK_HERO",
+      "value": "BARD",
+      "maxStack": 1,
+      "shardCost": 8,
+      "rarity": "rare"
+    },
+    {
+      "id": "unlock_rogue",
+      "name": "Shadow Recruit",
+      "desc": "Unlock the Rogue hero class.",
+      "effect": "UNLOCK_HERO",
+      "value": "ROGUE",
+      "maxStack": 1,
+      "shardCost": 10,
+      "rarity": "rare"
+    },
+    {
+      "id": "unlock_paladin",
+      "name": "Holy Calling",
+      "desc": "Unlock the Paladin hero class.",
+      "effect": "UNLOCK_HERO",
+      "value": "PALADIN",
+      "maxStack": 1,
+      "shardCost": 12,
+      "rarity": "rare"
+    },
+    {
+      "id": "unlock_druid",
+      "name": "Nature's Bond",
+      "desc": "Unlock the Druid hero class.",
+      "effect": "UNLOCK_HERO",
+      "value": "DRUID",
+      "maxStack": 1,
+      "shardCost": 12,
+      "rarity": "rare"
+    },
+    {
+      "id": "squad_size",
+      "name": "Extended Barracks",
+      "desc": "Start runs with 5 heroes instead of 4.",
+      "effect": "SQUAD_SIZE",
+      "value": 1,
+      "maxStack": 1,
+      "shardCost": 12,
+      "rarity": "rare"
+    },
+    {
+      "id": "forge_bonus",
+      "name": "Master Smith",
+      "desc": "Forge upgrades enhance relics by +75% instead of +50%.",
+      "effect": "FORGE_BONUS",
+      "value": 0.25,
+      "maxStack": 2,
+      "shardCost": 5,
+      "rarity": "uncommon"
+    },
+    {
+      "id": "curse_resistance",
+      "name": "Warded Soul",
+      "desc": "25% chance to negate gaining a curse.",
+      "effect": "CURSE_RESISTANCE",
+      "value": 0.25,
+      "maxStack": 2,
+      "shardCost": 4,
+      "rarity": "uncommon"
+    },
+    {
+      "id": "shard_magnet",
+      "name": "Shard Magnet",
+      "desc": "Earn +1 shard per run completion.",
+      "effect": "SHARD_MAGNET",
+      "value": 1,
+      "maxStack": 3,
+      "shardCost": 3,
+      "rarity": "common"
+    }
+  ]
+}

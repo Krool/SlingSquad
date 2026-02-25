@@ -1,0 +1,118 @@
+[
+  {
+    "id": "mysterious_shrine",
+    "name": "Mysterious Shrine",
+    "text": "A glowing shrine hums with power. Strange symbols pulse across its surface.",
+    "choices": [
+      { "label": "Touch the shrine", "desc": "Gain a random relic, but gain a random curse", "outcome": { "type": "RELIC_AND_CURSE" } },
+      { "label": "Offer 25 gold", "desc": "Pay tribute for an uncommon relic", "outcome": { "type": "BUY_RELIC", "cost": 25, "rarity": "uncommon" } },
+      { "label": "Walk away", "desc": "Leave the shrine undisturbed", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "wounded_knight",
+    "name": "Wounded Knight",
+    "text": "A knight lies bleeding by the road. He clutches a heavy purse.",
+    "choices": [
+      { "label": "Help him", "desc": "Spend 15 gold to heal him — he may join your cause", "outcome": { "type": "BUY_RELIC", "cost": 15, "rarity": "common" } },
+      { "label": "Rob him", "desc": "Take his gold (+30) but gain a curse", "outcome": { "type": "GOLD_AND_CURSE", "gold": 30 } },
+      { "label": "Ignore", "desc": "Continue on your way", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "witch_bargain",
+    "name": "Witch's Bargain",
+    "text": "A cackling witch offers you a deal from her bubbling cauldron.",
+    "choices": [
+      { "label": "Remove a curse", "desc": "She'll cleanse one curse from you", "outcome": { "type": "REMOVE_CURSE" } },
+      { "label": "Upgrade a relic", "desc": "Transform a common relic into something better", "outcome": { "type": "UPGRADE_RELIC" } },
+      { "label": "Decline", "desc": "Best not to deal with witches", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "abandoned_armory",
+    "name": "Abandoned Armory",
+    "text": "You discover a dusty armory filled with old weapons and armor.",
+    "choices": [
+      { "label": "Take weapon", "desc": "Gain +4 combat damage relic", "outcome": { "type": "SPECIFIC_RELIC", "relicId": "blood_crystal" } },
+      { "label": "Take shield", "desc": "Gain +20 HP relic", "outcome": { "type": "SPECIFIC_RELIC", "relicId": "iron_shield" } },
+      { "label": "Sell it all", "desc": "Gain 40 gold", "outcome": { "type": "GOLD", "gold": 40 } }
+    ]
+  },
+  {
+    "id": "dark_ritual",
+    "name": "Dark Ritual",
+    "text": "A circle of dark runes glows on the ground. Power radiates from within.",
+    "choices": [
+      { "label": "Sacrifice health", "desc": "All heroes lose 30 HP this run, gain a rare relic", "outcome": { "type": "HP_COST_RELIC", "hpCost": 30, "rarity": "rare" } },
+      { "label": "Decline", "desc": "The darkness isn't worth the risk", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "goblin_gambler",
+    "name": "Goblin Gambler",
+    "text": "A goblin with a toothy grin challenges you: 'Bet 20 gold! Double or nothing!'",
+    "choices": [
+      { "label": "Accept the bet", "desc": "50% chance to win 40 gold, 50% to lose 20", "outcome": { "type": "GAMBLE", "cost": 20, "reward": 40 } },
+      { "label": "Decline", "desc": "You don't trust goblins", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "traveling_merchant",
+    "name": "Traveling Merchant",
+    "text": "A merchant with a mysterious cart waves you over. 'Special deals today!'",
+    "choices": [
+      { "label": "Buy mystery box", "desc": "Pay 30 gold for a random uncommon or rare relic", "outcome": { "type": "BUY_RELIC", "cost": 30, "rarity": "uncommon" } },
+      { "label": "Trade a relic", "desc": "Give a common relic, get a random uncommon", "outcome": { "type": "TRADE_RELIC" } },
+      { "label": "Browse and leave", "desc": "Nothing catches your eye", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "ancient_well",
+    "name": "Ancient Well",
+    "text": "An ancient well with runes carved around its rim. You can hear whispers from below.",
+    "choices": [
+      { "label": "Toss a coin", "desc": "Pay 10 gold — something good may happen", "outcome": { "type": "BUY_RELIC", "cost": 10, "rarity": "common" } },
+      { "label": "Drink the water", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } },
+      { "label": "Leave it alone", "desc": "Some wells are best left undisturbed", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "blacksmith",
+    "name": "Wandering Blacksmith",
+    "text": "A blacksmith offers to improve your equipment for a modest fee.",
+    "choices": [
+      { "label": "Upgrade a relic", "desc": "Pay 20 gold to enhance one relic by +50%", "outcome": { "type": "BUY_UPGRADE", "cost": 20 } },
+      { "label": "New weapon", "desc": "Gain a random common relic", "outcome": { "type": "FREE_RELIC", "rarity": "common" } },
+      { "label": "No thanks", "desc": "Your equipment is fine", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "cursed_chest",
+    "name": "Cursed Chest",
+    "text": "A chest covered in thorny vines. The lock is rusted but the contents gleam.",
+    "choices": [
+      { "label": "Force it open", "desc": "Gain a rare relic but also a curse", "outcome": { "type": "RELIC_AND_CURSE", "rarity": "rare" } },
+      { "label": "Pick the lock", "desc": "Pay 15 gold to open safely — gain an uncommon relic", "outcome": { "type": "BUY_RELIC", "cost": 15, "rarity": "uncommon" } },
+      { "label": "Leave it", "desc": "Not worth the risk", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "war_camp",
+    "name": "Destroyed War Camp",
+    "text": "You find the remains of a war camp. Supplies are scattered everywhere.",
+    "choices": [
+      { "label": "Scavenge supplies", "desc": "Gain 25 gold from the wreckage", "outcome": { "type": "GOLD", "gold": 25 } },
+      { "label": "Search for weapons", "desc": "Gain a random common relic", "outcome": { "type": "FREE_RELIC", "rarity": "common" } }
+    ]
+  },
+  {
+    "id": "fortune_teller",
+    "name": "Fortune Teller",
+    "text": "A hooded figure peers into a crystal ball. 'I see your future... for a price.'",
+    "choices": [
+      { "label": "Pay 20 gold", "desc": "Gain +2 trajectory dots and learn enemy weakness", "outcome": { "type": "BUY_RELIC", "cost": 20, "rarity": "uncommon" } },
+      { "label": "Refuse", "desc": "You make your own destiny", "outcome": { "type": "NOTHING" } }
+    ]
+  }
+]

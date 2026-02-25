@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Sling Squad</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        background: #0a0a0f;
+        overflow: hidden;
+        touch-action: none;
+      }
+      #game-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container"></div>
+    <!-- Must run before any module to set audio session before AudioContext creation.
+         'ambient' = our audio mixes under podcasts/music instead of interrupting them.
+         Supported: Safari 17+ / iOS 17+. Silently ignored everywhere else. -->
+    <script>
+      if ('audioSession' in navigator) {
+        navigator.audioSession.type = 'ambient';
+      }
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

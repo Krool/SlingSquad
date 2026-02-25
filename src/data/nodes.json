@@ -1,0 +1,159 @@
+{
+  "name": "The Goblin Wastes",
+  "nodes": [
+    {
+      "id": 0,
+      "type": "BATTLE",
+      "name": "Goblin Scouts",
+      "x": 100, "y": 310,
+      "next": [1, 2],
+      "enemies": ["GRUNT", "GRUNT"],
+      "gold": 15,
+      "difficulty": 1
+    },
+    {
+      "id": 1,
+      "type": "BATTLE",
+      "name": "Goblin Camp",
+      "x": 250, "y": 175,
+      "next": [3],
+      "enemies": ["GRUNT", "GRUNT", "RANGED"],
+      "gold": 22,
+      "difficulty": 2
+    },
+    {
+      "id": 2,
+      "type": "BATTLE",
+      "name": "Forest Ambush",
+      "x": 250, "y": 455,
+      "next": [4],
+      "enemies": ["GRUNT", "RANGED"],
+      "gold": 18,
+      "difficulty": 1
+    },
+    {
+      "id": 3,
+      "type": "EVENT",
+      "name": "Mysterious Glade",
+      "x": 400, "y": 175,
+      "next": [5],
+      "gold": 0,
+      "difficulty": 0
+    },
+    {
+      "id": 4,
+      "type": "SHOP",
+      "name": "Wandering Trader",
+      "x": 400, "y": 455,
+      "next": [5],
+      "gold": 0,
+      "difficulty": 0
+    },
+    {
+      "id": 5,
+      "type": "BATTLE",
+      "name": "Goblin Stronghold",
+      "x": 540, "y": 310,
+      "next": [6, 7],
+      "enemies": ["GRUNT", "GRUNT", "SHIELD", "RANGED"],
+      "gold": 30,
+      "difficulty": 3
+    },
+    {
+      "id": 6,
+      "type": "ELITE",
+      "name": "Warlord's Rampart",
+      "x": 680, "y": 175,
+      "next": [8],
+      "enemies": ["GRUNT", "SHIELD", "RANGED", "HEALER"],
+      "gold": 40,
+      "difficulty": 3
+    },
+    {
+      "id": 7,
+      "type": "BATTLE",
+      "name": "Siege Camp",
+      "x": 680, "y": 455,
+      "next": [9],
+      "enemies": ["GRUNT", "GRUNT", "BOMBER"],
+      "gold": 28,
+      "difficulty": 2
+    },
+    {
+      "id": 8,
+      "type": "FORGE",
+      "name": "Ancient Anvil",
+      "x": 820, "y": 175,
+      "next": [10],
+      "gold": 0,
+      "difficulty": 0
+    },
+    {
+      "id": 9,
+      "type": "REWARD",
+      "name": "Plundered Vault",
+      "x": 820, "y": 455,
+      "next": [10],
+      "gold": 0,
+      "difficulty": 0
+    },
+    {
+      "id": 10,
+      "type": "BATTLE",
+      "name": "The Crossing",
+      "x": 940, "y": 310,
+      "next": [11, 12],
+      "enemies": ["GRUNT", "GRUNT", "SHIELD", "RANGED", "BOMBER"],
+      "gold": 35,
+      "difficulty": 3
+    },
+    {
+      "id": 11,
+      "type": "EVENT",
+      "name": "Dark Crossroads",
+      "x": 1050, "y": 200,
+      "next": [13],
+      "gold": 0,
+      "difficulty": 0
+    },
+    {
+      "id": 12,
+      "type": "BATTLE",
+      "name": "Goblin Warren",
+      "x": 1050, "y": 420,
+      "next": [14],
+      "enemies": ["GRUNT", "GRUNT", "RANGED", "HEALER"],
+      "gold": 32,
+      "difficulty": 3
+    },
+    {
+      "id": 13,
+      "type": "SHOP",
+      "name": "War Market",
+      "x": 1140, "y": 200,
+      "next": [15],
+      "gold": 0,
+      "difficulty": 0
+    },
+    {
+      "id": 14,
+      "type": "BATTLE",
+      "name": "Death's Gate",
+      "x": 1140, "y": 420,
+      "next": [15],
+      "enemies": ["GRUNT", "GRUNT", "SHIELD", "RANGED", "RANGED"],
+      "gold": 45,
+      "difficulty": 4
+    },
+    {
+      "id": 15,
+      "type": "BOSS",
+      "name": "Warlord Krag",
+      "x": 1220, "y": 310,
+      "next": [],
+      "enemies": ["BOSS_GRUNT", "GRUNT", "SHIELD", "RANGED", "RANGED", "HEALER"],
+      "gold": 80,
+      "difficulty": 5
+    }
+  ]
+}

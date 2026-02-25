@@ -1,0 +1,92 @@
+[
+  {
+    "id": "fragile_bones",
+    "name": "Fragile Bones",
+    "desc": "All heroes take +15% combat damage.",
+    "effect": "DAMAGE_REDUCTION",
+    "value": -0.15,
+    "rarity": "common",
+    "curse": true
+  },
+  {
+    "id": "heavy_pockets",
+    "name": "Heavy Pockets",
+    "desc": "Launch power -10%.",
+    "effect": "LAUNCH_POWER_CURSE",
+    "value": -0.10,
+    "rarity": "common",
+    "curse": true
+  },
+  {
+    "id": "slow_hands",
+    "name": "Slow Hands",
+    "desc": "Launch cooldown +500ms.",
+    "effect": "COOLDOWN_REDUCE",
+    "value": -500,
+    "rarity": "common",
+    "curse": true
+  },
+  {
+    "id": "thin_skin",
+    "name": "Thin Skin",
+    "desc": "All heroes -20 max HP.",
+    "effect": "FLAT_HP",
+    "value": -20,
+    "rarity": "common",
+    "curse": true
+  },
+  {
+    "id": "greed_tax",
+    "name": "Greed Tax",
+    "desc": "Lose 20% gold on each battle win.",
+    "effect": "GOLD_TAX_PCT",
+    "value": 0.20,
+    "rarity": "uncommon",
+    "curse": true
+  },
+  {
+    "id": "foggy_aim",
+    "name": "Foggy Aim",
+    "desc": "Trajectory dots reduced to 10.",
+    "effect": "TRAJECTORY_REDUCE",
+    "value": 15,
+    "rarity": "common",
+    "curse": true
+  },
+  {
+    "id": "brittle_arms",
+    "name": "Brittle Arms",
+    "desc": "Warrior impact -25%.",
+    "effect": "WARRIOR_IMPACT_BONUS",
+    "value": -0.25,
+    "rarity": "uncommon",
+    "curse": true
+  },
+  {
+    "id": "dull_arrows",
+    "name": "Dull Arrows",
+    "desc": "Ranger fires 1 fewer arrow.",
+    "effect": "RANGER_ARROW_COUNT",
+    "value": -1,
+    "rarity": "uncommon",
+    "curse": true
+  },
+  {
+    "id": "mana_drain",
+    "name": "Mana Drain",
+    "desc": "Mage AoE radius -40px.",
+    "effect": "MAGE_AOE_RADIUS",
+    "value": -40,
+    "rarity": "uncommon",
+    "curse": true
+  },
+  {
+    "id": "faithless",
+    "name": "Faithless",
+    "desc": "Priest heal amount -10.",
+    "effect": "PRIEST_HEAL_BONUS",
+    "value": -40,
+    "rarity": "uncommon",
+    "curse": true
+  }
+]

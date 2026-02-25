@@ -1,0 +1,41 @@
+[
+  {
+    "id": "glass_cannon",
+    "name": "Glass Cannon",
+    "desc": "Heroes have 50% HP, deal 2x damage.",
+    "icon": "💥",
+    "effects": {
+      "hpMult": 0.5,
+      "damageMult": 2.0
+    }
+  },
+  {
+    "id": "marathon",
+    "name": "Marathon",
+    "desc": "20 nodes instead of 16.",
+    "icon": "🏃",
+    "effects": {
+      "extraNodes": 4
+    }
+  },
+  {
+    "id": "poverty",
+    "name": "Poverty",
+    "desc": "Start with 0 gold, shops cost 50% less.",
+    "icon": "💰",
+    "effects": {
+      "startingGold": 0,
+      "shopCostMult": 0.5
+    }
+  },
+  {
+    "id": "chaos",
+    "name": "Chaos",
+    "desc": "Gain a random relic AND curse after every battle.",
+    "icon": "🌀",
+    "effects": {
+      "postBattleRelic": true,
+      "postBattleCurse": true
+    }
+  }
+]

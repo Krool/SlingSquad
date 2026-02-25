@@ -1,0 +1,81 @@
+{
+  "id": "infernal_keep",
+  "name": "The Infernal Keep",
+  "skyColor": "0x2a0a0a",
+  "nodes": [
+    {
+      "id": 0, "type": "BATTLE", "name": "Burning Gate",
+      "x": 100, "y": 310, "next": [1, 2],
+      "enemies": ["FIRE_IMP", "FIRE_IMP", "GRUNT"], "gold": 20, "difficulty": 2
+    },
+    {
+      "id": 1, "type": "BATTLE", "name": "Lava Pits",
+      "x": 250, "y": 175, "next": [3],
+      "enemies": ["FIRE_IMP", "FIRE_IMP", "DEMON_KNIGHT"], "gold": 26, "difficulty": 2
+    },
+    {
+      "id": 2, "type": "BATTLE", "name": "Hellfire Corridor",
+      "x": 250, "y": 455, "next": [4],
+      "enemies": ["DEMON_KNIGHT", "FIRE_IMP", "RANGED"], "gold": 24, "difficulty": 2
+    },
+    {
+      "id": 3, "type": "EVENT", "name": "Demon's Bargain",
+      "x": 400, "y": 175, "next": [5], "gold": 0, "difficulty": 0
+    },
+    {
+      "id": 4, "type": "SHOP", "name": "Infernal Market",
+      "x": 400, "y": 455, "next": [5], "gold": 0, "difficulty": 0
+    },
+    {
+      "id": 5, "type": "BATTLE", "name": "Scorched Halls",
+      "x": 540, "y": 310, "next": [6, 7],
+      "enemies": ["DEMON_KNIGHT", "DEMON_KNIGHT", "FIRE_IMP", "RANGED"], "gold": 34, "difficulty": 3
+    },
+    {
+      "id": 6, "type": "ELITE", "name": "Warden's Chamber",
+      "x": 680, "y": 175, "next": [8],
+      "enemies": ["DEMON_KNIGHT", "DEMON_KNIGHT", "FIRE_IMP", "FIRE_IMP", "HEALER"], "gold": 44, "difficulty": 4
+    },
+    {
+      "id": 7, "type": "BATTLE", "name": "Ember Tunnels",
+      "x": 680, "y": 455, "next": [9],
+      "enemies": ["FIRE_IMP", "FIRE_IMP", "FIRE_IMP", "RANGED"], "gold": 30, "difficulty": 3
+    },
+    {
+      "id": 8, "type": "REWARD", "name": "Demon's Hoard",
+      "x": 820, "y": 175, "next": [10], "gold": 0, "difficulty": 0
+    },
+    {
+      "id": 9, "type": "FORGE", "name": "Hellfire Anvil",
+      "x": 820, "y": 455, "next": [10], "gold": 0, "difficulty": 0
+    },
+    {
+      "id": 10, "type": "BATTLE", "name": "Throne Approach",
+      "x": 940, "y": 310, "next": [11, 12],
+      "enemies": ["DEMON_KNIGHT", "DEMON_KNIGHT", "FIRE_IMP", "RANGED", "HEALER"], "gold": 40, "difficulty": 4
+    },
+    {
+      "id": 11, "type": "EVENT", "name": "Blood Altar",
+      "x": 1050, "y": 200, "next": [13], "gold": 0, "difficulty": 0
+    },
+    {
+      "id": 12, "type": "BATTLE", "name": "Inner Sanctum",
+      "x": 1050, "y": 420, "next": [14],
+      "enemies": ["DEMON_KNIGHT", "FIRE_IMP", "FIRE_IMP", "RANGED", "RANGED"], "gold": 38, "difficulty": 4
+    },
+    {
+      "id": 13, "type": "SHOP", "name": "Dark Emporium",
+      "x": 1140, "y": 200, "next": [15], "gold": 0, "difficulty": 0
+    },
+    {
+      "id": 14, "type": "BATTLE", "name": "Inferno Gate",
+      "x": 1140, "y": 420, "next": [15],
+      "enemies": ["DEMON_KNIGHT", "DEMON_KNIGHT", "FIRE_IMP", "FIRE_IMP", "HEALER", "RANGED"], "gold": 50, "difficulty": 5
+    },
+    {
+      "id": 15, "type": "BOSS", "name": "Infernal Lord",
+      "x": 1220, "y": 310, "next": [],
+      "enemies": ["INFERNAL_BOSS", "DEMON_KNIGHT", "DEMON_KNIGHT", "FIRE_IMP", "FIRE_IMP", "HEALER"], "gold": 100, "difficulty": 5
+    }
+  ]
+}

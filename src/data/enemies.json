@@ -1,0 +1,14 @@
+[
+  { "id": "grunt",        "class": "GRUNT",        "name": "Grunt"      },
+  { "id": "ranged",       "class": "RANGED",       "name": "Archer"     },
+  { "id": "shield",       "class": "SHIELD",       "name": "Shieldwall" },
+  { "id": "bomber",       "class": "BOMBER",       "name": "Bomber"     },
+  { "id": "healer",       "class": "HEALER",       "name": "Cleric"     },
+  { "id": "boss_grunt",   "class": "BOSS_GRUNT",   "name": "Warchief"   },
+  { "id": "ice_mage",     "class": "ICE_MAGE",     "name": "Frost Mage" },
+  { "id": "yeti",         "class": "YETI",         "name": "Yeti"       },
+  { "id": "frost_archer", "class": "FROST_ARCHER", "name": "Frost Archer" },
+  { "id": "fire_imp",     "class": "FIRE_IMP",     "name": "Fire Imp"   },
+  { "id": "demon_knight", "class": "DEMON_KNIGHT", "name": "Demon Knight" },
+  { "id": "infernal_boss","class": "INFERNAL_BOSS","name": "Infernal Lord" }
+]
