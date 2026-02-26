@@ -15,6 +15,7 @@ export class ImpactSystem {
   private combatSystem: CombatSystem;
   private readonly relicMods: ReturnType<typeof getRelicModifiers>;
   private _impactForce = 0;
+  private heroes: Hero[] = [];
 
   onDamageEvent?: () => void;
   /** Emit 'blockDamage' or 'unitDamage' events so BattleScene shows floating numbers */
@@ -22,16 +23,17 @@ export class ImpactSystem {
     this.scene.events.emit(isUnit ? 'unitDamage' : 'blockDamage', x, y, Math.round(amount));
   }
 
-  constructor(scene: MatterScene, combatSystem: CombatSystem) {
+  constructor(scene: MatterScene, combatSystem: CombatSystem, heroes?: Hero[]) {
     this.scene = scene;
     this.combatSystem = combatSystem;
     this.relicMods = getRelicModifiers();
+    this.heroes = heroes ?? [];
   }
 
   /** Floor: 20 * mult. Cap: 70 * mult. Force-scaled landing damage helper. */
-  private calcImpact(multiplier: number): number {
+  private calcImpact(multiplier: number, materialBonus = 0): number {
     const base = Math.min(70, this._impactForce * 0.4 + 20) * multiplier;
-    return base * (1 + this.relicMods.impactDamageBonus);
+    return base * (1 + this.relicMods.impactDamageBonus) * (1 + materialBonus);
   }
 
   /**
@@ -68,25 +70,31 @@ export class ImpactSystem {
   private warriorImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
     const { x, y } = hero.body!.position;
     const stats = HERO_STATS.WARRIOR;
-    const dmg = this.calcImpact(stats.impactMultiplier);
+    // Vanguard passive: +25% impact on first launch
+    const vanguardMult = (hero as any)._isFirstLaunch ? 1.25 : 1.0;
+    const dmg = this.calcImpact(stats.impactMultiplier) * vanguardMult;
+    const knockbackBonus = this.relicMods.warriorKnockback;
 
     // Extra force applied to nearby blocks
     for (const b of blocks) {
       const bx = b.body.position.x, by = b.body.position.y;
       const d = Math.hypot(bx - x, by - y);
       if (d > 80) continue;
+      // Stone damage bonus relic
+      const matBonus = b.material === 'STONE' ? this.relicMods.stoneDamageBonus : 0;
       const mult = stats.impactDamageBonus * this.relicMods.warriorImpactMult;
-      const dealt = dmg * mult * (1 - d / 80);
+      const dealt = dmg * mult * (1 - d / 80) * (1 + matBonus);
       b.applyDamage(dealt);
       this.emitDamage(bx, by, dealt);
-      // Push block outward
+      // Push block outward (+ knockback relic bonus)
       if (!b.destroyed) {
         const nx = (bx - x) / Math.max(d, 1);
         const ny = (by - y) / Math.max(d, 1);
-        this.scene.matter.applyForce(b.body, { x: nx * 0.08, y: ny * 0.06 });
+        const kb = 1 + knockbackBonus;
+        this.scene.matter.applyForce(b.body, { x: nx * 0.08 * kb, y: ny * 0.06 * kb });
       }
     }
-    // Damage nearby enemies
+    // Damage nearby enemies (+ knockback)
     for (const e of enemies) {
       if (e.state === 'dead') continue;
       const d = Math.hypot(e.x - x, e.y - y);
@@ -140,12 +148,14 @@ export class ImpactSystem {
       if (d < closestDist) { closestDist = d; aimAngle = Math.atan2(e.y - y, e.x - x); }
     }
 
+    const poisonDmg = this.relicMods.rangerPoisonDamage;
     for (const spreadDeg of spreadAngles) {
       const angleRad = aimAngle + Phaser.Math.DegToRad(spreadDeg);
       const speed = stats.arrowSpeed / 60;
       const vx = Math.cos(angleRad) * speed;
       const vy = Math.sin(angleRad) * speed;
       const p = new Projectile(this.scene, x, y, vx, vy, stats.arrowDamage, 0x27ae60);
+      if (poisonDmg > 0) (p as any).poisonDamage = poisonDmg;
       this.combatSystem.addProjectile(p);
     }
 
@@ -163,7 +173,8 @@ export class ImpactSystem {
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < r) {
-        const dealt = mageDmg * (1 - d / r);
+        const matBonus = b.material === 'STONE' ? this.relicMods.stoneDamageBonus : 0;
+        const dealt = mageDmg * (1 - d / r) * (1 + matBonus);
         b.applyDamage(dealt);
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
       }
@@ -241,13 +252,27 @@ export class ImpactSystem {
     const healAmount = stats.healAmount + this.relicMods.priestHealBonus;
     this.scene.events.emit('priestHealAura', x, y, healRadius, healAmount);
     this.spawnHealAura(x, y, healRadius);
+
+    // Priest resurrect relic: revive dead heroes within heal radius
+    if (this.relicMods.priestResurrectPct > 0) {
+      for (const h of this.heroes) {
+        if (h.state !== 'dead') continue;
+        // Approximate position check — dead heroes may not have a body
+        const hx = h.body?.position.x ?? h.x;
+        const hy = h.body?.position.y ?? h.y;
+        const d = Math.hypot(hx - x, hy - y);
+        if (d < healRadius) {
+          h.revive(Math.round(h.maxHp * this.relicMods.priestResurrectPct));
+        }
+      }
+    }
   }
 
   // ─── BARD ────────────────────────────────────────────────────────────────
   private bardImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
     const { x, y } = hero.body!.position;
     const stats = hero.stats as any;
-    const charmRadius = stats.charmRadius ?? 100;
+    const charmRadius = (stats.charmRadius ?? 100) + this.relicMods.bardCharmBonus;
     const charmDuration = stats.charmDurationMs ?? 3000;
 
     // Small landing damage (0.8x base, 80px radius)
@@ -310,7 +335,10 @@ export class ImpactSystem {
     const stats = HERO_STATS.ROGUE;
     const crashDmg = this.calcImpact(stats.impactMultiplier);
 
-    // Piercing: Rogue continues flying through first block (handled elsewhere via piercing flag)
+    // Piercing flag is set in LaunchSystem.doLaunch() so it's active before the first collision.
+    // rogueImpact fires on the collision that triggers impact; by then piercing has already been
+    // consumed by processCollisionPair. No need to set it here.
+
     // Landing damage in small radius
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
@@ -324,7 +352,11 @@ export class ImpactSystem {
       if (e.state === 'dead') continue;
       const d = Math.hypot(e.x - x, e.y - y);
       if (d < 60) {
-        const dealt = crashDmg * (1 - d / 60);
+        // Backstab passive: 2x damage if Rogue lands behind the enemy.
+        // Enemies face left (flipX=true) by default. "Behind" = Rogue is to the enemy's right.
+        const isBehind = x > e.x;
+        const backstab = isBehind ? 2.0 : 1.0;
+        const dealt = crashDmg * (1 - d / 60) * backstab;
         e.applyDamage(dealt);
         this.emitDamage(e.x, e.y, dealt, true);
       }
@@ -377,11 +409,12 @@ export class ImpactSystem {
     const stats = HERO_STATS.DRUID;
     const crashDmg = this.calcImpact(stats.impactMultiplier);
 
-    // Landing damage
+    // Landing damage — Nature's Wrath passive: +30% to wood blocks
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < 70) {
-        const dealt = crashDmg * (1 - d / 70);
+        const woodBonus = b.material === 'WOOD' ? 1.3 : 1.0;
+        const dealt = crashDmg * (1 - d / 70) * woodBonus;
         b.applyDamage(dealt);
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
       }

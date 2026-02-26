@@ -28,6 +28,7 @@ export class LaunchSystem {
   private effectiveMaxDrag: number;
   private effectivePowerMult: number;
   private relicMods: ReturnType<typeof getRelicModifiers>;
+  private airFrictionReduce: number;
 
   // Visuals
   private slingGraphics: Phaser.GameObjects.Graphics;
@@ -36,6 +37,10 @@ export class LaunchSystem {
   private readyText: Phaser.GameObjects.Text;
   private preview: Phaser.GameObjects.Graphics;
   private previewSprite: Phaser.GameObjects.Sprite | null = null;
+
+  // Passives
+  encoreActive = false;
+  isFirstLaunch = true;
 
   onLaunch?: (hero: Hero) => void;
 
@@ -47,12 +52,15 @@ export class LaunchSystem {
     this.relicMods           = mods;
     this.effectiveCooldownMs = Math.max(200, LAUNCH_COOLDOWN_MS - mods.cooldownReduceMs);
     this.effectiveMaxDrag    = MAX_DRAG_DISTANCE + mods.maxDragBonus;
-    // Apply meta launch power bonus if present
+    this.airFrictionReduce   = mods.airFrictionReduce;
+    // Apply meta launch power bonus + launch power curse if present
     try {
       const run = getRunState();
-      this.effectivePowerMult = LAUNCH_POWER_MULTIPLIER * (1 + (run.metaLaunchPowerPct ?? 0));
+      this.effectivePowerMult = LAUNCH_POWER_MULTIPLIER
+        * (1 + (run.metaLaunchPowerPct ?? 0))
+        * (1 - mods.launchPowerCurse);
     } catch {
-      this.effectivePowerMult = LAUNCH_POWER_MULTIPLIER;
+      this.effectivePowerMult = LAUNCH_POWER_MULTIPLIER * (1 - mods.launchPowerCurse);
     }
 
     this.slingGraphics    = scene.add.graphics().setDepth(10);
@@ -177,10 +185,34 @@ export class LaunchSystem {
   private doLaunch() {
     const hero = this.currentHero;
     if (!hero || hero.state !== 'queued') return;
-    const { vx, vy } = this.getLaunchVelocity();
+    let { vx, vy } = this.getLaunchVelocity();
     if (Math.hypot(vx, vy) < 0.3) return; // drag too short
 
+    // Encore passive (Bard): +15% launch power for the next hero after a Bard kill
+    if (this.encoreActive) {
+      vx *= 1.15;
+      vy *= 1.15;
+      this.encoreActive = false;
+    }
+
     hero.launch(SLING_X, SLING_Y, vx, vy);
+
+    // Apply air friction reduction from relic
+    if (this.airFrictionReduce > 0 && hero.body) {
+      hero.body.frictionAir = Math.max(0.0005, HERO_FRICTION_AIR - this.airFrictionReduce);
+    }
+
+    // Track first launch for Vanguard passive (Warrior)
+    if (this.isFirstLaunch) {
+      (hero as any)._isFirstLaunch = true;
+      this.isFirstLaunch = false;
+    }
+
+    // Rogue piercing: set flag before first collision so processCollisionPair can use it
+    if (hero.heroClass === 'ROGUE') {
+      hero.piercing = true;
+    }
+
     this.onLaunch?.(hero);
     this.currentIndex++;
     this.cooldownRemaining = this.effectiveCooldownMs;
@@ -215,7 +247,11 @@ export class LaunchSystem {
     // Track last above-ground position for Mage AoE preview
     let landX = SLING_X, landY = SLING_Y;
 
-    for (let frame = 0; frame < TRAJECTORY_SIM_FRAMES && dotsDrawn < TRAJECTORY_POINTS; frame++) {
+    // Trajectory dot count: reduced by curse, boosted by Eagle Eye (Ranger)
+    let effectiveDots = Math.max(5, TRAJECTORY_POINTS - this.relicMods.trajectoryReduce);
+    if (this.currentHero?.heroClass === 'RANGER') effectiveDots = Math.round(effectiveDots * 1.3);
+
+    for (let frame = 0; frame < TRAJECTORY_SIM_FRAMES && dotsDrawn < effectiveDots; frame++) {
       // Apply same physics as Matter.js body (frictionAir + gravity)
       pvx *= (1 - HERO_FRICTION_AIR);
       pvy += GRAVITY_PER_FRAME;

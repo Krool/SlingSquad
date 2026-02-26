@@ -20,7 +20,6 @@ export class CombatSystem {
   private relicMods: RelicModifiers;
   /** Accumulated gold-on-kill bonus for BattleScene to read */
   killGoldBonus = 0;
-  private deathSavesUsed = 0;
 
   onDamageEvent?: () => void;
   blocks: Block[] = [];
@@ -63,7 +62,7 @@ export class CombatSystem {
   private updateBomberRush(_delta: number) {
     const liveHeroes = this.heroes.filter(h => h.state === 'combat' || h.state === 'flying');
     for (const enemy of this.enemies) {
-      if (enemy.state !== 'combat' || enemy.enemyClass !== 'BOMBER') continue;
+      if (enemy.state !== 'combat' || (enemy.enemyClass !== 'BOMBER' && enemy.enemyClass !== 'FIRE_IMP')) continue;
       if (!enemy.isRushing) {
         // Start rushing toward nearest hero
         const target = this.nearest(enemy.x, enemy.y, liveHeroes, Infinity);
@@ -217,7 +216,8 @@ export class CombatSystem {
         const auraR = (other.stats as any).auraRadius ?? 100;
         if (d <= auraR) bardBoost = Math.min(bardBoost, 1 - ((other.stats as any).auraSpeedBoost ?? 0.20));
       }
-      const effectiveSpeed = hero.stats.combatSpeed * this.relicCombatSpeedMult * bardBoost;
+      const slowPenalty = hero.isSlowed ? 1.5 : 1.0;
+      const effectiveSpeed = hero.stats.combatSpeed * this.relicCombatSpeedMult * bardBoost * slowPenalty;
       if (now - hero.lastAttackTime < effectiveSpeed) continue;
       let heroDmg = (hero.stats.combatDamage + this.relicFlatDmg) * this.metaDamageMult;
       // Crit chance
@@ -280,14 +280,13 @@ export class CombatSystem {
       }
 
       if (!enemy.canAttack(now)) continue;
-      if (enemy.enemyClass === 'RANGED') {
+      if (enemy.enemyClass === 'RANGED' || enemy.enemyClass === 'ICE_MAGE' || enemy.enemyClass === 'FROST_ARCHER') {
         this.processRangedAttack(enemy, liveHeroes, now);
       } else {
         const target = this.nearest(enemy.x, enemy.y, liveHeroes, enemy.stats.combatRange);
         if (!target) continue;
-        let eDmg = enemy.stats.combatDamage;
-        // Damage reduction relic
-        if (this.relicMods.damageReduction > 0) eDmg *= (1 - this.relicMods.damageReduction);
+        const eDmg = enemy.stats.combatDamage;
+        // Damage reduction is applied inside Hero.applyDamage() — do NOT reduce here to avoid double-dipping
         target.applyDamage(eDmg);
         this.scene.events.emit('unitDamage', target.x, target.y, Math.round(eDmg));
         enemy.lastAttackTime = now;
@@ -346,6 +345,8 @@ export class CombatSystem {
     const dist = Math.hypot(dx, dy);
     if (dist === 0) return;
     const speed = stats.projectileSpeed / 60;
+    const isIce = enemy.enemyClass === 'ICE_MAGE' || enemy.enemyClass === 'FROST_ARCHER';
+    const color = isIce ? 0x74b9ff : 0xe67e22;
     const p = new Projectile(
       this.scene,
       enemy.x,
@@ -353,9 +354,10 @@ export class CombatSystem {
       (dx / dist) * speed,
       (dy / dist) * speed,
       enemy.stats.combatDamage,
-      0xe67e22,
+      color,
     );
     p.source = 'enemy';
+    if (isIce) (p as any).isIce = true;
     this.projectiles.push(p);
     enemy.lastAttackTime = now;
   }
@@ -403,6 +405,8 @@ export class CombatSystem {
         for (const hero of liveHeroes) {
           if (Math.hypot(px - hero.x, py - hero.y) < hero.stats.radius + 5) {
             hero.applyDamage(p.damage);
+            // ICE_MAGE / FROST_ARCHER slow effect
+            if ((p as any).isIce) hero.applySlow(2000);
             this.scene.events.emit('unitDamage', hero.x, hero.y, Math.round(p.damage));
             this.onDamageEvent?.();
             p.destroy();
@@ -414,6 +418,23 @@ export class CombatSystem {
           if (Math.hypot(px - enemy.x, py - enemy.y) < enemy.stats.radius + 5) {
             enemy.applyDamage(p.damage);
             this.scene.events.emit('unitDamage', enemy.x, enemy.y, Math.round(p.damage));
+            // Ranger poison DoT: deal poison damage per second for 3 seconds
+            const poisonDmg = (p as any).poisonDamage as number | undefined;
+            if (poisonDmg && poisonDmg > 0) {
+              let ticks = 0;
+              const interval = this.scene.time.addEvent({
+                delay: 1000,
+                repeat: 2,
+                callback: () => {
+                  if (enemy.state !== 'dead') {
+                    enemy.applyDamage(poisonDmg);
+                    this.scene.events.emit('unitDamage', enemy.x, enemy.y, Math.round(poisonDmg));
+                  }
+                  ticks++;
+                  if (ticks >= 3) interval.destroy();
+                },
+              });
+            }
             this.onDamageEvent?.();
             p.destroy();
             break;

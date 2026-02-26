@@ -24,6 +24,25 @@ export class Hero {
   walkStuckMs = 0;     // accumulated ms without meaningful x movement
   lastWalkX = 0;       // x position at last movement update
 
+  // Death save (relic: DEATH_SAVE)
+  deathSavesRemaining = 0;
+
+  // Slow state (ICE_MAGE projectile)
+  slowUntil = 0;
+
+  // Damage reduction (relic + Paladin innate)
+  damageReduction = 0;
+
+  // Divine Shield (Paladin passive — survives one lethal hit)
+  hasDivineShield = false;
+
+  // Rogue piercing — continues through first block hit
+  piercing = false;
+
+  // Last known position (saved before body is destroyed on death, used by revive)
+  private _lastX = 0;
+  private _lastY = 0;
+
   constructor(
     scene: Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics },
     heroClass: HeroClass,
@@ -38,6 +57,18 @@ export class Hero {
   /** Increase max HP (relic bonus). Does not change current HP — call setStartHp after. */
   applyHpBonus(bonus: number) {
     this.maxHp += bonus;
+  }
+
+  setDeathSaves(n: number) {
+    this.deathSavesRemaining = n;
+  }
+
+  applySlow(durationMs: number) {
+    this.slowUntil = this.scene.time.now + durationMs;
+  }
+
+  get isSlowed(): boolean {
+    return this.scene.time.now < this.slowUntil;
   }
 
   /** Set starting HP for this battle (persisted from RunState). Clamped to [1, maxHp]. */
@@ -133,7 +164,12 @@ export class Hero {
 
   applyDamage(amount: number) {
     if (this.state === 'dead') return;
-    this._hp = Math.max(0, this._hp - amount);
+    // Damage reduction (relic + Paladin innate). Negative values = curse (take MORE damage).
+    let finalAmount = amount;
+    if (this.damageReduction !== 0) {
+      finalAmount = amount * (1 - this.damageReduction);
+    }
+    this._hp = Math.max(0, this._hp - finalAmount);
     this.drawHpBar();
     // Hit flash — red tint then clear
     if (this.sprite) {
@@ -142,7 +178,30 @@ export class Hero {
         if (this.state !== 'dead') this.sprite?.clearTint();
       });
     }
-    if (this._hp <= 0) this.die();
+    if (this._hp <= 0) {
+      // Divine Shield (Paladin passive): survive one lethal hit
+      if (this.hasDivineShield) {
+        this._hp = 1;
+        this.hasDivineShield = false;
+        this.drawHpBar();
+        // Gold flash to indicate shield consumed
+        if (this.sprite) {
+          this.sprite.setTint(0xf1c40f);
+          this.scene.time.delayedCall(300, () => {
+            if (this.state !== 'dead') this.sprite?.clearTint();
+          });
+        }
+        return;
+      }
+      // Death save (relic): survive at 1 HP
+      if (this.deathSavesRemaining > 0) {
+        this._hp = 1;
+        this.deathSavesRemaining--;
+        this.drawHpBar();
+        return;
+      }
+      this.die();
+    }
   }
 
   die() {
@@ -150,6 +209,8 @@ export class Hero {
     this.state = 'dead';
     this.scene.events.emit('heroDied', this);
     if (this.body) {
+      this._lastX = this.body.position.x;
+      this._lastY = this.body.position.y;
       try { this.scene.matter.world.remove(this.body); } catch { /* */ }
       this.body = null;
     }
@@ -163,6 +224,38 @@ export class Hero {
     }
     this.hpBarBg?.destroy();
     this.hpBarFill?.destroy();
+  }
+
+  /** Revive a dead hero (Priest resurrect relic). Restores state, physics body, HP bar, and sprite. */
+  revive(hp: number) {
+    if (this.state !== 'dead') return;
+    this._hp = Math.max(1, Math.min(hp, this.maxHp));
+    // Use last known position (saved before body was destroyed) or fallback
+    const rx = this._lastX ?? 640;
+    const ry = this._lastY ?? 500;
+    // Re-create physics body so hero can walk and take damage
+    const r = this.stats.radius;
+    this.body = this.scene.matter.add.circle(rx, ry, r, {
+      density: 0.002 * ((this.stats as any).mass ?? 1),
+      restitution: 0.25,
+      friction: 0.9,
+      frictionAir: 0.07,
+      label: `hero_${this.heroClass}`,
+      collisionFilter: { category: 0x0002, mask: ~0x0002 },
+    }) as MatterJS.BodyType;
+    (this.body as any).__hero = this;
+    // Re-create sprite
+    const charKey = this.heroClass.toLowerCase();
+    this.sprite = this.scene.add.sprite(rx, ry - r * 0.25, `${charKey}_idle_1`)
+      .setDisplaySize(r * 2.5, r * 2.5);
+    this.sprite.play(`${charKey}_attack`);
+    // Green flash on revive
+    this.sprite.setTint(0x44ff88);
+    this.scene.time.delayedCall(400, () => {
+      if (this.state !== 'dead') this.sprite?.clearTint();
+    });
+    this.initHpBar();
+    this.state = 'combat';
   }
 
   update() {

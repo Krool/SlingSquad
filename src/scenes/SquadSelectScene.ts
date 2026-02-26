@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {
-  GAME_WIDTH, GAME_HEIGHT, HERO_STATS, STARTER_SQUAD_SIZE, MAX_SQUAD_SIZE,
+  GAME_WIDTH, GAME_HEIGHT, STARTER_SQUAD_SIZE, MAX_SQUAD_SIZE,
   type HeroClass,
 } from '@/config/constants';
 import { getMetaBonuses, getShards, pickRandomCommonRelic } from '@/systems/MetaState';
@@ -8,6 +8,8 @@ import { newRun, addRelic, clearSave, type NodeDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import type { MetaBonuses } from '@/systems/MetaState';
 import nodesData from '@/data/nodes.json';
+import { getAllMaps, getMapById } from '@/data/maps/index';
+import { getUnlockedAscension } from '@/systems/AscensionSystem';
 
 const SAVE_KEY = 'slingsquad_squad_v1';
 
@@ -56,6 +58,11 @@ export class SquadSelectScene extends Phaser.Scene {
   private _slotsContainer: Phaser.GameObjects.Container | null = null;
   private _rosterContainer: Phaser.GameObjects.Container | null = null;
 
+  // Run config state
+  private _selectedMapId = 'goblin_wastes';
+  private _ascensionLevel = 0;
+  private _activeModifiers: string[] = [];
+
   constructor() {
     super({ key: 'SquadSelectScene' });
   }
@@ -86,6 +93,7 @@ export class SquadSelectScene extends Phaser.Scene {
     this.buildTitleText();
     this.buildSlots();
     this.buildRoster();
+    this.buildRunConfig();
     this.buildBottomButtons();
 
     // Pre-fill with last squad or defaults
@@ -166,11 +174,12 @@ export class SquadSelectScene extends Phaser.Scene {
 
   // ── Squad Slots ───────────────────────────────────────────────────────
   private buildSlots() {
-    const slotW = 140, slotH = 160;
-    const gap = 16;
+    const slotW = this._slotCount <= 4 ? 140 : 120;
+    const slotH = this._slotCount <= 4 ? 160 : 140;
+    const gap = this._slotCount <= 4 ? 16 : 12;
     const totalW = this._slotCount * slotW + (this._slotCount - 1) * gap;
     const startX = GAME_WIDTH / 2 - totalW / 2 + slotW / 2;
-    const slotY = 180;
+    const slotY = 160;
 
     this._slotsContainer = this.add.container(0, 0).setDepth(5);
     this._slots = [];
@@ -356,10 +365,10 @@ export class SquadSelectScene extends Phaser.Scene {
     }
     this._roster = [];
 
-    const cardW = 100, cardH = 120, gap = 12;
+    const cardW = 100, cardH = 110, gap = 12;
     const totalW = this._availableClasses.length * cardW + (this._availableClasses.length - 1) * gap;
     const startX = GAME_WIDTH / 2 - totalW / 2 + cardW / 2;
-    const rosterY = 400;
+    const rosterY = 370;
 
     const slotted = new Set(this.getSlottedClasses());
 
@@ -588,6 +597,169 @@ export class SquadSelectScene extends Phaser.Scene {
     this.updateBeginButton();
   }
 
+  // ── Run Config (map, ascension, modifiers) ────────────────────────────
+  private buildRunConfig() {
+    const cx = GAME_WIDTH / 2;
+    const panelY = 490;
+    const pw = 620, ph = 100, pr = 8;
+
+    // Panel background — centered below roster
+    const panel = this.add.graphics().setDepth(10);
+    panel.fillStyle(0x0a1220, 0.88);
+    panel.fillRoundedRect(cx - pw / 2, panelY, pw, ph, pr);
+    panel.lineStyle(1, 0x3a5070, 0.45);
+    panel.strokeRoundedRect(cx - pw / 2, panelY, pw, ph, pr);
+
+    // ── Map selection (left column) ──
+    const mapCX = cx - 200;
+    this.add.text(mapCX, panelY + 10, 'MAP', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+    }).setOrigin(0.5, 0).setDepth(11);
+
+    const maps = getAllMaps();
+    let mapIdx = maps.findIndex(m => m.id === this._selectedMapId);
+    if (mapIdx < 0) mapIdx = 0;
+    const mapLabel = this.add.text(mapCX, panelY + 32, maps[mapIdx].name, {
+      fontSize: '14px', fontFamily: 'Georgia, serif', color: '#f1c40f',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 0).setDepth(11);
+
+    const updateMap = () => {
+      this._selectedMapId = maps[mapIdx].id;
+      mapLabel.setText(maps[mapIdx].name);
+    };
+    this.buildSmallArrowBtn(mapCX - 80, panelY + 36, '\u25c0', () => {
+      mapIdx = (mapIdx - 1 + maps.length) % maps.length; updateMap();
+    });
+    this.buildSmallArrowBtn(mapCX + 80, panelY + 36, '\u25b6', () => {
+      mapIdx = (mapIdx + 1) % maps.length; updateMap();
+    });
+
+    // Subtle divider
+    panel.lineStyle(1, 0x2a3a50, 0.4);
+    panel.lineBetween(cx - 80, panelY + 12, cx - 80, panelY + ph - 12);
+
+    // ── Ascension (center column) ──
+    const ascCX = cx;
+    this.add.text(ascCX, panelY + 10, 'ASCENSION', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+    }).setOrigin(0.5, 0).setDepth(11);
+
+    const maxAsc = getUnlockedAscension();
+    const ascLabel = this.add.text(ascCX, panelY + 32, `${this._ascensionLevel}`, {
+      fontSize: '20px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+      color: this._ascensionLevel > 0 ? '#e74c3c' : '#5a7a9a',
+      stroke: '#000', strokeThickness: 3,
+    }).setOrigin(0.5, 0).setDepth(11);
+
+    const updateAsc = () => {
+      ascLabel.setText(`${this._ascensionLevel}`);
+      ascLabel.setColor(this._ascensionLevel > 0 ? '#e74c3c' : '#5a7a9a');
+    };
+    this.buildSmallArrowBtn(ascCX - 36, panelY + 36, '\u25c0', () => {
+      this._ascensionLevel = Math.max(0, this._ascensionLevel - 1); updateAsc();
+    });
+    this.buildSmallArrowBtn(ascCX + 36, panelY + 36, '\u25b6', () => {
+      this._ascensionLevel = Math.min(maxAsc, this._ascensionLevel + 1); updateAsc();
+    });
+
+    // Subtle divider
+    panel.lineBetween(cx + 80, panelY + 12, cx + 80, panelY + ph - 12);
+
+    // ── Modifier toggles (right column) ──
+    const modCX = cx + 200;
+    this.add.text(modCX, panelY + 10, 'MODIFIERS', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+    }).setOrigin(0.5, 0).setDepth(11);
+
+    const modDefs = [
+      { id: 'glass_cannon', label: 'Glass Cannon', color: 0xe74c3c },
+      { id: 'marathon', label: 'Marathon', color: 0x3498db },
+      { id: 'poverty', label: 'Poverty', color: 0xf39c12 },
+      { id: 'chaos', label: 'Chaos', color: 0x9b59b6 },
+    ];
+
+    // 2x2 grid of modifier chips
+    modDefs.forEach((mod, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const mx = modCX - 55 + col * 110;
+      const my = panelY + 32 + row * 30;
+      this.buildModChip(mx, my, mod.id, mod.label, mod.color);
+    });
+  }
+
+  /** Small arrow button (used in run config panel) */
+  private buildSmallArrowBtn(x: number, y: number, char: string, onClick: () => void) {
+    const g = this.add.graphics().setDepth(11);
+    const draw = (hovered: boolean) => {
+      g.clear();
+      g.fillStyle(hovered ? 0x1a2a3e : 0x0d1526, 1);
+      g.fillRoundedRect(x - 14, y - 4, 28, 22, 5);
+      g.lineStyle(1, hovered ? 0x5a8ab8 : 0x2a4a60, hovered ? 0.9 : 0.5);
+      g.strokeRoundedRect(x - 14, y - 4, 28, 22, 5);
+    };
+    draw(false);
+    this.add.text(x, y + 7, char, {
+      fontSize: '10px', color: '#7a9ab8',
+    }).setOrigin(0.5).setDepth(12);
+    const hit = this.add.rectangle(x, y + 7, 28, 22, 0, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(13);
+    hit.on('pointerover', () => draw(true));
+    hit.on('pointerout', () => draw(false));
+    hit.on('pointerdown', onClick);
+  }
+
+  /** Modifier toggle chip (used in run config panel) */
+  private buildModChip(x: number, y: number, modId: string, label: string, color: number) {
+    const w = 100, h = 24, r = 5;
+    const isOn = this._activeModifiers.includes(modId);
+    const g = this.add.graphics().setDepth(11);
+    const textObj = this.add.text(x, y + h / 2, label, {
+      fontSize: '10px', fontFamily: 'Georgia, serif',
+      color: isOn ? '#' + color.toString(16).padStart(6, '0') : '#4a5a6a',
+      stroke: '#000', strokeThickness: 1,
+    }).setOrigin(0.5).setDepth(12);
+    let active = isOn;
+
+    const draw = (hovered: boolean) => {
+      g.clear();
+      if (active) {
+        const dc = Phaser.Display.Color.IntegerToColor(color);
+        const bg = Phaser.Display.Color.GetColor(
+          Math.floor(dc.red * 0.18), Math.floor(dc.green * 0.18), Math.floor(dc.blue * 0.18),
+        );
+        g.fillStyle(bg, 1);
+        g.fillRoundedRect(x - w / 2, y, w, h, r);
+        g.lineStyle(1.5, color, hovered ? 1 : 0.7);
+        g.strokeRoundedRect(x - w / 2, y, w, h, r);
+      } else {
+        g.fillStyle(hovered ? 0x0f1a28 : 0x0a1220, 0.8);
+        g.fillRoundedRect(x - w / 2, y, w, h, r);
+        g.lineStyle(1, 0x2a3a4a, hovered ? 0.6 : 0.3);
+        g.strokeRoundedRect(x - w / 2, y, w, h, r);
+      }
+    };
+    draw(false);
+
+    const hit = this.add.rectangle(x, y + h / 2, w, h, 0, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(13);
+    hit.on('pointerover', () => draw(true));
+    hit.on('pointerout', () => draw(false));
+    hit.on('pointerdown', () => {
+      const idx = this._activeModifiers.indexOf(modId);
+      if (idx >= 0) {
+        this._activeModifiers.splice(idx, 1);
+        active = false;
+      } else {
+        this._activeModifiers.push(modId);
+        active = true;
+      }
+      draw(true);
+      textObj.setColor(active ? '#' + color.toString(16).padStart(6, '0') : '#4a5a6a');
+    });
+  }
+
   // ── Start Run ─────────────────────────────────────────────────────────
   private startRun() {
     const squad = this.getSlottedClasses();
@@ -599,8 +771,13 @@ export class SquadSelectScene extends Phaser.Scene {
     } catch { /* ignore */ }
 
     clearSave();
-    const nodes = (nodesData as any).nodes as NodeDef[];
-    newRun(nodes, squad, this._meta);
+    // Load nodes from selected map
+    const mapDef = getMapById(this._selectedMapId);
+    const nodes = mapDef ? (mapDef.nodes as NodeDef[]) : ((nodesData as any).nodes as NodeDef[]);
+    newRun(nodes, squad, this._meta, this._selectedMapId, {
+      ascensionLevel: this._ascensionLevel,
+      modifiers: this._activeModifiers,
+    });
 
     // Inject starting relic if purchased
     if (this._meta.startingRelic) {

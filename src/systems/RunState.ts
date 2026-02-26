@@ -1,5 +1,6 @@
 import { HERO_STATS, MAX_SQUAD_SIZE, type HeroClass } from '@/config/constants';
 import type { MetaBonuses } from '@/systems/MetaState';
+import { getAscensionModifiers } from '@/systems/AscensionSystem';
 
 // ─── Node types ───────────────────────────────────────────────────────────────
 export type NodeType = 'BATTLE' | 'ELITE' | 'REWARD' | 'SHOP' | 'BOSS' | 'EVENT' | 'FORGE';
@@ -85,7 +86,23 @@ export function newRun(
     DRUID: 'Thorn',
   };
 
-  const hpMult = 1 + (meta?.flatHpPct ?? 0);
+  let hpMult = 1 + (meta?.flatHpPct ?? 0);
+  const modifiers = opts?.modifiers ?? [];
+  const ascLevel = opts?.ascensionLevel ?? 0;
+  const ascMods = getAscensionModifiers(ascLevel);
+
+  // Glass Cannon modifier: halve HP, double damage
+  let damageMult = meta?.damagePct ?? 0;
+  if (modifiers.includes('glass_cannon')) {
+    hpMult *= 0.5;
+    damageMult = (1 + damageMult) * 2 - 1; // effectively 2x total
+  }
+
+  // Poverty modifier: no starting gold, but shop costs 50% less (stored for ShopScene)
+  let startingGold = meta?.startingGold ?? 0;
+  if (modifiers.includes('poverty')) {
+    startingGold = 0;
+  }
 
   _state = {
     squad: heroClasses.map(cls => {
@@ -98,7 +115,7 @@ export function newRun(
         maxHp,
       };
     }),
-    gold: meta?.startingGold ?? 0,
+    gold: startingGold,
     relics: [], // starting relic (if purchased) injected by MainMenuScene after newRun()
     nodeMap,
     currentNodeId: nodeMap[0].id,
@@ -106,13 +123,28 @@ export function newRun(
     availableNodeIds: new Set([nodeMap[0].id]),
     lockedNodeIds: new Set(),
     currentMapId: mapId,
-    ascensionLevel: opts?.ascensionLevel ?? 0,
-    activeModifiers: opts?.modifiers ?? [],
+    ascensionLevel: ascLevel,
+    activeModifiers: modifiers,
     isDailyChallenge: opts?.isDaily ?? false,
     metaGoldGainPct: meta?.goldGainPct ?? 0,
-    metaDamagePct: meta?.damagePct ?? 0,
+    metaDamagePct: damageMult,
     metaLaunchPowerPct: meta?.launchPowerPct ?? 0,
   };
+
+  // Ascension: start with a random curse
+  if (ascMods.startWithCurse) {
+    try {
+      // Dynamic import not available here; load curses inline
+      const cursePool = [
+        { id: 'fragile_bones', name: 'Fragile Bones', desc: 'Take +15% damage.', effect: 'DAMAGE_REDUCTION', value: -0.15, rarity: 'common' as const, curse: true },
+        { id: 'heavy_pockets', name: 'Heavy Pockets', desc: 'Launch power -10%.', effect: 'LAUNCH_POWER_CURSE', value: 0.1, rarity: 'common' as const, curse: true },
+        { id: 'slow_hands', name: 'Slow Hands', desc: 'Launch cooldown +0.3s.', effect: 'COOLDOWN_REDUCE', value: -300, rarity: 'common' as const, curse: true },
+      ];
+      const curse = cursePool[Math.floor(Math.random() * cursePool.length)];
+      _state.relics.push(curse);
+    } catch { /* */ }
+  }
+
   saveRun();
   return _state;
 }

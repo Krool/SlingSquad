@@ -24,7 +24,8 @@ import { DamageNumber } from '@/ui/DamageNumber';
 
 import {
   getRunState, hasRunState, completeNode, syncSquadHp, newRun, getRelicModifiers, loadRun,
-  type NodeDef,
+  addRelic,
+  type NodeDef, type RelicDef,
 } from '@/systems/RunState';
 import { AudioSystem } from '@/systems/AudioSystem';
 import type { MusicSystem } from '@/systems/MusicSystem';
@@ -32,7 +33,10 @@ import { recordEnemyKill, recordHeroUsed } from '@/systems/DiscoveryLog';
 import { addBlocksDestroyed, addEnemiesKilled, recordLaunchDamage, recordBattleTime } from '@/systems/RunHistory';
 import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
 import { isTutorialComplete, completeStep, getTutorialText, getNextStep } from '@/systems/TutorialSystem';
+import { getAscensionModifiers } from '@/systems/AscensionSystem';
 import nodesData from '@/data/nodes.json';
+import relicsData from '@/data/relics.json';
+import cursesData from '@/data/curses.json';
 
 // ─── Scene ───────────────────────────────────────────────────────────────────
 
@@ -752,11 +756,25 @@ export class BattleScene extends Phaser.Scene {
 
   // ─── Place enemies from node data ─────────────────────────────────────────
   private placeEnemies(slots: Array<{ x: number; y: number }>) {
-    const enemyList = this.activeNode.enemies ?? ['GRUNT', 'GRUNT'];
+    const run = getRunState();
+    const ascMods = getAscensionModifiers(run.ascensionLevel);
+    const enemyList = [...(this.activeNode.enemies ?? ['GRUNT', 'GRUNT'])];
+
+    // Ascension: add extra enemies
+    if (ascMods.extraEnemies > 0 && enemyList.length > 0) {
+      for (let i = 0; i < ascMods.extraEnemies; i++) {
+        enemyList.push(enemyList[i % enemyList.length]);
+      }
+    }
+
     // ELITE/BOSS nodes have tougher enemies — scale their HP
-    const hpMult = this.activeNode.type === 'BOSS' ? 1.5
-                 : this.activeNode.type === 'ELITE' ? 1.25
-                 : 1.0;
+    const baseHpMult = this.activeNode.type === 'BOSS' ? 1.5
+                     : this.activeNode.type === 'ELITE' ? 1.25
+                     : 1.0;
+    // Ascension HP scaling
+    const bossExtra = this.activeNode.type === 'BOSS' ? ascMods.bossHpMult : ascMods.enemyHpMult;
+    const hpMult = baseHpMult * bossExtra;
+
     enemyList.forEach((cls, i) => {
       const slot = slots[i % slots.length];
       const jitter = i >= slots.length ? Phaser.Math.Between(-30, 30) : 0;
@@ -768,14 +786,48 @@ export class BattleScene extends Phaser.Scene {
   private buildSquad() {
     const run = getRunState();
     const mods = getRelicModifiers();
-    for (const heroData of run.squad) {
+    const ascMods = getAscensionModifiers(run.ascensionLevel);
+
+    // Ascension: fewer heroes
+    let squadData = [...run.squad];
+    if (ascMods.fewerHeroes > 0 && squadData.length > 1) {
+      squadData = squadData.slice(0, Math.max(1, squadData.length - ascMods.fewerHeroes));
+    }
+
+    for (const heroData of squadData) {
       const hero = new Hero(this, heroData.heroClass);
       // Apply relic HP bonus to maxHp, then restore persisted HP (death → 25% revive)
       hero.applyHpBonus(mods.flatHpBonus);
       hero.setStartHp(heroData.currentHp);
+      // Death saves (relic)
+      if (mods.deathSaves > 0) hero.setDeathSaves(mods.deathSaves);
+      // Damage reduction (relic + Paladin innate)
+      hero.damageReduction = mods.damageReduction;
+      if (hero.heroClass === 'PALADIN') {
+        hero.damageReduction += HERO_STATS.PALADIN.damageReduction;
+        hero.hasDivineShield = true; // Paladin passive
+      }
       this.heroes.push(hero);
       recordHeroUsed(heroData.heroClass);
     }
+
+    // Extra launches relic: add duplicate heroes based on last squad member
+    if (mods.extraLaunches > 0 && squadData.length > 0) {
+      const lastClass = squadData[squadData.length - 1].heroClass;
+      for (let i = 0; i < mods.extraLaunches; i++) {
+        const extra = new Hero(this, lastClass);
+        extra.applyHpBonus(mods.flatHpBonus);
+        extra.setStartHp(extra.maxHp);
+        if (mods.deathSaves > 0) extra.setDeathSaves(mods.deathSaves);
+        extra.damageReduction = mods.damageReduction;
+        if (lastClass === 'PALADIN') {
+          extra.damageReduction += HERO_STATS.PALADIN.damageReduction;
+          extra.hasDivineShield = true;
+        }
+        this.heroes.push(extra);
+      }
+    }
+
     // Fallback: if ALL dead (shouldn't happen but safety net)
     if (this.heroes.length === 0) {
       for (let i = 0; i < STARTER_SQUAD_SIZE; i++) {
@@ -791,7 +843,7 @@ export class BattleScene extends Phaser.Scene {
     this.registry.set('audio', this.audio); // shared with SettingsScene
 
     this.combatSystem = new CombatSystem(this, this.heroes, this.enemies);
-    this.impactSystem = new ImpactSystem(this, this.combatSystem);
+    this.impactSystem = new ImpactSystem(this, this.combatSystem, this.heroes);
     this.timeoutSystem = new TimeoutSystem(this);
     this.launchSystem = new LaunchSystem(this, this.heroes);
     this.squadUI = new SquadUI(this, this.heroes);
@@ -864,6 +916,18 @@ export class BattleScene extends Phaser.Scene {
     const other = hero === heroA ? bB : bA;
 
     if (hero && hero.state === 'flying') {
+      // Rogue piercing: if flying through a block with piercing flag, deal damage but don't stop
+      if (hero.piercing && (other as any).label?.startsWith('block_')) {
+        const block = this.blocks.find(b => b.body === other);
+        if (block && !block.destroyed) {
+          const v = hero.body?.velocity ?? { x: 0, y: 0 };
+          const speed = Math.hypot(v.x, v.y);
+          block.applyDamage(speed * 15); // piercing damage
+          hero.piercing = false; // clear after first pierce
+        }
+        return; // don't trigger normal impact — hero keeps flying
+      }
+
       const v = hero.body?.velocity ?? { x: 0, y: 0 };
       const speed = Math.hypot(v.x, v.y);
       const mass  = hero.body?.mass ?? 1;
@@ -932,6 +996,15 @@ export class BattleScene extends Phaser.Scene {
           });
         }
       }
+      // Mage Arcane Instability passive: 20% chance to chain-explode near a Mage
+      for (const h of this.heroes) {
+        if (h.state === 'dead' || h.heroClass !== 'MAGE') continue;
+        const d = Math.hypot(h.x - x, h.y - y);
+        if (d < 120 && Math.random() < 0.20) {
+          this.events.emit('barrelExploded', x, y, 80, 30);
+          break; // one explosion per block
+        }
+      }
     });
 
     this.events.on('priestHealAura', (x: number, y: number, radius: number, amount: number) => {
@@ -969,13 +1042,27 @@ export class BattleScene extends Phaser.Scene {
       this.combatSystem.killGoldBonus = 0;
       const mods = getRelicModifiers();
       if (mods.goldOnKill > 0) this.coinGoldBonus += mods.goldOnKill;
+      // Encore passive (Bard): if any Bard is alive, next hero launches with +15% power
+      const hasBard = this.heroes.some(h => h.heroClass === 'BARD' && h.state !== 'dead');
+      if (hasBard) this.launchSystem.encoreActive = true;
       // Track discovery + stats
       this.enemiesKilledThisBattle++;
       addEnemiesKilled(1);
       if (enemy?.enemyClass) recordEnemyKill(enemy.enemyClass);
       this.checkWin();
     });
-    this.events.on('heroDied',  () => this.checkLoss());
+    this.events.on('heroDied', (hero?: Hero) => {
+      // Priest Martyr passive: when a Priest dies, heal all living heroes for 15
+      if (hero?.heroClass === 'PRIEST') {
+        for (const h of this.heroes) {
+          if (h.state !== 'dead' && h !== hero) {
+            h.heal(15);
+            DamageNumber.heal(this, h.x, h.y, 15);
+          }
+        }
+      }
+      this.checkLoss();
+    });
 
     // Paladin ability: spawn temporary shield wall blocks
     this.events.on('spawnTempBlock', (x: number, y: number, mat: string) => {
@@ -992,6 +1079,21 @@ export class BattleScene extends Phaser.Scene {
     // Druid ability: spawn wolf minions that deal damage to nearby enemies
     this.events.on('spawnWolf', (x: number, y: number, dmg: number, hp: number) => {
       this.spawnWolfMinion(x, y, dmg, hp);
+    });
+
+    // DEMON_KNIGHT thorns: reflect damage to nearest hero
+    this.events.on('thornsReflect', (ex: number, ey: number, dmg: number) => {
+      let nearest: Hero | null = null;
+      let nearestDist = 80;
+      for (const h of this.heroes) {
+        if (h.state === 'dead') continue;
+        const d = Math.hypot(h.x - ex, h.y - ey);
+        if (d < nearestDist) { nearestDist = d; nearest = h; }
+      }
+      if (nearest) {
+        nearest.applyDamage(dmg);
+        DamageNumber.damage(this, nearest.x, nearest.y, Math.round(dmg));
+      }
     });
   }
 
@@ -1062,7 +1164,31 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const mods = getRelicModifiers();
-    const gold = victory ? (this.activeNode.gold ?? 20) + this.coinGoldBonus + mods.goldOnWin : 0;
+    let gold = victory ? (this.activeNode.gold ?? 20) + this.coinGoldBonus + mods.goldOnWin : 0;
+    // Gold tax curse
+    if (mods.goldTaxPct > 0 && gold > 0) {
+      gold = Math.round(gold * (1 - mods.goldTaxPct));
+    }
+    // Ascension: reduced gold
+    const ascMods = getAscensionModifiers(run.ascensionLevel);
+    if (ascMods.reducedGold && gold > 0) {
+      gold = Math.round(gold * 0.5);
+    }
+
+    // Chaos modifier: add a random relic AND a random curse after each victory
+    if (victory && run.activeModifiers.includes('chaos')) {
+      const allRelics = (relicsData as any[]).filter((r: any) => !r.curse);
+      const allCurses = (cursesData as any[]).filter((r: any) => r.curse === true);
+      if (allRelics.length > 0) {
+        const rr = allRelics[Math.floor(Math.random() * allRelics.length)];
+        addRelic(rr as RelicDef);
+      }
+      if (allCurses.length > 0) {
+        const rc = allCurses[Math.floor(Math.random() * allCurses.length)];
+        addRelic(rc as RelicDef);
+      }
+    }
+
     this.time.delayedCall(800, () => {
       this.scene.start('ResultScene', { victory, reason, gold, nodeId: this.activeNode.id });
     });
@@ -1109,7 +1235,15 @@ export class BattleScene extends Phaser.Scene {
       ];
     }
 
-    for (const [x, y, value] of layout) {
+    // Ascension: reduced gold → halve coin count
+    const run = getRunState();
+    const ascMods = getAscensionModifiers(run.ascensionLevel);
+    let coinLayout = layout;
+    if (ascMods.reducedGold && layout.length > 1) {
+      coinLayout = layout.filter((_, i) => i % 2 === 0);
+    }
+
+    for (const [x, y, value] of coinLayout) {
       this.coins.push(new Coin(this, x, y, value));
     }
   }

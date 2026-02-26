@@ -59,6 +59,15 @@ export class Enemy {
     if (enemyClass === 'SHIELD') this.sprite.setTint(0x5588cc);
     if (enemyClass === 'BOMBER') this.sprite.setTint(0xbb66dd);
     if (enemyClass === 'HEALER') this.sprite.setTint(0x55cc88);
+    if (enemyClass === 'ICE_MAGE') this.sprite.setTint(0x74b9ff);
+    if (enemyClass === 'YETI') this.sprite.setTint(0xdfe6e9);
+    if (enemyClass === 'FROST_ARCHER') this.sprite.setTint(0xa29bfe);
+    if (enemyClass === 'FIRE_IMP') this.sprite.setTint(0xfd79a8);
+    if (enemyClass === 'DEMON_KNIGHT') this.sprite.setTint(0xd63031);
+    if (enemyClass === 'INFERNAL_BOSS') {
+      this.sprite.setTint(0x6c5ce7);
+      this.sprite.setDisplaySize(r * 2.8, r * 2.8);
+    }
     if (enemyClass === 'BOSS_GRUNT') {
       this.sprite.setTint(0xff4444);
       this.sprite.setDisplaySize(r * 2.8, r * 2.8); // bigger sprite for boss variant
@@ -107,6 +116,13 @@ export class Enemy {
     this.scene.time.delayedCall(120, () => {
       if (this.state !== 'dead') this.restoreTint();
     });
+    // DEMON_KNIGHT thorns: reflect a fraction of damage taken back to attacker
+    if (this.enemyClass === 'DEMON_KNIGHT' && finalAmount > 0) {
+      const thornsFraction = (this.stats as any).thornsReflect ?? 0;
+      if (thornsFraction > 0) {
+        this.scene.events.emit('thornsReflect', this.x, this.y, finalAmount * thornsFraction);
+      }
+    }
     if (this.state === 'idle') this.enterCombat();
     if (this._hp <= 0) this.die();
   }
@@ -115,6 +131,8 @@ export class Enemy {
   restoreTint() {
     const tintMap: Partial<Record<EnemyClass, number>> = {
       SHIELD: 0x5588cc, BOMBER: 0xbb66dd, HEALER: 0x55cc88, BOSS_GRUNT: 0xff4444,
+      ICE_MAGE: 0x74b9ff, YETI: 0xdfe6e9, FROST_ARCHER: 0xa29bfe,
+      FIRE_IMP: 0xfd79a8, DEMON_KNIGHT: 0xd63031, INFERNAL_BOSS: 0x6c5ce7,
     };
     const tint = tintMap[this.enemyClass];
     if (tint) this.sprite?.setTint(tint);
@@ -125,8 +143,8 @@ export class Enemy {
     if (this.state === 'dead') return;
     this.state = 'dead';
 
-    // Bomber: explode on death dealing AoE damage
-    if (this.enemyClass === 'BOMBER') {
+    // Bomber / Fire Imp: explode on death dealing AoE damage
+    if (this.enemyClass === 'BOMBER' || this.enemyClass === 'FIRE_IMP') {
       const stats = this.stats as typeof this.stats & { explosionRadius: number; explosionDamage: number };
       this.scene.events.emit('bomberExploded', this.x, this.y, stats.explosionRadius, stats.explosionDamage);
     }

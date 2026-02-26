@@ -4,6 +4,7 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, type NodeDef } from '@/systems/RunState';
 import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
+import { getMapById } from '@/data/maps/index';
 
 const NODE_RADIUS = 26;
 const NODE_COLORS: Record<string, number> = {
@@ -83,6 +84,7 @@ export class OverworldScene extends Phaser.Scene {
     }
 
     const run = getRunState();
+    // Use map-specific node data from the run state
     this.nodeMap = run.nodeMap;
 
     this.buildBackground();
@@ -143,10 +145,19 @@ export class OverworldScene extends Phaser.Scene {
   private buildBackground() {
     const bg = this.add.graphics().setDepth(0);
 
-    bg.fillStyle(0x0e1520, 1);
+    // Map-themed background color
+    const run = getRunState();
+    const mapTheme: Record<string, { sky: number; grid: number; star: number }> = {
+      goblin_wastes:  { sky: 0x0e1520, grid: 0x1e2d42, star: 0xc0d0e8 },
+      frozen_peaks:   { sky: 0x0a1a2e, grid: 0x1a3a5a, star: 0xd0e8ff },
+      infernal_keep:  { sky: 0x1a0808, grid: 0x3a1515, star: 0xe8c0c0 },
+    };
+    const theme = mapTheme[run.currentMapId] ?? mapTheme.goblin_wastes;
+
+    bg.fillStyle(theme.sky, 1);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    bg.lineStyle(1, 0x1e2d42, 0.7);
+    bg.lineStyle(1, theme.grid, 0.7);
     const size = 55;
     const w = size * 1.5;
     const h = size * Math.sqrt(3);
@@ -169,7 +180,7 @@ export class OverworldScene extends Phaser.Scene {
       const sx = Phaser.Math.Between(0, GAME_WIDTH);
       const sy = Phaser.Math.Between(0, GAME_HEIGHT);
       const bright = Math.random() * 0.35 + 0.08;
-      bg.fillStyle(0xc0d0e8, bright);
+      bg.fillStyle(theme.star, bright);
       bg.fillCircle(sx, sy, Math.random() < 0.2 ? 2 : 1);
     }
 
@@ -185,7 +196,9 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private buildMapTitle() {
-    const title = (nodesData as any).name as string;
+    const run = getRunState();
+    const mapDef = getMapById(run.currentMapId);
+    const title = mapDef?.name ?? (nodesData as any).name as string;
 
     const titleBg = this.add.graphics().setDepth(9);
     titleBg.fillStyle(0x000000, 0.55);
