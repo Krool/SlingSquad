@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="Physics-based roguelike where you sling a squad of heroes at enemy fortresses. Built with Phaser 3." />
@@ -32,16 +32,24 @@
       html, body {
         width: 100%;
         height: 100%;
+        height: 100dvh; /* modern mobile: dynamic viewport height */
         background: #0a0a0f;
         overflow: hidden;
         touch-action: none;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
       }
+      /* Fixed position is the most reliable way to fill the screen on iOS PWA */
       #game-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 100%;
-        height: 100%;
       }
       canvas {
         display: block;

@@ -20,8 +20,9 @@ const config: Phaser.Types.Core.GameConfig = {
   parent: 'game-container',
   backgroundColor: '#0d1117',
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.ENVELOP,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+    expandParent: true,   // expand #game-container to fill available space on mobile
   },
   physics: {
     default: 'matter',
