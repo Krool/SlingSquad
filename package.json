@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && npm run copy-assets",
-    "copy-assets": "cp -r assets/sprites dist/assets/",
+    "copy-assets": "cp -r assets/sprites dist/assets/ && echo '' > dist/.gitignore",
     "preview": "vite preview",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist --dotfiles"
   },
   "dependencies": {
     "phaser": "^3.88.2"
