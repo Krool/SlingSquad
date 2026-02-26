@@ -20,8 +20,8 @@ const config: Phaser.Types.Core.GameConfig = {
   parent: 'game-container',
   backgroundColor: '#0d1117',
   scale: {
-    mode: Phaser.Scale.ENVELOP,
-    autoCenter: Phaser.Scale.NO_CENTER,  // CSS handles sizing; no Phaser centering
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.NO_CENTER,
     expandParent: false,
   },
   physics: {
