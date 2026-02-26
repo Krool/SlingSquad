@@ -36,7 +36,7 @@ OverworldScene (run complete) → MainMenuScene
 src/
   main.ts                 — Phaser game config (gravity, dimensions, scene list)
   config/constants.ts     — ALL tuning values (physics, hero stats, enemy stats, materials)
-  scenes/                 — 11 scenes (Boot, MainMenu, Overworld, Battle, Shop, Result, CampUpgrades, Settings, Event, Forge, Codex)
+  scenes/                 — 12 scenes (Boot, MainMenu, SquadSelect, Overworld, Battle, Shop, Result, CampUpgrades, Settings, Event, Forge, Codex)
   entities/               — Game objects (Hero, Enemy, Block, Barrel, Projectile, Coin)
   systems/                — 15 systems (Launch, Combat, Impact, Timeout, RunState, MetaState, Audio, Music, Achievement, Mastery, Ascension, RunHistory, DiscoveryLog, Tutorial, DailyChallenge)
   ui/                     — HUD components (SquadUI, DamageNumber)
@@ -79,7 +79,7 @@ public/                    — Static files: favicon.svg, .nojekyll, robots.txt,
 
 ### Code Conventions
 - All balance/tuning values go in `src/config/constants.ts` — never hardcode magic numbers in systems or entities
-- **5 hero classes** (WARRIOR, RANGER, MAGE, PRIEST, BARD) — BARD unlocked=false by default
+- **8 hero classes** (WARRIOR, RANGER, MAGE, PRIEST, BARD, ROGUE, PALADIN, DRUID) — BARD/ROGUE/PALADIN/DRUID unlocked=false by default
 - **6 enemy types** (GRUNT, RANGED, SHIELD, BOMBER, HEALER, BOSS_GRUNT) — new types reuse existing sprite folders
 - **25 relics + 10 curses** — curses are negative relics (same system, `curse: true` flag, negative values)
 - Relic management: `addRelic()`, `removeRelic()`, `upgradeRelic()`, `getCurses()`, `getNonCurseRelics()`
