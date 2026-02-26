@@ -39,14 +39,16 @@
         -webkit-user-select: none;
         user-select: none;
       }
-      /* Fill entire screen edge-to-edge, including behind notch */
+      /* Fill entire screen edge-to-edge */
       #game-container {
         position: fixed;
-        inset: 0;
+        top: 0;
+        left: 0;
+        width: 100vw;
         width: 100dvw;
+        height: 100vh;
         height: 100dvh;
-        padding: 0;
-        margin: 0;
+        overflow: hidden;
       }
       canvas {
         display: block;
