@@ -7,7 +7,7 @@ import {
 } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
-import { discoverRelic } from '@/systems/DiscoveryTracker';
+import { discoverRelic } from '@/systems/DiscoveryLog';
 import { incrementStat } from '@/systems/AchievementSystem';
 
 const ACCENT = 0xe67e22;

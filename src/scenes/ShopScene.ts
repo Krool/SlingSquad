@@ -3,7 +3,7 @@ import relicsData from '@/data/relics.json';
 import { getRunState, addRelic, spendGold, completeNode, type NodeDef, type RelicDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
-import { discoverRelic } from '@/systems/DiscoveryTracker';
+import { discoverRelic } from '@/systems/DiscoveryLog';
 import { checkAchievements } from '@/systems/AchievementSystem';
 
 const RARITY_COLOR: Record<string, number> = {

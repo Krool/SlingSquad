@@ -7,7 +7,7 @@ import {
   isRelicDiscovered, getRelicDiscoveryCount,
   isEnemyDiscovered, getEnemyKillCount,
   isHeroDiscovered,
-} from '@/systems/DiscoveryTracker';
+} from '@/systems/DiscoveryLog';
 import { getMasteryLevel, getXPForNextLevel } from '@/systems/MasterySystem';
 
 type TabId = 'heroes' | 'bestiary' | 'relics';

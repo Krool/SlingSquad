@@ -9,7 +9,7 @@ import {
 } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
-import { discoverRelic } from '@/systems/DiscoveryTracker';
+import { discoverRelic } from '@/systems/DiscoveryLog';
 import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
 
 // ── Types mirroring events.json ────────────────────────────────────────────────

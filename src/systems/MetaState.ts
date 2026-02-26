@@ -23,6 +23,7 @@ export interface MetaBonuses {
   damagePct: number;            // fraction bonus to all combat damage
   launchPowerPct: number;       // fraction bonus to launch power multiplier
   startingRelic: boolean;       // grant a random common relic at run start
+  squadSizeBonus: number;       // extra squad slots beyond STARTER_SQUAD_SIZE
   unlockedHeroClasses: string[];// hero classes unlocked via meta upgrades
 }
 
@@ -83,6 +84,7 @@ export function getMetaBonuses(): MetaBonuses {
     damagePct: 0,
     launchPowerPct: 0,
     startingRelic: false,
+    squadSizeBonus: 0,
     unlockedHeroClasses: [],
   };
 
@@ -96,6 +98,7 @@ export function getMetaBonuses(): MetaBonuses {
       case 'DAMAGE_PCT':       bonuses.damagePct        += (upgrade.value as number) * count; break;
       case 'LAUNCH_POWER_PCT': bonuses.launchPowerPct   += (upgrade.value as number) * count; break;
       case 'STARTING_RELIC':   bonuses.startingRelic     = true; break;
+      case 'SQUAD_SIZE':       bonuses.squadSizeBonus   += (upgrade.value as number) * count; break;
       case 'UNLOCK_HERO': {
         const cls = upgrade.heroClass ?? (typeof upgrade.value === 'string' ? upgrade.value : '');
         if (cls) bonuses.unlockedHeroClasses.push(cls);

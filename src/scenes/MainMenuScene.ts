@@ -1,29 +1,97 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, type HeroClass } from '@/config/constants';
+import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import {
-  getShards, earnShards, getMetaBonuses, getPurchaseCount, pickRandomCommonRelic,
+  getShards, earnShards, getMetaBonuses, getPurchaseCount,
 } from '@/systems/MetaState';
-import { newRun, addRelic, clearSave, hasSavedRun, type NodeDef } from '@/systems/RunState';
+import { hasSavedRun } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
-import { getTodayString, getDailySeed, getDailySquad, getDailyMapId, getTodaysBestScore } from '@/systems/DailyChallenge';
-import nodesData from '@/data/nodes.json';
 
 interface MainMenuData {
   shardsEarned?: number;
   fromDefeat?: boolean;
 }
 
-// Upgrade id → visual config for camp structures
+// Per-hero walking state
+interface HeroWalkState {
+  sprite: Phaser.GameObjects.Sprite;
+  key: string;
+  targetX: number;
+  pauseUntil: number;   // timestamp (ms) — 0 = not pausing
+  walking: boolean;
+}
+
+// ── Parallax layer system ───────────────────────────────────────────────────
+type ParallaxLayer = 'superBg' | 'bg' | 'mid' | 'fg' | 'superFg';
+
+const LAYER_CFG: Record<ParallaxLayer, { y: number; depth: number; alpha: number }> = {
+  superBg: { y: 506, depth: 1, alpha: 0.30 },
+  bg:      { y: 520, depth: 2, alpha: 0.50 },
+  mid:     { y: 540, depth: 3, alpha: 1.00 },
+  fg:      { y: 554, depth: 5, alpha: 0.80 },
+  superFg: { y: 564, depth: 6, alpha: 0.60 },
+};
+
+// ── Camp structures — each assigned to a parallax layer ─────────────────────
 const CAMP_STRUCTURES: Record<string, {
-  label: string;
   x: number;
-  color: number;
-  buildFn: (g: Phaser.GameObjects.Graphics, x: number, groundY: number, count: number) => void;
+  layer: ParallaxLayer;
+  buildFn: (g: Phaser.GameObjects.Graphics, x: number, gy: number, count: number) => void;
 }> = {
-  starting_gold: {
-    label: 'Cache', x: 340, color: 0x8b6914,
+  // Super background — tall distant landmark
+  launch_power: {
+    x: 950, layer: 'superBg',
     buildFn: (g, x, gy, count) => {
-      // Wooden crates
+      g.fillStyle(0x6b5030, 1);
+      g.fillRect(x - 4, gy - 55, 8, 55);
+      g.fillRect(x - 14, gy - 55, 6, 18);
+      g.fillRect(x + 8, gy - 55, 6, 18);
+      g.fillRect(x - 12, gy - 6, 24, 6);
+      g.lineStyle(2, 0x8b6914, 0.8);
+      g.lineBetween(x - 11, gy - 40, x - 2, gy - 28);
+      g.lineBetween(x + 11, gy - 40, x + 2, gy - 28);
+      if (count >= 2) { g.fillStyle(0xa0522d, 1); g.fillRect(x - 6, gy - 65, 12, 10); }
+    },
+  },
+  // Background — medium distance buildings
+  gold_gain: {
+    x: 700, layer: 'bg',
+    buildFn: (g, x, gy, count) => {
+      g.fillStyle(0x6b5030, 1);
+      g.fillRect(x - 28, gy - 8, 56, 8);
+      g.fillRect(x - 26, gy - 40, 4, 32);
+      g.fillRect(x + 22, gy - 40, 4, 32);
+      g.fillStyle(0x27ae60, 0.8);
+      g.fillRect(x - 30, gy - 48, 60, 10);
+      if (count >= 2) { g.fillStyle(0xf1c40f, 0.8); g.fillCircle(x - 8, gy - 14, 4); g.fillCircle(x + 8, gy - 14, 4); }
+    },
+  },
+  starting_relic: {
+    x: 400, layer: 'bg',
+    buildFn: (g, x, gy, count) => {
+      g.fillStyle(0x5a5a6a, 1);
+      g.fillRect(x - 14, gy - 30, 28, 30);
+      g.fillRect(x - 20, gy - 6, 40, 6);
+      g.fillStyle(0x8e44ad, 0.8);
+      g.fillRect(x - 18, gy - 36, 36, 6);
+      if (count >= 1) { g.fillStyle(0xc89ef0, 0.7); g.fillCircle(x, gy - 44, 5); }
+    },
+  },
+  // Foreground — close structures
+  hp_boost: {
+    x: 500, layer: 'fg',
+    buildFn: (g, x, gy, count) => {
+      g.fillStyle(0x6b5030, 1);
+      g.fillRect(x - 3, gy - 50, 6, 50);
+      g.fillRect(x - 18, gy - 40, 36, 8);
+      g.fillStyle(0x8a6842, 1);
+      g.fillCircle(x, gy - 58, 10);
+      if (count >= 2) { g.fillStyle(0x993333, 0.6); g.fillCircle(x, gy - 36, 6); }
+      if (count >= 3) { g.fillStyle(0xcc4444, 0.7); g.fillCircle(x, gy - 36, 4); }
+    },
+  },
+  starting_gold: {
+    x: 820, layer: 'fg',
+    buildFn: (g, x, gy, count) => {
       g.fillStyle(0x8b6914, 1);
       g.fillRect(x - 16, gy - 20, 32, 20);
       g.lineStyle(1, 0x5a4410, 1);
@@ -32,91 +100,37 @@ const CAMP_STRUCTURES: Record<string, {
       if (count >= 3) { g.fillStyle(0xa88a34, 1); g.fillRect(x - 6, gy - 48, 18, 12); g.strokeRect(x - 6, gy - 48, 18, 12); }
     },
   },
-  hp_boost: {
-    label: 'Dummy', x: 460, color: 0x6b5030,
-    buildFn: (g, x, gy, count) => {
-      // Training dummy
-      g.fillStyle(0x6b5030, 1);
-      g.fillRect(x - 3, gy - 50, 6, 50);   // post
-      g.fillRect(x - 18, gy - 40, 36, 8);   // arms
-      g.fillStyle(0x8a6842, 1);
-      g.fillCircle(x, gy - 58, 10);         // head
-      if (count >= 2) { g.fillStyle(0x993333, 0.6); g.fillCircle(x, gy - 36, 6); } // target
-      if (count >= 3) { g.fillStyle(0xcc4444, 0.7); g.fillCircle(x, gy - 36, 4); }
-    },
-  },
-  gold_gain: {
-    label: 'Market', x: 580, color: 0x27ae60,
-    buildFn: (g, x, gy, count) => {
-      // Market stall
-      g.fillStyle(0x6b5030, 1);
-      g.fillRect(x - 28, gy - 8, 56, 8);    // counter
-      g.fillRect(x - 26, gy - 40, 4, 32);   // left post
-      g.fillRect(x + 22, gy - 40, 4, 32);   // right post
-      g.fillStyle(0x27ae60, 0.8);
-      g.fillRect(x - 30, gy - 48, 60, 10);  // awning
-      if (count >= 2) { g.fillStyle(0xf1c40f, 0.8); g.fillCircle(x - 8, gy - 14, 4); g.fillCircle(x + 8, gy - 14, 4); }
-    },
-  },
+  // Super foreground — nearest props
   damage_bonus: {
-    label: 'Forge', x: 700, color: 0x95a5a6,
+    x: 1060, layer: 'superFg',
     buildFn: (g, x, gy, count) => {
-      // Forge — stone blocks + anvil
       g.fillStyle(0x5a5a6a, 1);
-      g.fillRect(x - 20, gy - 24, 40, 24);  // base
+      g.fillRect(x - 20, gy - 24, 40, 24);
       g.lineStyle(1, 0x3a3a4a, 1);
       g.strokeRect(x - 20, gy - 24, 40, 24);
       g.fillStyle(0x7a7a8a, 1);
-      g.fillRect(x - 10, gy - 32, 20, 8);   // anvil top
-      if (count >= 2) { g.fillStyle(0xe67e22, 0.7); g.fillCircle(x + 16, gy - 30, 5); } // flame
+      g.fillRect(x - 10, gy - 32, 20, 8);
+      if (count >= 2) { g.fillStyle(0xe67e22, 0.7); g.fillCircle(x + 16, gy - 30, 5); }
       if (count >= 3) { g.fillStyle(0xff4444, 0.5); g.fillCircle(x + 16, gy - 30, 8); }
-    },
-  },
-  starting_relic: {
-    label: 'Altar', x: 820, color: 0x8e44ad,
-    buildFn: (g, x, gy, count) => {
-      // Altar — stone pedestal
-      g.fillStyle(0x5a5a6a, 1);
-      g.fillRect(x - 14, gy - 30, 28, 30);  // pillar
-      g.fillRect(x - 20, gy - 6, 40, 6);    // base
-      g.fillStyle(0x8e44ad, 0.8);
-      g.fillRect(x - 18, gy - 36, 36, 6);   // top slab
-      if (count >= 1) { g.fillStyle(0xc89ef0, 0.7); g.fillCircle(x, gy - 44, 5); } // glow orb
-    },
-  },
-  launch_power: {
-    label: 'Sling', x: 940, color: 0xa0522d,
-    buildFn: (g, x, gy, count) => {
-      // Sling tower
-      g.fillStyle(0x6b5030, 1);
-      g.fillRect(x - 4, gy - 55, 8, 55);    // main post
-      g.fillRect(x - 14, gy - 55, 6, 18);   // left prong
-      g.fillRect(x + 8, gy - 55, 6, 18);    // right prong
-      g.fillRect(x - 12, gy - 6, 24, 6);    // base
-      g.lineStyle(2, 0x8b6914, 0.8);
-      g.lineBetween(x - 11, gy - 40, x - 2, gy - 28); // left band
-      g.lineBetween(x + 11, gy - 40, x + 2, gy - 28); // right band
-      if (count >= 2) { g.fillStyle(0xa0522d, 1); g.fillRect(x - 6, gy - 65, 12, 10); } // reinforced top
     },
   },
 };
 
 export class MainMenuScene extends Phaser.Scene {
   private _shardText: Phaser.GameObjects.Text | null = null;
-  private _campGfx: Phaser.GameObjects.Graphics | null = null;
+  private _layerGfx: Phaser.GameObjects.Graphics[] = [];
   private _fireGfx: Phaser.GameObjects.Graphics | null = null;
-  private _heroSprites: Phaser.GameObjects.Sprite[] = [];
+  private _heroStates: HeroWalkState[] = [];
+  private _shimmerGfx: Phaser.GameObjects.Graphics | null = null;
 
   constructor() {
     super({ key: 'MainMenuScene' });
   }
 
   create(data: MainMenuData = {}) {
-    console.log('[MainMenuScene] create() called', data);
     (this.registry.get('music') as MusicSystem | null)?.play('menu');
     const { shardsEarned = 0 } = data;
 
-    // Award shards from the completed run
     if (shardsEarned > 0) earnShards(shardsEarned);
 
     this.cameras.main.fadeIn(400, 0, 0, 0);
@@ -126,48 +140,105 @@ export class MainMenuScene extends Phaser.Scene {
     this.buildHeroSprites();
     this.buildTitle();
     this.buildShardDisplay(shardsEarned);
+    this.buildSettingsButton();
     this.buildButtons();
 
-    // Resume handler — rebuild visuals after returning from overlay
     this.events.on('resume', this.onResume, this);
   }
 
-  private onResume() {
-    // Rebuild camp structures (new purchases may have been made)
-    this._campGfx?.destroy();
-    this._campGfx = null;
-    if (this._fireGfx) { this.tweens.killTweensOf(this._fireGfx); this._fireGfx.destroy(); this._fireGfx = null; }
-    this.buildCampStructures();
-    // Refresh shard display
-    this._shardText?.setText(`◆ ${getShards()}`);
+  update(_time: number, _delta: number) {
+    const now = this.time.now;
+    for (const h of this._heroStates) {
+      if (h.pauseUntil > 0) {
+        if (now < h.pauseUntil) continue;
+        h.pauseUntil = 0;
+        h.targetX = Phaser.Math.Between(200, 1100);
+        h.walking = true;
+        const walkAnim = `${h.key}_walk`;
+        if (this.anims.exists(walkAnim)) {
+          h.sprite.play(walkAnim);
+        }
+        h.sprite.setFlipX(h.targetX < h.sprite.x);
+      }
+
+      if (!h.walking) continue;
+
+      const dx = h.targetX - h.sprite.x;
+      if (Math.abs(dx) < 5) {
+        h.walking = false;
+        const idleAnim = `${h.key}_idle`;
+        if (this.anims.exists(idleAnim)) {
+          h.sprite.play(idleAnim);
+        }
+        // Keep current facing direction while idle
+        h.pauseUntil = now + Phaser.Math.Between(1000, 4000);
+      } else {
+        h.sprite.x += Math.sign(dx) * 0.4;
+        h.sprite.setFlipX(dx < 0);
+      }
+    }
   }
 
-  // ── Background ──────────────────────────────────────────────────────────
+  private onResume() {
+    // Destroy and rebuild camp layers
+    for (const g of this._layerGfx) { this.tweens.killTweensOf(g); g.destroy(); }
+    this._layerGfx = [];
+    if (this._fireGfx) { this.tweens.killTweensOf(this._fireGfx); this._fireGfx.destroy(); this._fireGfx = null; }
+    this.buildCampStructures();
+    // Rebuild heroes (new unlocks)
+    this.destroyHeroes();
+    this.buildHeroSprites();
+    this._shardText?.setText(`\u25c6 ${getShards()}`);
+  }
+
+  private destroyHeroes() {
+    for (const h of this._heroStates) h.sprite.destroy();
+    this._heroStates = [];
+  }
+
+  // ── Background (sky + parallax ground strips) ─────────────────────────
   private buildBackground() {
     const bg = this.add.graphics().setDepth(0);
+    const midY = LAYER_CFG.mid.y;
 
-    // Night sky gradient
+    // Sky gradient (0 → distant terrain start)
     bg.fillGradientStyle(0x0a0e2a, 0x0a0e2a, 0x142040, 0x142040, 1);
-    bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT * 0.75);
+    bg.fillRect(0, 0, GAME_WIDTH, 498);
 
-    // Ground
-    const groundY = GAME_HEIGHT * 0.75;
+    // Distant terrain transition (498 → midY) — subtle hill area
+    bg.fillGradientStyle(0x101830, 0x101830, 0x152a15, 0x152a15, 1);
+    bg.fillRect(0, 498, GAME_WIDTH, midY - 498);
+
+    // Main ground (midY → bottom)
     bg.fillGradientStyle(0x1a3a1a, 0x1a3a1a, 0x0d1f0d, 0x0d1f0d, 1);
-    bg.fillRect(0, groundY, GAME_WIDTH, GAME_HEIGHT - groundY);
+    bg.fillRect(0, midY, GAME_WIDTH, GAME_HEIGHT - midY);
 
-    // Grass strip
-    bg.fillStyle(0x2a5a2a, 1);
-    bg.fillRect(0, groundY, GAME_WIDTH, 4);
-    bg.fillStyle(0x3a7a3a, 0.6);
-    for (let i = 0; i < 60; i++) {
-      const gx = Phaser.Math.Between(0, GAME_WIDTH);
-      bg.fillRect(gx, groundY - Phaser.Math.Between(2, 8), 2, Phaser.Math.Between(4, 10));
+    // Foreground ground — slightly different shade below midY
+    bg.fillGradientStyle(0x16321a, 0x16321a, 0x0b1a0e, 0x0b1a0e, 0.5);
+    bg.fillRect(0, midY + 6, GAME_WIDTH, GAME_HEIGHT - midY - 6);
+
+    // Parallax ground strips — a grass/path line at each layer Y
+    const strips: { y: number; intensity: number; tufts: number }[] = [
+      { y: LAYER_CFG.superBg.y, intensity: 0.12, tufts: 8 },
+      { y: LAYER_CFG.bg.y,      intensity: 0.22, tufts: 14 },
+      { y: midY,                 intensity: 0.80, tufts: 50 },
+      { y: LAYER_CFG.fg.y,      intensity: 0.30, tufts: 16 },
+      { y: LAYER_CFG.superFg.y, intensity: 0.18, tufts: 10 },
+    ];
+    for (const strip of strips) {
+      bg.fillStyle(0x2a5a2a, strip.intensity);
+      bg.fillRect(0, strip.y, GAME_WIDTH, 3);
+      bg.fillStyle(0x3a7a3a, strip.intensity * 0.6);
+      for (let i = 0; i < strip.tufts; i++) {
+        const gx = Phaser.Math.Between(0, GAME_WIDTH);
+        bg.fillRect(gx, strip.y - Phaser.Math.Between(2, 7), 2, Phaser.Math.Between(3, 8));
+      }
     }
 
-    // Stars
+    // Stars (sky area only)
     for (let i = 0; i < 80; i++) {
       const sx = Phaser.Math.Between(0, GAME_WIDTH);
-      const sy = Phaser.Math.Between(0, groundY - 40);
+      const sy = Phaser.Math.Between(0, 480);
       bg.fillStyle(0xffffff, Math.random() * 0.4 + 0.1);
       bg.fillCircle(sx, sy, Math.random() < 0.15 ? 2 : 1);
     }
@@ -176,59 +247,69 @@ export class MainMenuScene extends Phaser.Scene {
     bg.fillStyle(0xf0e8c0, 0.85);
     bg.fillCircle(GAME_WIDTH - 140, 80, 22);
     bg.fillStyle(0x0a0e2a, 1);
-    bg.fillCircle(GAME_WIDTH - 130, 74, 20); // carve crescent
+    bg.fillCircle(GAME_WIDTH - 130, 74, 20);
   }
 
-  // ── Camp structures ─────────────────────────────────────────────────────
+  // ── Camp structures (parallax layers) ─────────────────────────────────
   private buildCampStructures() {
-    const groundY = GAME_HEIGHT * 0.75;
-    const g = this.add.graphics().setDepth(2);
-    this._campGfx = g;
+    this._layerGfx = [];
+    const midY = LAYER_CFG.mid.y;
 
-    // Always: small wooden hut
-    g.fillStyle(0x6b5030, 1);
-    g.fillRect(170, groundY - 50, 60, 50);       // hut walls
-    g.lineStyle(1, 0x4a3820, 1);
-    g.strokeRect(170, groundY - 50, 60, 50);
-    g.fillStyle(0x8b6914, 1);
-    g.fillTriangle(165, groundY - 50, 200, groundY - 72, 235, groundY - 50); // roof
-    g.fillStyle(0x3a2810, 1);
-    g.fillRect(190, groundY - 22, 14, 22);       // door
+    // ── Middle layer (always: hut + log) ──
+    const midGfx = this.add.graphics().setDepth(LAYER_CFG.mid.depth);
+    this._layerGfx.push(midGfx);
 
-    // Campfire glow
-    this._fireGfx = this.add.graphics().setDepth(3);
+    // Hut
+    midGfx.fillStyle(0x6b5030, 1);
+    midGfx.fillRect(170, midY - 50, 60, 50);
+    midGfx.lineStyle(1, 0x4a3820, 1);
+    midGfx.strokeRect(170, midY - 50, 60, 50);
+    midGfx.fillStyle(0x8b6914, 1);
+    midGfx.fillTriangle(165, midY - 50, 200, midY - 72, 235, midY - 50);
+    midGfx.fillStyle(0x3a2810, 1);
+    midGfx.fillRect(190, midY - 22, 14, 22);
+
+    // Log beside fire
+    midGfx.fillStyle(0x5a4020, 1);
+    midGfx.fillRect(264, midY - 6, 32, 6);
+
+    // Campfire (separate gfx for pulse tween)
+    this._fireGfx = this.add.graphics().setDepth(LAYER_CFG.mid.depth);
     this._fireGfx.fillStyle(0xff6600, 0.3);
-    this._fireGfx.fillCircle(280, groundY - 6, 18);
+    this._fireGfx.fillCircle(280, midY - 6, 18);
     this._fireGfx.fillStyle(0xff4400, 0.5);
-    this._fireGfx.fillCircle(280, groundY - 8, 8);
+    this._fireGfx.fillCircle(280, midY - 8, 8);
     this._fireGfx.fillStyle(0xffaa00, 0.7);
-    this._fireGfx.fillCircle(280, groundY - 10, 4);
-
-    // Campfire pulse
+    this._fireGfx.fillCircle(280, midY - 10, 4);
     this.tweens.add({
       targets: this._fireGfx, alpha: 0.7, duration: 800,
       yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    // Log beside fire
-    g.fillStyle(0x5a4020, 1);
-    g.fillRect(264, groundY - 6, 32, 6);
+    // ── Per-upgrade structures on their assigned layers ──
+    const byLayer = new Map<ParallaxLayer, Array<{ x: number; buildFn: (typeof CAMP_STRUCTURES)[string]['buildFn']; count: number }>>();
+    for (const [id, cfg] of Object.entries(CAMP_STRUCTURES)) {
+      const count = getPurchaseCount(id);
+      if (count === 0) continue;
+      if (!byLayer.has(cfg.layer)) byLayer.set(cfg.layer, []);
+      byLayer.get(cfg.layer)!.push({ x: cfg.x, buildFn: cfg.buildFn, count });
+    }
 
-    // Per-upgrade structures
-    for (const [upgradeId, cfg] of Object.entries(CAMP_STRUCTURES)) {
-      const count = getPurchaseCount(upgradeId);
-      if (count > 0) {
-        cfg.buildFn(g, cfg.x, groundY, count);
+    for (const [layerKey, items] of byLayer.entries()) {
+      const lcfg = LAYER_CFG[layerKey];
+      const g = this.add.graphics().setDepth(lcfg.depth).setAlpha(lcfg.alpha);
+      this._layerGfx.push(g);
+      for (const item of items) {
+        item.buildFn(g, item.x, lcfg.y, item.count);
       }
     }
   }
 
-  // ── Hero sprites ────────────────────────────────────────────────────────
+  // ── Hero sprites (walking, on middle layer) ───────────────────────────
   private buildHeroSprites() {
-    const groundY = GAME_HEIGHT * 0.75;
+    const midY = LAYER_CFG.mid.y;
     const heroKeys: string[] = ['warrior', 'ranger', 'mage', 'priest'];
 
-    // Show all unlocked hero classes
     const meta = getMetaBonuses();
     for (const cls of meta.unlockedHeroClasses) {
       const key = cls.toLowerCase();
@@ -237,35 +318,185 @@ export class MainMenuScene extends Phaser.Scene {
 
     const spacing = 60;
     const startX = GAME_WIDTH / 2 - ((heroKeys.length - 1) * spacing) / 2;
+    const hy = midY - 16; // feet align with ground line
 
-    this._heroSprites = [];
+    this._heroStates = [];
+    const now = this.time.now;
     for (let i = 0; i < heroKeys.length; i++) {
       const hx = startX + i * spacing;
-      const hy = groundY - 26;
       const key = heroKeys[i];
 
       const sprite = this.add.sprite(hx, hy, `${key}_idle_1`)
         .setDisplaySize(50, 50)
-        .setDepth(4);
+        .setDepth(4); // between mid (3) and fg (5)
 
       const animKey = `${key}_idle`;
-      if (this.anims.exists(animKey)) {
-        sprite.play(animKey);
-      }
-      this._heroSprites.push(sprite);
+      if (this.anims.exists(animKey)) sprite.play(animKey);
+
+      this._heroStates.push({
+        sprite,
+        key,
+        targetX: hx,
+        pauseUntil: now + Phaser.Math.Between(500, 3000),
+        walking: false,
+      });
     }
   }
 
-  // ── Title ───────────────────────────────────────────────────────────────
+  // ── Title (sling / rubber-band launch animation) ──────────────────────
   private buildTitle() {
-    this.add.text(GAME_WIDTH / 2, 48, 'SLING SQUAD', {
+    const finalX = GAME_WIDTH / 2;
+    const finalY = 48;
+    const postX = 130;
+
+    // ── Sling Y-fork post ──
+    const forkY = finalY + 8;
+    const baseY = finalY + 55;
+    const leftTip = { x: postX - 18, y: finalY - 22 };
+    const rightTip = { x: postX + 18, y: finalY - 22 };
+
+    const postGfx = this.add.graphics().setDepth(9);
+    postGfx.lineStyle(6, 0x5a4020, 0.9);
+    postGfx.lineBetween(postX, baseY, postX, forkY);             // handle
+    postGfx.lineStyle(5, 0x6b5030, 0.9);
+    postGfx.lineBetween(postX, forkY, leftTip.x, leftTip.y);     // left prong
+    postGfx.lineBetween(postX, forkY, rightTip.x, rightTip.y);   // right prong
+    // Prong caps
+    postGfx.fillStyle(0x8b6914, 1);
+    postGfx.fillCircle(leftTip.x, leftTip.y, 4);
+    postGfx.fillCircle(rightTip.x, rightTip.y, 4);
+
+    // ── Elastic bands ──
+    const bandGfx = this.add.graphics().setDepth(9);
+
+    // ── Title text (the "projectile") ──
+    const startX = postX - 30;
+    const title = this.add.text(startX, finalY, 'SLING SQUAD', {
       fontSize: '42px', fontFamily: 'Georgia, serif',
       color: '#c8a840', stroke: '#000', strokeThickness: 5,
       letterSpacing: 6,
-    }).setOrigin(0.5).setDepth(10);
+    }).setOrigin(0.5).setDepth(10).setScale(0.9, 1);
+
+    // Draw elastic bands from prong tips to the title pouch point
+    const drawBands = () => {
+      bandGfx.clear();
+      const pouchX = title.x - title.displayWidth * 0.35;
+      const pouchY = title.y;
+      // Band thickness increases with stretch
+      const stretch = Math.max(0, postX - pouchX);
+      const thickness = 2 + stretch * 0.025;
+      bandGfx.lineStyle(thickness, 0x8b6914, 0.85);
+      bandGfx.lineBetween(leftTip.x, leftTip.y, pouchX, pouchY);
+      bandGfx.lineBetween(rightTip.x, rightTip.y, pouchX, pouchY);
+      // Pouch
+      bandGfx.fillStyle(0x8b6914, 0.6);
+      bandGfx.fillCircle(pouchX, pouchY, 4);
+    };
+    drawBands();
+
+    // ── Phase 1: Pull back (350ms) ──
+    let bandsSnapped = false;
+    this.tweens.add({
+      targets: title,
+      x: postX - 70,
+      scaleX: 0.7,
+      duration: 350,
+      ease: 'Sine.easeIn',
+      onUpdate: () => drawBands(),
+      onComplete: () => {
+        // ── Phase 2: Release — fling to center (1200ms, Elastic.easeOut) ──
+        this.tweens.add({
+          targets: title,
+          x: finalX,
+          scaleX: 1,
+          duration: 1200,
+          ease: 'Elastic.easeOut',
+          onUpdate: () => {
+            if (!bandsSnapped && title.x > postX + 40) {
+              bandsSnapped = true;
+              // Bands snap back to resting position
+              bandGfx.clear();
+              bandGfx.lineStyle(2, 0x8b6914, 0.6);
+              const restX = postX;
+              const restY = finalY + 5;
+              bandGfx.lineBetween(leftTip.x, leftTip.y, restX, restY);
+              bandGfx.lineBetween(rightTip.x, rightTip.y, restX, restY);
+            } else if (!bandsSnapped) {
+              drawBands();
+            }
+          },
+          onComplete: () => {
+            // ── Phase 3: Settle ──
+            // Fade out sling post + bands
+            this.tweens.add({
+              targets: [postGfx, bandGfx],
+              alpha: 0,
+              duration: 600,
+              onComplete: () => { postGfx.destroy(); bandGfx.destroy(); },
+            });
+
+            // Micro-shake for impact
+            this.cameras.main.shake(120, 0.003);
+
+            // Ambient scale pulse
+            this.tweens.add({
+              targets: title,
+              scaleX: 1.02, scaleY: 1.02,
+              yoyo: true, repeat: -1, duration: 2000,
+              ease: 'Sine.easeInOut',
+            });
+
+            // Gold shimmer sweep
+            this.buildShimmer(title, finalX, finalY);
+          },
+        });
+      },
+    });
+
+    // ── Subtitle — fades in after fling completes ──
+    const subtitle = this.add.text(GAME_WIDTH / 2, finalY + 34, 'Ready Your Sling', {
+      fontSize: '14px', fontFamily: 'Georgia, serif',
+      color: '#8a9ab0', fontStyle: 'italic',
+    }).setOrigin(0.5).setDepth(10).setAlpha(0);
+
+    this.tweens.add({
+      targets: subtitle,
+      alpha: 0.8,
+      duration: 600,
+      delay: 1800, // after pull (350) + fling (1200) + settle
+      ease: 'Sine.easeIn',
+    });
   }
 
-  // ── Shard display (top-right) ───────────────────────────────────────────
+  // ── Shimmer sweep across title ────────────────────────────────────────
+  private buildShimmer(title: Phaser.GameObjects.Text, cx: number, cy: number) {
+    const shimmer = this.add.graphics().setDepth(11);
+    this._shimmerGfx = shimmer;
+    const shimmerW = 60;
+    const shimmerH = 62;
+    const halfW = title.displayWidth / 2;
+    const shimmerStartX = cx - halfW - shimmerW;
+    const shimmerEndX = cx + halfW + shimmerW;
+
+    shimmer.setPosition(shimmerStartX, cy - shimmerH / 2);
+    shimmer.fillStyle(0xfff8d0, 0.15);
+    shimmer.fillRect(0, 0, shimmerW, shimmerH);
+    shimmer.fillStyle(0xfff8d0, 0.25);
+    shimmer.fillRect(shimmerW * 0.3, 0, shimmerW * 0.4, shimmerH);
+    shimmer.setBlendMode(Phaser.BlendModes.ADD);
+
+    this.tweens.add({
+      targets: shimmer,
+      x: shimmerEndX,
+      duration: 4000,
+      repeat: -1,
+      repeatDelay: 2000,
+      ease: 'Linear',
+      onRepeat: () => shimmer.setPosition(shimmerStartX, cy - shimmerH / 2),
+    });
+  }
+
+  // ── Shard display (top-right) ─────────────────────────────────────────
   private buildShardDisplay(earned: number) {
     const px = GAME_WIDTH - 20, py = 14;
     const W = 180, H = 44;
@@ -280,12 +511,11 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
-    this._shardText = this.add.text(px - W / 2, py + 20, `◆ ${getShards()}`, {
+    this._shardText = this.add.text(px - W / 2, py + 20, `\u25c6 ${getShards()}`, {
       fontSize: '18px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
       color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
-    // Earned badge animation
     if (earned > 0) {
       const badge = this.add.text(px - 22, py + 8, `+${earned}`, {
         fontSize: '13px', fontFamily: 'Georgia, serif',
@@ -301,15 +531,40 @@ export class MainMenuScene extends Phaser.Scene {
     }
   }
 
-  // ── Buttons ─────────────────────────────────────────────────────────────
+  // ── Settings gear icon (top-left) ─────────────────────────────────────
+  private buildSettingsButton() {
+    const size = 36, r = 8;
+    const bg = this.add.graphics().setDepth(20);
+    const draw = (hovered: boolean) => {
+      bg.clear();
+      bg.fillStyle(0x060b12, hovered ? 1 : 0.75);
+      bg.fillRoundedRect(10, 10, size, size, r);
+      bg.lineStyle(1, 0x3a5070, hovered ? 1 : 0.5);
+      bg.strokeRoundedRect(10, 10, size, size, r);
+    };
+    draw(false);
+    this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
+      fontSize: '18px',
+    }).setOrigin(0.5).setDepth(21);
+
+    const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(22);
+    hit.on('pointerover', () => draw(true));
+    hit.on('pointerout', () => draw(false));
+    hit.on('pointerdown', () => {
+      this.scene.launch('SettingsScene', { callerKey: 'MainMenuScene' });
+    });
+  }
+
+  // ── Buttons ───────────────────────────────────────────────────────────
   private buildButtons() {
     const cx = GAME_WIDTH / 2;
-    const baseY = GAME_HEIGHT * 0.75 + 32; // just below ground line
+    const baseY = GAME_HEIGHT * 0.75 + 32;
     const colSpacing = 230;
     const rowSpacing = 50;
     const savedRunExists = hasSavedRun();
 
-    // Row 1
+    // Row 1: Continue Run | New Run
     this.buildMenuButton(cx - colSpacing / 2, baseY, 'Continue Run', 0x2ecc71, savedRunExists, () => {
       this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
         if (p === 1) this.scene.start('OverworldScene');
@@ -319,49 +574,16 @@ export class MainMenuScene extends Phaser.Scene {
       if (savedRunExists) {
         this.showConfirmDialog();
       } else {
-        this.startNewRun();
+        this.goToSquadSelect();
       }
     });
 
-    // Row 2
+    // Row 2: Camp Upgrades | Codex
     this.buildMenuButton(cx - colSpacing / 2, baseY + rowSpacing, 'Camp Upgrades', 0x7ec8e3, true, () => {
       this.scene.launch('CampUpgradesScene', { callerKey: 'MainMenuScene' });
     });
-    this.buildMenuButton(cx + colSpacing / 2, baseY + rowSpacing, 'Settings', 0xa0bcd0, true, () => {
-      this.scene.launch('SettingsScene', { callerKey: 'MainMenuScene' });
-    });
-
-    // Row 3
-    this.buildMenuButton(cx - colSpacing / 2, baseY + rowSpacing * 2, 'Codex', 0xc0a060, true, () => {
+    this.buildMenuButton(cx + colSpacing / 2, baseY + rowSpacing, 'Codex', 0xc0a060, true, () => {
       this.scene.start('CodexScene', { callerKey: 'MainMenuScene' });
-    });
-
-    const dailyBest = getTodaysBestScore();
-    const dailyLabel = dailyBest ? `Daily  ✓${dailyBest.score}` : 'Daily Challenge';
-    this.buildMenuButton(cx + colSpacing / 2, baseY + rowSpacing * 2, dailyLabel, 0xe67e22, true, () => {
-      this.startDailyChallenge();
-    });
-  }
-
-  private startDailyChallenge() {
-    const meta = getMetaBonuses();
-    clearSave();
-
-    const seed = getDailySeed();
-    const squad = getDailySquad(seed) as HeroClass[];
-    const mapId = getDailyMapId(seed);
-
-    // Use goblin_wastes nodes for now (daily always uses the base map nodes)
-    const nodes = (nodesData as any).nodes as NodeDef[];
-    newRun(nodes, squad, meta, mapId, { isDaily: true });
-
-    if (meta.startingRelic) {
-      const relic = pickRandomCommonRelic();
-      if (relic) addRelic(relic);
-    }
-
-    this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
-      if (p === 1) this.scene.start('OverworldScene');
     });
   }
 
@@ -420,19 +642,17 @@ export class MainMenuScene extends Phaser.Scene {
     }
   }
 
-  // ── Confirm dialog ──────────────────────────────────────────────────────
+  // ── Confirm dialog ────────────────────────────────────────────────────
   private showConfirmDialog() {
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
 
     const overlay = this.add.container(0, 0).setDepth(50);
 
-    // Dim
     const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.65)
-      .setInteractive(); // block input below
+      .setInteractive();
     overlay.add(dim);
 
-    // Panel
     const pw = 440, ph = 220, pr = 12;
     const panelBg = this.add.graphics();
     panelBg.fillStyle(0x0a1220, 0.97);
@@ -441,28 +661,21 @@ export class MainMenuScene extends Phaser.Scene {
     panelBg.strokeRoundedRect(cx - pw / 2, cy - ph / 2, pw, ph, pr);
     overlay.add(panelBg);
 
-    // Title
-    const title = this.add.text(cx, cy - 60, 'Abandon Current Run?', {
+    overlay.add(this.add.text(cx, cy - 60, 'Abandon Current Run?', {
       fontSize: '24px', fontFamily: 'Georgia, serif',
       color: '#e74c3c', stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0.5);
-    overlay.add(title);
+    }).setOrigin(0.5));
 
-    // Subtitle
-    const sub = this.add.text(cx, cy - 24, 'Your saved run will be lost.', {
+    overlay.add(this.add.text(cx, cy - 24, 'Your saved run will be lost.', {
       fontSize: '14px', fontFamily: 'Georgia, serif', color: '#7a9ab8',
-    }).setOrigin(0.5);
-    overlay.add(sub);
+    }).setOrigin(0.5));
 
-    // Cancel button
     this.buildDialogButton(overlay, cx - 90, cy + 46, 'Cancel', 0x3a5070, () => {
       overlay.destroy();
     });
-
-    // Confirm button
     this.buildDialogButton(overlay, cx + 90, cy + 46, 'Confirm', 0xe74c3c, () => {
       overlay.destroy();
-      this.startNewRun();
+      this.goToSquadSelect();
     });
   }
 
@@ -499,30 +712,10 @@ export class MainMenuScene extends Phaser.Scene {
     hit.on('pointerdown', onClick);
   }
 
-  // ── Start new run ───────────────────────────────────────────────────────
-  private startNewRun() {
-    const meta = getMetaBonuses();
-    clearSave();
-
-    // Build squad from unlocked classes
-    const squad = ['WARRIOR', 'RANGER', 'MAGE', 'PRIEST'] as HeroClass[];
-    for (const cls of meta.unlockedHeroClasses) {
-      if (!squad.includes(cls as HeroClass)) {
-        squad.push(cls as HeroClass);
-      }
-    }
-
-    const nodes = (nodesData as any).nodes as NodeDef[];
-    newRun(nodes, squad, meta);
-
-    // Inject starting relic if purchased
-    if (meta.startingRelic) {
-      const relic = pickRandomCommonRelic();
-      if (relic) addRelic(relic);
-    }
-
+  // ── Navigate to Squad Select ──────────────────────────────────────────
+  private goToSquadSelect() {
     this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
-      if (p === 1) this.scene.start('OverworldScene');
+      if (p === 1) this.scene.start('SquadSelectScene');
     });
   }
 }

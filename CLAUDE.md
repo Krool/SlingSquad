@@ -7,6 +7,7 @@ Physics-based roguelike where you sling a squad of heroes at block structures to
 ```bash
 npm run dev      # Vite dev server on port 3000
 npm run build    # tsc + vite build
+npm run deploy   # build + push dist/ to gh-pages branch
 ```
 
 ## Tech Stack
@@ -37,13 +38,15 @@ src/
   config/constants.ts     — ALL tuning values (physics, hero stats, enemy stats, materials)
   scenes/                 — 11 scenes (Boot, MainMenu, Overworld, Battle, Shop, Result, CampUpgrades, Settings, Event, Forge, Codex)
   entities/               — Game objects (Hero, Enemy, Block, Barrel, Projectile, Coin)
-  systems/                — 15 systems (Launch, Combat, Impact, Timeout, RunState, MetaState, Audio, Music, Achievement, Mastery, Ascension, StatsTracker, DiscoveryTracker, Tutorial, DailyChallenge)
+  systems/                — 15 systems (Launch, Combat, Impact, Timeout, RunState, MetaState, Audio, Music, Achievement, Mastery, Ascension, RunHistory, DiscoveryLog, Tutorial, DailyChallenge)
   ui/                     — HUD components (SquadUI, DamageNumber)
   data/                   — JSON data files (heroes, enemies, relics, nodes, upgrades, curses, events, achievements, modifiers)
   data/maps/              — Alternate map definitions (frozen_peaks, infernal_keep) + index.ts registry
 assets/
   sprites/medievalrpgpack/ — Character sprite frames (gitignored)
-  music/                   — 8 category folders: battle, boss, defeat, event, map, menu, shop, victory
+  music/                   — 8 category folders (gitignored): battle, boss, defeat, event, map, menu, shop, victory
+public/                    — Static files: favicon.svg, .nojekyll, robots.txt, manifest.json
+.github/workflows/         — GitHub Actions deploy workflow
 ```
 
 ### Key Patterns
@@ -94,6 +97,12 @@ assets/
 
 ### MatterJS Typing Gotcha
 - Phaser collision events emit `MatterJS.Body`; cast to `MatterJS.BodyType` for type compatibility
+
+### Deployment — GitHub Pages
+- `base: '/SlingSquad/'` in vite.config.ts is **required** — removing it breaks all asset paths on GitHub Pages
+- Assets (sprites, music, UI) are gitignored — build locally, CI cannot build
+- Deploy flow: `npm run deploy` → builds, pushes `dist/` to `gh-pages` branch → GitHub Pages serves it
+- `public/.nojekyll` prevents GitHub Pages from running Jekyll processing
 
 ### Bundle Size
 - Phaser is ~1.5MB — expected and acceptable for prototype

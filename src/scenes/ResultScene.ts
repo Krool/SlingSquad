@@ -4,7 +4,7 @@ import { getRunState, type NodeDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { calcShardsEarned } from '@/systems/MetaState';
 import { addXP } from '@/systems/MasterySystem';
-import { recordRunEnd } from '@/systems/StatsTracker';
+import { recordRunEnd } from '@/systems/RunHistory';
 import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
 import { recordDailyScore, getTodayString } from '@/systems/DailyChallenge';
 import nodesData from '@/data/nodes.json';

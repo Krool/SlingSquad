@@ -28,8 +28,8 @@ import {
 } from '@/systems/RunState';
 import { AudioSystem } from '@/systems/AudioSystem';
 import type { MusicSystem } from '@/systems/MusicSystem';
-import { recordEnemyKill, recordHeroUsed } from '@/systems/DiscoveryTracker';
-import { addBlocksDestroyed, addEnemiesKilled, recordLaunchDamage, recordBattleTime } from '@/systems/StatsTracker';
+import { recordEnemyKill, recordHeroUsed } from '@/systems/DiscoveryLog';
+import { addBlocksDestroyed, addEnemiesKilled, recordLaunchDamage, recordBattleTime } from '@/systems/RunHistory';
 import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
 import { isTutorialComplete, completeStep, getTutorialText, getNextStep } from '@/systems/TutorialSystem';
 import nodesData from '@/data/nodes.json';

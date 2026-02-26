@@ -22,6 +22,7 @@ const CHARS: CharDef[] = [
   {
     key: 'warrior', folder: 'WARRIOR', anims: [
       { name: 'idle',   prefix: 'IDLE',   count: 4, frameRate: 8,  repeat: -1 },
+      { name: 'walk',   prefix: 'WALK',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'jump',   prefix: 'JUMP',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'fall',   prefix: 'FALL',   count: 3, frameRate: 10, repeat: -1 },
       { name: 'attack', prefix: 'ATTACK', count: 3, frameRate: 8,  repeat: -1 },
@@ -31,6 +32,7 @@ const CHARS: CharDef[] = [
   {
     key: 'ranger', folder: 'ASSASIN', anims: [
       { name: 'idle',   prefix: 'IDLE',   count: 4, frameRate: 8,  repeat: -1 },
+      { name: 'walk',   prefix: 'WALK',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'jump',   prefix: 'JUMP',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'fall',   prefix: 'FALL',   count: 3, frameRate: 10, repeat: -1 },
       { name: 'attack', prefix: 'ATTACK', count: 3, frameRate: 8,  repeat: -1 },
@@ -41,6 +43,7 @@ const CHARS: CharDef[] = [
   {
     key: 'mage', folder: 'SORCERESS', anims: [
       { name: 'idle',   prefix: 'IDLE',   count: 4, frameRate: 8,  repeat: -1 },
+      { name: 'walk',   prefix: 'WALK',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'jump',   prefix: 'JUMP',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'fall',   prefix: 'FALL',   count: 3, frameRate: 10, repeat: -1 },
       { name: 'attack', prefix: 'ATTACK', count: 3, frameRate: 8,  repeat: -1 },
@@ -51,6 +54,7 @@ const CHARS: CharDef[] = [
   {
     key: 'priest', folder: 'NECROMANCER', anims: [
       { name: 'idle',   prefix: 'IDLE',   count: 4, frameRate: 8,  repeat: -1 },
+      { name: 'walk',   prefix: 'WALK',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'jump',   prefix: 'JUMP',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'fall',   prefix: 'FALL',   count: 3, frameRate: 10, repeat: -1 },
       { name: 'attack', prefix: 'ATTACK', count: 3, frameRate: 8,  repeat: -1 },
@@ -122,6 +126,7 @@ const CHARS: CharDef[] = [
   {
     key: 'bard', folder: 'SORCERESS', anims: [
       { name: 'idle',   prefix: 'IDLE',   count: 4, frameRate: 8,  repeat: -1 },
+      { name: 'walk',   prefix: 'WALK',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'jump',   prefix: 'JUMP',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'fall',   prefix: 'FALL',   count: 3, frameRate: 10, repeat: -1 },
       { name: 'attack', prefix: 'ATTACK', count: 3, frameRate: 8,  repeat: -1 },
@@ -133,6 +138,7 @@ const CHARS: CharDef[] = [
   {
     key: 'rogue', folder: 'ASSASIN', anims: [
       { name: 'idle',   prefix: 'IDLE',   count: 4, frameRate: 8,  repeat: -1 },
+      { name: 'walk',   prefix: 'WALK',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'jump',   prefix: 'JUMP',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'fall',   prefix: 'FALL',   count: 3, frameRate: 10, repeat: -1 },
       { name: 'attack', prefix: 'ATTACK', count: 3, frameRate: 8,  repeat: -1 },
@@ -144,6 +150,7 @@ const CHARS: CharDef[] = [
   {
     key: 'paladin', folder: 'WARRIOR', anims: [
       { name: 'idle',   prefix: 'IDLE',   count: 4, frameRate: 8,  repeat: -1 },
+      { name: 'walk',   prefix: 'WALK',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'jump',   prefix: 'JUMP',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'fall',   prefix: 'FALL',   count: 3, frameRate: 10, repeat: -1 },
       { name: 'attack', prefix: 'ATTACK', count: 3, frameRate: 8,  repeat: -1 },
@@ -154,6 +161,7 @@ const CHARS: CharDef[] = [
   {
     key: 'druid', folder: 'NECROMANCER', anims: [
       { name: 'idle',   prefix: 'IDLE',   count: 4, frameRate: 8,  repeat: -1 },
+      { name: 'walk',   prefix: 'WALK',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'jump',   prefix: 'JUMP',   count: 4, frameRate: 10, repeat: -1 },
       { name: 'fall',   prefix: 'FALL',   count: 3, frameRate: 10, repeat: -1 },
       { name: 'attack', prefix: 'ATTACK', count: 3, frameRate: 8,  repeat: -1 },
@@ -263,8 +271,6 @@ export class BootScene extends Phaser.Scene {
     // Instantiate MusicSystem once and share via registry (cross-scene singleton)
     const music = new MusicSystem();
     this.registry.set('music', music);
-
-    console.log('[BootScene] create() complete, starting MainMenuScene');
     this.scene.start('MainMenuScene');
   }
 }
