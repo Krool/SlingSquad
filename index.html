@@ -53,6 +53,12 @@
       canvas {
         display: block;
         image-rendering: pixelated;
+        /* Stretch to fill entire viewport — overrides Phaser's FIT letterboxing */
+        width: 100vw !important;
+        width: 100dvw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        object-fit: fill;
       }
     </style>
   </head>

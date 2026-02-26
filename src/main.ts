@@ -15,13 +15,13 @@ import { CodexScene } from '@/scenes/CodexScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: window.innerWidth,
-  height: window.innerHeight,
+  width: GAME_WIDTH,
+  height: GAME_HEIGHT,
   parent: 'game-container',
   backgroundColor: '#0d1117',
   scale: {
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.NO_CENTER,
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   physics: {
     default: 'matter',
