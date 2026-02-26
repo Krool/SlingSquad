@@ -22,7 +22,9 @@ const config: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.NO_CENTER,
-    expandParent: false,
+    expandParent: true,
+    width: '100%',
+    height: '100%',
   },
   physics: {
     default: 'matter',
