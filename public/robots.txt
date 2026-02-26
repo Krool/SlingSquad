@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://kroolworld.github.io/SlingSquad/
+Sitemap: https://krool.github.io/SlingSquad/

@@ -2,7 +2,7 @@
   "name": "slingsquad",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://kroolworld.github.io/SlingSquad/",
+  "homepage": "https://krool.github.io/SlingSquad/",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
