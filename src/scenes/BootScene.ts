@@ -245,7 +245,7 @@ export class BootScene extends Phaser.Scene {
         for (let i = 1; i <= anim.count; i++) {
           this.load.image(
             `${char.key}_${anim.name}_${i}`,
-            `sprites/medievalrpgpack/${char.folder}/${anim.prefix} ${i}.png`,
+            `sprites/medievalrpgpack/${char.folder}/${anim.prefix}_${i}.png`,
           );
         }
       }
