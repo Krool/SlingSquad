@@ -8,7 +8,7 @@
     "build": "tsc && vite build && npm run copy-assets",
     "copy-assets": "cp -r assets/sprites dist/assets/ && node -e \"const fs=require('fs'),p=require('path');(function r(d){fs.readdirSync(d).forEach(f=>{const fp=p.join(d,f);fs.statSync(fp).isDirectory()?r(fp):f.includes(' ')&&fs.renameSync(fp,p.join(d,f.replace(/ /g,'_')))})})('dist/assets/sprites')\" && echo '' > dist/.gitignore",
     "preview": "vite preview",
-    "deploy": "npm run build && gh-pages -d dist --dotfiles"
+    "deploy": "npm run build && node scripts/deploy.js"
   },
   "dependencies": {
     "phaser": "^3.88.2"

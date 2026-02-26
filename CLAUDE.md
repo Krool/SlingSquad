@@ -101,8 +101,11 @@ public/                    — Static files: favicon.svg, .nojekyll, robots.txt,
 ### Deployment — GitHub Pages
 - `base: '/SlingSquad/'` in vite.config.ts is **required** — removing it breaks all asset paths on GitHub Pages
 - Assets (sprites, music, UI) are gitignored — build locally, CI cannot build
-- Deploy flow: `npm run deploy` → builds, pushes `dist/` to `gh-pages` branch → GitHub Pages serves it
+- Deploy flow: `npm run deploy` → builds, copies+renames sprites into dist/, pushes `dist/` to gh-pages branch via `scripts/deploy.js`
+- **Sprite filenames**: source files have spaces (`IDLE 1.png`) but `copy-assets` renames to underscores (`IDLE_1.png`) — GitHub Pages returns 404 for files with spaces
+- BootScene loads sprites with underscore paths (`${prefix}_${i}.png`) to match renamed files
 - `public/.nojekyll` prevents GitHub Pages from running Jekyll processing
+- Deploy script uses manual git orphan branch (not `gh-pages` npm package) to avoid Windows ENAMETOOLONG with 1800+ files
 
 ### Bundle Size
 - Phaser is ~1.5MB — expected and acceptable for prototype
