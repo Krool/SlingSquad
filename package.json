@@ -5,7 +5,8 @@
   "homepage": "https://krool.github.io/SlingSquad/",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && npm run copy-assets",
+    "copy-assets": "cp -r assets/sprites dist/assets/",
     "preview": "vite preview",
     "deploy": "npm run build && gh-pages -d dist"
   },
