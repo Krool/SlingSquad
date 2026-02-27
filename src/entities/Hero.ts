@@ -49,6 +49,14 @@ export class Hero {
   private _lastX = 0;
   private _lastY = 0;
 
+  /** Persistent tint for heroes that reuse another class's sprite folder */
+  static readonly CLASS_TINT: Partial<Record<HeroClass, number>> = {
+    BARD:    0xffcc66,  // warm amber (shares SORCERESS with MAGE)
+    ROGUE:   0xbb88ff,  // shadow purple (shares ASSASIN with RANGER)
+    PALADIN: 0x77bbff,  // holy blue (shares WARRIOR with WARRIOR)
+    DRUID:   0x77dd77,  // nature green (shares NECROMANCER with PRIEST)
+  };
+
   constructor(
     scene: Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics },
     heroClass: HeroClass,
@@ -58,6 +66,13 @@ export class Hero {
     this.stats = HERO_STATS[heroClass];
     this._hp = this.stats.hp;
     this.maxHp = this.stats.hp;
+  }
+
+  /** Restore the persistent class tint (or clear if none). Call after temporary flash effects. */
+  restoreTint() {
+    const tint = Hero.CLASS_TINT[this.heroClass];
+    if (tint) this.sprite?.setTint(tint);
+    else this.sprite?.clearTint();
   }
 
   /** Increase max HP (relic bonus). Does not change current HP — call setStartHp after. */
@@ -116,6 +131,7 @@ export class Hero {
     this.sprite = this.scene.add.sprite(x, y - r * 0.25, `${charKey}_idle_1`)
       .setDisplaySize(r * 2.5, r * 2.5);
     this.sprite.play(`${charKey}_jump`);
+    this.restoreTint();
     this.initHpBar();
   }
 
@@ -164,7 +180,7 @@ export class Hero {
     if (this.sprite) {
       this.sprite.setTint(0x44ff88);
       this.scene.time.delayedCall(200, () => {
-        if (this.state !== 'dead') this.sprite?.clearTint();
+        if (this.state !== 'dead') this.restoreTint();
       });
     }
   }
@@ -182,7 +198,7 @@ export class Hero {
     if (this.sprite) {
       this.sprite.setTint(0xff4444);
       this.scene.time.delayedCall(120, () => {
-        if (this.state !== 'dead') this.sprite?.clearTint();
+        if (this.state !== 'dead') this.restoreTint();
       });
     }
     if (this._hp <= 0) {
@@ -195,7 +211,7 @@ export class Hero {
         if (this.sprite) {
           this.sprite.setTint(0xf1c40f);
           this.scene.time.delayedCall(300, () => {
-            if (this.state !== 'dead') this.sprite?.clearTint();
+            if (this.state !== 'dead') this.restoreTint();
           });
         }
         return;
@@ -256,10 +272,10 @@ export class Hero {
     this.sprite = this.scene.add.sprite(rx, ry - r * 0.25, `${charKey}_idle_1`)
       .setDisplaySize(r * 2.5, r * 2.5);
     this.sprite.play(`${charKey}_idle`);
-    // Green flash on revive
+    // Green flash on revive, then restore class tint
     this.sprite.setTint(0x44ff88);
     this.scene.time.delayedCall(400, () => {
-      if (this.state !== 'dead') this.sprite?.clearTint();
+      if (this.state !== 'dead') this.restoreTint();
     });
     this.initHpBar();
     this.state = 'combat';

@@ -31,6 +31,9 @@ const config: Phaser.Types.Core.GameConfig = {
       // So: gravity.y * scale(0.001) * 277.9 = desired 0.3 px/step²
       // → gravity.y = 0.3 / (0.001 * 277.9) ≈ 1.08
       gravity: { x: 0, y: 1.08 },
+      enableSleeping: true,
+      positionIterations: 10,
+      velocityIterations: 10,
       debug: false,
     },
   },

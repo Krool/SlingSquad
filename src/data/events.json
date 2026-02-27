@@ -114,5 +114,133 @@
       { "label": "Pay 20 gold", "desc": "Gain +2 trajectory dots and learn enemy weakness", "outcome": { "type": "BUY_RELIC", "cost": 20, "rarity": "uncommon" } },
       { "label": "Refuse", "desc": "You make your own destiny", "outcome": { "type": "NOTHING" } }
     ]
+  },
+  {
+    "id": "sacred_spring",
+    "name": "Sacred Spring",
+    "text": "Crystal-clear water flows from a mossy rock. The air hums with healing energy.",
+    "choices": [
+      { "label": "Bathe in the spring", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } },
+      { "label": "Fill your canteens", "desc": "Gain 15 gold selling blessed water", "outcome": { "type": "GOLD", "gold": 15 } }
+    ]
+  },
+  {
+    "id": "fallen_paladin",
+    "name": "Fallen Paladin",
+    "text": "A paladin's ghost guards a sealed tomb. He offers his blessing — for a price.",
+    "choices": [
+      { "label": "Accept blessing", "desc": "All heroes lose 20 HP, gain a rare relic", "outcome": { "type": "HP_COST_RELIC", "hpCost": 20, "rarity": "rare" } },
+      { "label": "Pray with him", "desc": "Remove a curse from your squad", "outcome": { "type": "REMOVE_CURSE" } },
+      { "label": "Leave in peace", "desc": "The dead should rest", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "thieves_guild",
+    "name": "Thieves' Guild",
+    "text": "A shadowy figure whispers from an alley: 'We have what you need... for the right price.'",
+    "choices": [
+      { "label": "Buy rare goods", "desc": "Pay 40 gold for a rare relic", "outcome": { "type": "BUY_RELIC", "cost": 40, "rarity": "rare" } },
+      { "label": "Fence a relic", "desc": "Trade a common relic for 35 gold", "outcome": { "type": "TRADE_RELIC" } },
+      { "label": "Report them", "desc": "Gain 10 gold bounty reward", "outcome": { "type": "GOLD", "gold": 10 } }
+    ]
+  },
+  {
+    "id": "enchanted_grove",
+    "name": "Enchanted Grove",
+    "text": "Trees with golden leaves whisper ancient secrets. Fruit glows on the branches.",
+    "choices": [
+      { "label": "Eat the fruit", "desc": "Gain a free uncommon relic", "outcome": { "type": "FREE_RELIC", "rarity": "uncommon" } },
+      { "label": "Harvest and sell", "desc": "Gain 30 gold", "outcome": { "type": "GOLD", "gold": 30 } },
+      { "label": "Plant a seed", "desc": "A gift for future travelers", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "dragon_hoard",
+    "name": "Dragon's Hoard",
+    "text": "A sleeping dragon curls around a mountain of treasure. Do you dare?",
+    "choices": [
+      { "label": "Grab the treasure", "desc": "50% chance: +60 gold or lose 30 gold and gain a curse", "outcome": { "type": "GAMBLE", "cost": 30, "reward": 60 } },
+      { "label": "Sneak a relic", "desc": "All heroes lose 15 HP, gain a rare relic", "outcome": { "type": "HP_COST_RELIC", "hpCost": 15, "rarity": "rare" } },
+      { "label": "Back away slowly", "desc": "Discretion is the better part of valor", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "ruined_library",
+    "name": "Ruined Library",
+    "text": "Dusty tomes line the walls. Most are ruined, but some still hold power.",
+    "choices": [
+      { "label": "Study the tomes", "desc": "Upgrade a random relic by +50%", "outcome": { "type": "UPGRADE_RELIC" } },
+      { "label": "Sell rare books", "desc": "Gain 20 gold", "outcome": { "type": "GOLD", "gold": 20 } },
+      { "label": "Leave them", "desc": "Books are heavy", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "demon_pact",
+    "name": "Demon's Pact",
+    "text": "A horned figure materializes from smoke. 'Power beyond measure... for a small sacrifice.'",
+    "choices": [
+      { "label": "Accept the pact", "desc": "Gain a rare relic AND a curse", "outcome": { "type": "RELIC_AND_CURSE", "rarity": "rare" } },
+      { "label": "Counter-offer", "desc": "Pay 25 gold for an uncommon relic, no strings", "outcome": { "type": "BUY_RELIC", "cost": 25, "rarity": "uncommon" } },
+      { "label": "Banish the demon", "desc": "Your soul is not for sale", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "war_refugees",
+    "name": "War Refugees",
+    "text": "A group of displaced villagers beg for help. Their gratitude could be valuable.",
+    "choices": [
+      { "label": "Give 20 gold", "desc": "They gift you a relic in thanks", "outcome": { "type": "BUY_RELIC", "cost": 20, "rarity": "uncommon" } },
+      { "label": "Recruit scouts", "desc": "Gain a common relic — field intel", "outcome": { "type": "FREE_RELIC", "rarity": "common" } },
+      { "label": "Move along", "desc": "You can't save everyone", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "alchemist_lab",
+    "name": "Alchemist's Lab",
+    "text": "Bubbling potions and strange apparatus fill the room. The alchemist is long gone.",
+    "choices": [
+      { "label": "Drink a potion", "desc": "50% chance: heal all heroes OR gain a curse", "outcome": { "type": "GAMBLE", "cost": 0, "reward": 0 } },
+      { "label": "Sell the equipment", "desc": "Gain 25 gold", "outcome": { "type": "GOLD", "gold": 25 } },
+      { "label": "Too risky", "desc": "Unknown potions are dangerous", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "fairy_ring",
+    "name": "Fairy Ring",
+    "text": "Mushrooms form a perfect circle in a moonlit clearing. Tiny lights dance within.",
+    "choices": [
+      { "label": "Step inside", "desc": "Gain a free rare relic — the fae are generous", "outcome": { "type": "FREE_RELIC", "rarity": "rare" } },
+      { "label": "Leave an offering", "desc": "Pay 15 gold, remove a curse", "outcome": { "type": "REMOVE_CURSE" } },
+      { "label": "Avoid it", "desc": "Fairy magic is unpredictable", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "siege_remains",
+    "name": "Siege Remains",
+    "text": "The aftermath of a great siege. Broken siege engines and scattered supplies litter the field.",
+    "choices": [
+      { "label": "Salvage parts", "desc": "Pay 10 gold to upgrade a relic by +50%", "outcome": { "type": "BUY_UPGRADE", "cost": 10 } },
+      { "label": "Loot the dead", "desc": "Gain 35 gold, but gain a curse", "outcome": { "type": "GOLD_AND_CURSE", "gold": 35 } },
+      { "label": "Pay respects", "desc": "Honor the fallen and move on", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "mirror_pool",
+    "name": "Mirror Pool",
+    "text": "A still pool reflects a version of you — stronger, but changed. It beckons.",
+    "choices": [
+      { "label": "Touch the surface", "desc": "Transform a common relic into uncommon", "outcome": { "type": "TRADE_RELIC" } },
+      { "label": "Gaze deeper", "desc": "All heroes lose 10 HP, gain an uncommon relic", "outcome": { "type": "HP_COST_RELIC", "hpCost": 10, "rarity": "uncommon" } },
+      { "label": "Walk away", "desc": "Some reflections are best left alone", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "bounty_board",
+    "name": "Bounty Board",
+    "text": "A weathered board lists bounties for local threats. One has already been collected on.",
+    "choices": [
+      { "label": "Claim a bounty", "desc": "Gain 20 gold from a completed bounty", "outcome": { "type": "GOLD", "gold": 20 } },
+      { "label": "Check for intel", "desc": "Gain a common relic — local knowledge", "outcome": { "type": "FREE_RELIC", "rarity": "common" } }
+    ]
   }
 ]

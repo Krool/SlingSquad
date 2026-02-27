@@ -44,6 +44,8 @@ const BG_COLOR = 0x0a0812;
 export class EventScene extends Phaser.Scene {
   private node!: NodeDef;
   private event!: EventDef;
+  private goldLabel!: Phaser.GameObjects.Text;
+  private goldPanel!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super({ key: 'EventScene' });
@@ -60,11 +62,31 @@ export class EventScene extends Phaser.Scene {
     this.event = Phaser.Utils.Array.GetRandom(pool);
 
     this.buildBackground();
+    this.buildGoldHUD();
     this.buildTitle();
     this.buildNarrative();
     this.buildChoices();
 
     this.cameras.main.fadeIn(300, 0, 0, 0);
+  }
+
+  private buildGoldHUD() {
+    const run = getRunState();
+    this.goldPanel = this.add.graphics().setDepth(10);
+    this.goldPanel.fillStyle(0x0d1117, 0.9);
+    this.goldPanel.fillRoundedRect(18, 18, 180, 44, 7);
+    this.goldPanel.lineStyle(1, 0xf1c40f, 0.4);
+    this.goldPanel.strokeRoundedRect(18, 18, 180, 44, 7);
+
+    this.goldLabel = this.add.text(32, 32, `◆  ${run.gold} Gold`, {
+      fontSize: '20px', fontFamily: 'Georgia, serif',
+      color: '#f1c40f', stroke: '#000', strokeThickness: 3,
+    }).setDepth(11);
+  }
+
+  private refreshGoldHUD() {
+    const run = getRunState();
+    this.goldLabel.setText(`◆  ${run.gold} Gold`);
   }
 
   // ── Background ─────────────────────────────────────────────────────────────
@@ -140,10 +162,49 @@ export class EventScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(5);
   }
 
+  // ── Outcome badge helper ────────────────────────────────────────────────────
+  private getOutcomeBadge(outcome: EventOutcome): { text: string; color: number } {
+    switch (outcome.type) {
+      case 'NOTHING':
+        return { text: 'Safe', color: 0x555555 };
+      case 'RELIC_AND_CURSE':
+        return { text: 'Relic + Curse', color: 0xe67e22 };
+      case 'BUY_RELIC':
+        return { text: `-${outcome.cost ?? 0}g \u2192 Relic`, color: 0x3498db };
+      case 'FREE_RELIC':
+        return { text: '\u2726 Free Relic', color: 0x2ecc71 };
+      case 'GOLD_AND_CURSE':
+        return { text: `+${outcome.gold ?? 0}g + Curse`, color: 0xe67e22 };
+      case 'GOLD':
+        return { text: `+${outcome.gold ?? 0}g`, color: 0x2ecc71 };
+      case 'REMOVE_CURSE':
+        return { text: '\u2726 Cleanse', color: 0x9b59b6 };
+      case 'UPGRADE_RELIC':
+        return { text: '\u25b2 Upgrade', color: 0x3498db };
+      case 'SPECIFIC_RELIC': {
+        const all = relicsData as RelicDef[];
+        const r = all.find(x => x.id === outcome.relicId);
+        return { text: `\u2726 ${r ? r.name : 'Relic'}`, color: 0x2ecc71 };
+      }
+      case 'HP_COST_RELIC':
+        return { text: `-${outcome.hpCost ?? 0} HP \u2192 Relic`, color: 0xe74c3c };
+      case 'GAMBLE':
+        return { text: '\u2726 50/50', color: 0xf39c12 };
+      case 'TRADE_RELIC':
+        return { text: '\u27f3 Trade', color: 0x3498db };
+      case 'HEAL_ALL':
+        return { text: '\u2665 Full Heal', color: 0x2ecc71 };
+      case 'BUY_UPGRADE':
+        return { text: `-${outcome.cost ?? 0}g \u2192 Upgrade`, color: 0x3498db };
+      default:
+        return { text: '...', color: 0x555555 };
+    }
+  }
+
   // ── Choice buttons ───────────────────────────────────────────────────────────
   private buildChoices() {
     const choices = this.event.choices;
-    const btnW = 520, btnH = 70;
+    const btnW = 520, btnH = 80;
     const gap = 16;
     const totalH = choices.length * btnH + (choices.length - 1) * gap;
     const startY = 260 + (GAME_HEIGHT - 260 - 60 - totalH) / 2;
@@ -174,8 +235,8 @@ export class EventScene extends Phaser.Scene {
 
     // Label
     container.add(
-      this.add.text(-w / 2 + 20, -12, choice.label, {
-        fontSize: '18px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
+      this.add.text(-w / 2 + 20, -16, choice.label, {
+        fontSize: '20px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
         color: canChoose ? '#e8d8f0' : '#555',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0, 0.5),
@@ -183,21 +244,35 @@ export class EventScene extends Phaser.Scene {
 
     // Description
     container.add(
-      this.add.text(-w / 2 + 20, 12, choice.desc, {
-        fontSize: '13px', fontFamily: 'Georgia, serif',
+      this.add.text(-w / 2 + 20, 10, choice.desc, {
+        fontSize: '14px', fontFamily: 'Georgia, serif',
         color: canChoose ? '#8a7a9a' : '#3a3a3a',
       }).setOrigin(0, 0.5),
     );
 
-    // Arrow indicator
-    if (canChoose) {
-      container.add(
-        this.add.text(w / 2 - 20, 0, '→', {
-          fontSize: '20px', fontFamily: 'Georgia, serif',
-          color: ACCENT_HEX,
-        }).setOrigin(1, 0.5),
-      );
+    // Outcome badge (replaces arrow)
+    const badge = this.getOutcomeBadge(choice.outcome);
+    const badgeText = this.add.text(0, 0, badge.text, {
+      fontSize: '12px', fontFamily: 'Georgia, serif',
+      color: '#' + badge.color.toString(16).padStart(6, '0'),
+    }).setOrigin(0.5);
+    const badgePadX = 10, badgePadY = 4;
+    const bw = badgeText.width + badgePadX * 2;
+    const bh = badgeText.height + badgePadY * 2;
+    const badgeX = w / 2 - 16 - bw / 2;
+    badgeText.setPosition(badgeX, 0);
+
+    const badgeGfx = this.add.graphics();
+    badgeGfx.fillStyle(badge.color, 0.2);
+    badgeGfx.fillRoundedRect(badgeX - bw / 2, -bh / 2, bw, bh, 6);
+    badgeGfx.lineStyle(1, badge.color, 0.5);
+    badgeGfx.strokeRoundedRect(badgeX - bw / 2, -bh / 2, bw, bh, 6);
+    if (!canChoose) {
+      badgeGfx.setAlpha(0.3);
+      badgeText.setAlpha(0.3);
     }
+    container.add(badgeGfx);
+    container.add(badgeText);
 
     // Interactivity
     if (canChoose) {
@@ -427,14 +502,28 @@ export class EventScene extends Phaser.Scene {
   }
 
   // ── Result overlay ───────────────────────────────────────────────────────────
+  private getResultIcon(text: string): { icon: string; color: string } {
+    const t = text.toLowerCase();
+    if (t.includes('lost') || t.includes('not enough')) return { icon: '\u2717', color: '#e74c3c' };
+    if (t.includes('curse')) return { icon: '\u26a0', color: '#e67e22' };
+    if (t.includes('upgraded')) return { icon: '\u25b2', color: '#3498db' };
+    if (t.includes('removed')) return { icon: '\u2726', color: '#9b59b6' };
+    if (t.includes('heal')) return { icon: '\u2665', color: '#2ecc71' };
+    if (t.includes('gold') || /\+\d+g/.test(t)) return { icon: '\u25c6', color: '#f1c40f' };
+    if (t.includes('gained') || t.includes('relic')) return { icon: '\u2726', color: '#2ecc71' };
+    return { icon: '\u25cf', color: '#ffffff' };
+  }
+
   private showResult(text: string) {
+    this.refreshGoldHUD();
+
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000)
       .setDepth(20).setAlpha(0);
     this.tweens.add({ targets: veil, alpha: 0.6, duration: 300 });
 
     const panel = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2).setDepth(21).setAlpha(0);
 
-    const panelW = 420, panelH = 180;
+    const panelW = 420, panelH = 200;
     const bg = this.add.graphics();
     bg.fillStyle(0x120e1e, 1);
     bg.fillRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 12);
@@ -442,9 +531,18 @@ export class EventScene extends Phaser.Scene {
     bg.strokeRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 12);
     panel.add(bg);
 
+    // Result icon
+    const resultIcon = this.getResultIcon(text);
+    panel.add(
+      this.add.text(0, -55, resultIcon.icon, {
+        fontSize: '28px', fontFamily: 'Georgia, serif',
+        color: resultIcon.color, stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5),
+    );
+
     // Result text
     panel.add(
-      this.add.text(0, -30, text, {
+      this.add.text(0, -20, text, {
         fontSize: '17px', fontFamily: 'Georgia, serif',
         color: '#e8d8f0', stroke: '#000', strokeThickness: 2,
         wordWrap: { width: panelW - 40 }, align: 'center',
@@ -457,14 +555,14 @@ export class EventScene extends Phaser.Scene {
     const drawBtn = (hovered: boolean) => {
       btnGfx.clear();
       btnGfx.fillStyle(hovered ? 0x2a1e40 : 0x1a1228, 1);
-      btnGfx.fillRoundedRect(-btnW / 2, 40, btnW, btnH, 7);
+      btnGfx.fillRoundedRect(-btnW / 2, 50, btnW, btnH, 7);
       btnGfx.lineStyle(1, ACCENT, hovered ? 0.9 : 0.5);
-      btnGfx.strokeRoundedRect(-btnW / 2, 40, btnW, btnH, 7);
+      btnGfx.strokeRoundedRect(-btnW / 2, 50, btnW, btnH, 7);
     };
     drawBtn(false);
     panel.add(btnGfx);
 
-    const btnText = this.add.text(0, 58, 'Continue  →', {
+    const btnText = this.add.text(0, 68, 'Continue  \u2192', {
       fontSize: '16px', fontFamily: 'Georgia, serif', color: ACCENT_HEX,
     }).setOrigin(0.5);
     panel.add(btnText);

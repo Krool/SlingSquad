@@ -40,7 +40,9 @@ export const MATERIAL = {
     density: 0.0008,   // lighter → gets knocked further
     restitution: 0.05,
     friction: 0.4,
+    frictionStatic: 2.0,  // prevents lateral sliding under load
     frictionAir: 0.01,
+    slop: 0.01,           // tighter collision tolerance (default 0.05)
     hp: 55,
     label: 'WOOD',
   },
@@ -48,7 +50,9 @@ export const MATERIAL = {
     density: 0.003,    // heavier → stays put unless hit hard, crushes below
     restitution: 0.08,
     friction: 0.65,
+    frictionStatic: 3.0,  // high static friction for heavy stone
     frictionAir: 0.008,
+    slop: 0.01,
     hp: 130,
     label: 'STONE',
   },
@@ -331,6 +335,7 @@ export type EnemyClass = keyof typeof ENEMY_STATS;
 export const BARREL_EXPLOSION_RADIUS = 120;
 export const BARREL_EXPLOSION_DAMAGE = 70;
 export const BARREL_HP = 30;
+export const BARREL_EXPLOSION_FORCE = 0.12;
 
 // ─── Combat System ────────────────────────────────────────────────────────────
 export const COMBAT_TICK_MS = 500;

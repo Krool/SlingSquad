@@ -111,6 +111,9 @@ export class LaunchSystem {
       .setDisplaySize(r * 2.5, r * 2.5)
       .setDepth(9);
     this.previewSprite.play(`${charKey}_idle`);
+    // Apply class tint for heroes that reuse another class's sprite folder
+    const classTint = Hero.CLASS_TINT[hero.heroClass];
+    if (classTint) this.previewSprite.setTint(classTint);
 
     // Queue: next 2 heroes as smaller colored bubbles below the sling post
     for (let offset = 1; offset <= 2; offset++) {

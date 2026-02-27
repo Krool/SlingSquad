@@ -18,10 +18,70 @@ const RARITY_BG: Record<string, number> = {
 };
 // Icon per rarity — safe unicode that renders on canvas
 const RARITY_ICON: Record<string, string> = {
-  common:   '●',
-  uncommon: '◆',
-  rare:     '★',
+  common:   '\u25cf',
+  uncommon: '\u25c6',
+  rare:     '\u2605',
 };
+
+// Effect-specific icons for card display
+const EFFECT_ICON: Record<string, string> = {
+  FLAT_HP: '\u2665',
+  COOLDOWN_REDUCE: '\u27f3',
+  MAGE_AOE_RADIUS: '\u25ce',
+  WARRIOR_IMPACT_BONUS: '\u2694',
+  RANGER_ARROW_COUNT: '\u219f',
+  PRIEST_HEAL_BONUS: '\u2665',
+  FLAT_COMBAT_DAMAGE: '\u2694',
+  COMBAT_SPEED_MULT: '\u26a1',
+  MAX_DRAG_BONUS: '\u2197',
+  GOLD_ON_WIN: '\u25c6',
+  AIR_FRICTION_REDUCE: '\u2248',
+  DAMAGE_REDUCTION: '\u25c8',
+  THORNS: '\u2726',
+  CRIT_CHANCE: '\u2727',
+  IMPACT_DAMAGE_BONUS: '\u25cf',
+  DEATH_SAVE: '\u2606',
+  EXTRA_LAUNCH: '+',
+  GOLD_ON_KILL: '\u25c6',
+  WARRIOR_KNOCKBACK: '\u2694',
+  MAGE_CHAIN: '\u26a1',
+  RANGER_POISON: '\u2620',
+  PRIEST_RESURRECT: '\u2606',
+  BARD_CHARM_BONUS: '\u266a',
+  STONE_DAMAGE_BONUS: '\u25fc',
+  LOW_HP_DAMAGE: '\u2694',
+};
+
+function getEffectPreview(effect: string, value: number): string {
+  switch (effect) {
+    case 'FLAT_HP': return `+${value} HP`;
+    case 'COOLDOWN_REDUCE': return `-${value / 1000}s cooldown`;
+    case 'MAGE_AOE_RADIUS': return `+${value}px AoE`;
+    case 'WARRIOR_IMPACT_BONUS': return `+${Math.round(value * 100)}% impact`;
+    case 'RANGER_ARROW_COUNT': return `+${value} arrows`;
+    case 'PRIEST_HEAL_BONUS': return `+${value}px heal range`;
+    case 'FLAT_COMBAT_DAMAGE': return `+${value} damage`;
+    case 'COMBAT_SPEED_MULT': return `${Math.round((1 - value) * 100)}% faster`;
+    case 'MAX_DRAG_BONUS': return `+${value}px range`;
+    case 'GOLD_ON_WIN': return `+${value}g per win`;
+    case 'AIR_FRICTION_REDUCE': return `-${Math.round(value * 100)}% drag`;
+    case 'DAMAGE_REDUCTION': return `-${Math.round(value * 100)}% damage taken`;
+    case 'THORNS': return `${value} reflect dmg`;
+    case 'CRIT_CHANCE': return `${Math.round(value * 100)}% crit`;
+    case 'IMPACT_DAMAGE_BONUS': return `+${Math.round(value * 100)}% impact`;
+    case 'DEATH_SAVE': return `Cheat death 1x`;
+    case 'EXTRA_LAUNCH': return `+${value} launch`;
+    case 'GOLD_ON_KILL': return `+${value}g per kill`;
+    case 'WARRIOR_KNOCKBACK': return `Knockback ${value}px`;
+    case 'MAGE_CHAIN': return `Chain to ${value}`;
+    case 'RANGER_POISON': return `${value} poison dmg`;
+    case 'PRIEST_RESURRECT': return `Revive ${Math.round(value * 100)}% HP`;
+    case 'BARD_CHARM_BONUS': return `+${value / 1000}s charm`;
+    case 'STONE_DAMAGE_BONUS': return `+${Math.round(value * 100)}% vs stone`;
+    case 'LOW_HP_DAMAGE': return `${Math.round(value)}x low-HP dmg`;
+    default: return '';
+  }
+}
 
 export class ShopScene extends Phaser.Scene {
   private node!: NodeDef;
@@ -210,7 +270,7 @@ export class ShopScene extends Phaser.Scene {
     icon.strokeCircle(0, -h / 2 + 82, 32);
     container.add(icon);
 
-    const iconSymbol = RARITY_ICON[rarity] ?? '●';
+    const iconSymbol = EFFECT_ICON[relic.effect] ?? RARITY_ICON[rarity] ?? '\u25cf';
     container.add(
       this.add.text(0, -h / 2 + 82, iconSymbol, {
         fontSize: '24px', fontFamily: 'Georgia, serif',
@@ -229,12 +289,21 @@ export class ShopScene extends Phaser.Scene {
       }).setOrigin(0.5),
     );
 
+    // ── Stat preview ──────────────────────────────────────────────────────────
+    const preview = getEffectPreview(relic.effect, relic.value);
+    if (preview) {
+      container.add(
+        this.add.text(0, -h / 2 + 155, preview, {
+          fontSize: '14px', fontFamily: 'Georgia, serif',
+          color: canAfford ? '#' + accentColor.toString(16).padStart(6, '0') : '#444',
+        }).setOrigin(0.5),
+      );
+    }
+
     // ── Description ──────────────────────────────────────────────────────────
-    // Position description centered between name and buy button.
-    // max ~3 lines at 13px ≈ 48px height; anchor at -h/2+176 gives ~86px to button.
     container.add(
-      this.add.text(0, -h / 2 + 178, relic.desc, {
-        fontSize: '13px', fontFamily: 'Georgia, serif',
+      this.add.text(0, -h / 2 + 190, relic.desc, {
+        fontSize: '14px', fontFamily: 'Georgia, serif',
         color: canAfford ? '#8a9aaa' : '#3a3a3a',
         wordWrap: { width: w - 40 }, align: 'center',
       }).setOrigin(0.5),

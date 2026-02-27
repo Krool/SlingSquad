@@ -22,9 +22,14 @@ export class Barrel {
       density: 0.002,
       restitution: 0.4,
       friction: 0.5,
+      frictionStatic: 2.0,
+      slop: 0.01,
       label: 'barrel',
     }) as MatterJS.BodyType;
     (this.body as any).__barrel = this;
+
+    // Start sleeping — wakes when hit by hero/block/explosion
+    MatterJS.Sleeping.set(this.body, true);
 
     // Danger glow
     this.glowCircle = scene.add.graphics();

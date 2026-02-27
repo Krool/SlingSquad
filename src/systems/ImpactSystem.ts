@@ -5,7 +5,7 @@ import { Block } from '@/entities/Block';
 import { Barrel } from '@/entities/Barrel';
 import { Projectile } from '@/entities/Projectile';
 import { CombatSystem } from './CombatSystem';
-import { HERO_STATS } from '@/config/constants';
+import { HERO_STATS, BARREL_EXPLOSION_FORCE } from '@/config/constants';
 import { getRelicModifiers } from '@/systems/RunState';
 
 type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
@@ -479,6 +479,34 @@ export class ImpactSystem {
       const d = Math.hypot(h.x - bx, h.y - by);
       if (d < radius) h.applyDamage(damage * 0.5 * (1 - d / radius));
     }
+    // ── Explosion force: launch blocks and enemies outward ──────────────────
+    for (const b of blocks) {
+      if (b.destroyed) continue;
+      const dx = b.body.position.x - bx;
+      const dy = b.body.position.y - by;
+      const d = Math.hypot(dx, dy);
+      if (d < radius && d > 1) {
+        const nx = dx / d;
+        const ny = dy / d;
+        const falloff = (1 - d / radius) ** 2;
+        const forceMag = BARREL_EXPLOSION_FORCE * falloff;
+        this.scene.matter.applyForce(b.body, { x: nx * forceMag, y: (ny - 0.3) * forceMag });
+      }
+    }
+    for (const e of enemies) {
+      if (e.state === 'dead' || !e.body) continue;
+      const dx = e.x - bx;
+      const dy = e.y - by;
+      const d = Math.hypot(dx, dy);
+      if (d < radius && d > 1) {
+        const nx = dx / d;
+        const ny = dy / d;
+        const falloff = (1 - d / radius) ** 2;
+        const forceMag = BARREL_EXPLOSION_FORCE * 0.6 * falloff;
+        this.scene.matter.applyForce(e.body as MatterJS.BodyType, { x: nx * forceMag, y: (ny - 0.3) * forceMag });
+      }
+    }
+
     // Chain-detonate adjacent barrels
     for (const barrel of barrels) {
       if (barrel.exploded) continue;

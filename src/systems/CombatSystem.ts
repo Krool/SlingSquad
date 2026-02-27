@@ -345,19 +345,6 @@ export class CombatSystem {
             target.battleDamageDealt += this.relicMods.thorns;
             this.scene.events.emit('unitDamage', enemy.x, enemy.y, this.relicMods.thorns);
           }
-        } else {
-          // No hero in range — melee enemies inadvertently smash nearby blocks
-          const nearBlock = this.nearestBlock(enemy.x, enemy.y, enemy.stats.combatRange);
-          if (nearBlock) {
-            const blockDmg = enemy.stats.combatDamage * MELEE_BLOCK_DAMAGE_MULT;
-            nearBlock.applyDamage(blockDmg);
-            const bx = nearBlock.body.position.x, by = nearBlock.body.position.y;
-            this.scene.events.emit('blockDamage', bx, by, Math.round(blockDmg));
-            enemy.lastAttackTime = now;
-            this.flashEnemyAttackAnim(enemy);
-            this.onDamageEvent?.();
-            this.spawnMeleeFlash(bx, by);
-          }
         }
       }
     }
