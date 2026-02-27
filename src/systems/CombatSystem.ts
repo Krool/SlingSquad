@@ -3,7 +3,7 @@ import { Hero } from '@/entities/Hero';
 import { Enemy } from '@/entities/Enemy';
 import { Block } from '@/entities/Block';
 import { Projectile } from '@/entities/Projectile';
-import { COMBAT_TICK_MS } from '@/config/constants';
+import { COMBAT_TICK_MS, MELEE_BLOCK_DAMAGE_MULT } from '@/config/constants';
 import { getRelicModifiers, type RelicModifiers } from '@/systems/RunState';
 
 type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
@@ -98,23 +98,25 @@ export class CombatSystem {
       const hx = body.position.x;
       const hy = body.position.y;
 
-      // ── 1. Enemy in attack range → stop, attack anim ──────────────────────
+      // ── 1. Enemy in attack range → stop (tick handles attack anim + damage) ─
       const enemyInRange = liveEnemies.some(
         e => Math.hypot(e.x - hx, e.y - hy) <= hero.stats.combatRange,
       );
       if (enemyInRange) {
         this.scene.matter.setVelocity(body, 0, body.velocity.y);
-        this.ensureAnim(hero, 'attack');
+        // If we were walking, switch to idle. Don't interrupt active attack cycles.
+        this.ensureNotWalking(hero);
         hero.walkStuckMs = 0;
         hero.lastWalkX   = hx;
         continue;
       }
 
-      // ── 2. Block directly ahead → stop and hack (tick handles damage) ──────
+      // ── 2. Block directly ahead → stop (tick handles attack anim + damage) ─
       const blockAhead = this.findBlockAhead(hx, hy, hero.walkDir, hero.stats.radius);
       if (blockAhead) {
         this.scene.matter.setVelocity(body, 0, body.velocity.y);
-        this.ensureAnim(hero, 'attack');
+        // If we were walking, switch to idle. Don't interrupt active attack cycles.
+        this.ensureNotWalking(hero);
         hero.walkStuckMs += delta;
         // Give up on indestructible / very tanky block after 3 s — turn around
         if (hero.walkStuckMs > 3000) {
@@ -134,7 +136,7 @@ export class CombatSystem {
       const walkVx = hero.walkDir * hero.stats.walkSpeed;
       this.scene.matter.setVelocity(body, walkVx, body.velocity.y);
       hero.sprite?.setFlipX(hero.walkDir < 0);
-      this.ensureAnim(hero, 'idle');
+      this.ensureAnim(hero, 'walk');
 
       // Stuck detection — no meaningful x movement for 1.5 s → flip
       const dxMoved = Math.abs(hx - hero.lastWalkX);
@@ -157,6 +159,44 @@ export class CombatSystem {
     if (hero.sprite?.anims.currentAnim?.key !== key) {
       hero.sprite?.play(key);
     }
+  }
+
+  /** If hero is currently in walk anim, switch to idle. Leaves attack cycles untouched. */
+  private ensureNotWalking(hero: Hero) {
+    const walkKey = `${hero.heroClass.toLowerCase()}_walk`;
+    if (hero.sprite?.anims.currentAnim?.key === walkKey) {
+      hero.sprite.play(`${hero.heroClass.toLowerCase()}_idle`);
+    }
+  }
+
+  /** Flash attack anim on a hero for one cycle, then revert to idle.
+   *  Attack anims are defined with repeat:-1, so we override to repeat:0
+   *  to get a single cycle that fires `animationcomplete`. */
+  private flashAttackAnim(hero: Hero) {
+    const charKey = hero.heroClass.toLowerCase();
+    const atkKey = `${charKey}_attack`;
+    const idleKey = `${charKey}_idle`;
+    if (!hero.sprite) return;
+    hero.sprite.play({ key: atkKey, repeat: 0 });
+    hero.sprite.once('animationcomplete', () => {
+      if (hero.state === 'combat' && hero.sprite?.anims.currentAnim?.key === atkKey) {
+        hero.sprite.play(idleKey);
+      }
+    });
+  }
+
+  /** Flash attack anim on an enemy for one cycle, then revert to idle. */
+  private flashEnemyAttackAnim(enemy: Enemy) {
+    const charKey = enemy.enemyClass.toLowerCase();
+    const atkKey = `${charKey}_attack`;
+    const idleKey = `${charKey}_idle`;
+    if (!enemy.sprite) return;
+    enemy.sprite.play({ key: atkKey, repeat: 0 });
+    enemy.sprite.once('animationcomplete', () => {
+      if (enemy.state === 'combat' && enemy.sprite?.anims.currentAnim?.key === atkKey) {
+        enemy.sprite.play(idleKey);
+      }
+    });
   }
 
   /**
@@ -229,11 +269,13 @@ export class CombatSystem {
       );
       if (targets.length > 0) {
         for (const t of targets) {
-          t.applyDamage(heroDmg, hero.x);
+          t.applyDamage(heroDmg, hero.x, hero);
+          hero.battleDamageDealt += heroDmg;
           this.spawnMeleeFlash(t.x, t.y);
           this.scene.events.emit('unitDamage', t.x, t.y, Math.round(heroDmg));
         }
         hero.lastAttackTime = now;
+        this.flashAttackAnim(hero);
         this.onDamageEvent?.();
       } else {
         // Cap block-attack range at 140px for non-warriors so they don't reach across the map
@@ -242,10 +284,13 @@ export class CombatSystem {
           : Math.min(hero.stats.combatRange, 140);
         const nearestBlock = this.nearestBlock(hero.x, hero.y, blockRange);
         if (nearestBlock) {
-          nearestBlock.applyDamage(heroDmg);
+          const blockDmg = heroDmg * MELEE_BLOCK_DAMAGE_MULT;
+          nearestBlock.applyDamage(blockDmg);
+          hero.battleBlockDamage += blockDmg;
           const bx = nearestBlock.body.position.x, by = nearestBlock.body.position.y;
-          this.scene.events.emit('blockDamage', bx, by, Math.round(heroDmg));
+          this.scene.events.emit('blockDamage', bx, by, Math.round(blockDmg));
           hero.lastAttackTime = now;
+          this.flashAttackAnim(hero);
           this.onDamageEvent?.();
           this.spawnMeleeFlash(bx, by);
         }
@@ -273,6 +318,7 @@ export class CombatSystem {
           target.applyDamage(enemy.stats.combatDamage, enemy.x);
           this.scene.events.emit('unitDamage', target.x, target.y, Math.round(enemy.stats.combatDamage));
           enemy.lastAttackTime = now;
+          this.flashEnemyAttackAnim(enemy);
           this.onDamageEvent?.();
           this.spawnMeleeFlash(target.x, target.y);
         }
@@ -284,18 +330,34 @@ export class CombatSystem {
         this.processRangedAttack(enemy, liveHeroes, now);
       } else {
         const target = this.nearest(enemy.x, enemy.y, liveHeroes, enemy.stats.combatRange);
-        if (!target) continue;
-        const eDmg = enemy.stats.combatDamage;
-        // Damage reduction is applied inside Hero.applyDamage() — do NOT reduce here to avoid double-dipping
-        target.applyDamage(eDmg);
-        this.scene.events.emit('unitDamage', target.x, target.y, Math.round(eDmg));
-        enemy.lastAttackTime = now;
-        this.onDamageEvent?.();
-        this.spawnMeleeFlash(target.x, target.y);
-        // Thorns relic: reflect damage back
-        if (this.relicMods.thorns > 0) {
-          enemy.applyDamage(this.relicMods.thorns, target.x);
-          this.scene.events.emit('unitDamage', enemy.x, enemy.y, this.relicMods.thorns);
+        if (target) {
+          const eDmg = enemy.stats.combatDamage;
+          // Damage reduction is applied inside Hero.applyDamage() — do NOT reduce here to avoid double-dipping
+          target.applyDamage(eDmg);
+          this.scene.events.emit('unitDamage', target.x, target.y, Math.round(eDmg));
+          enemy.lastAttackTime = now;
+          this.flashEnemyAttackAnim(enemy);
+          this.onDamageEvent?.();
+          this.spawnMeleeFlash(target.x, target.y);
+          // Thorns relic: reflect damage back
+          if (this.relicMods.thorns > 0) {
+            enemy.applyDamage(this.relicMods.thorns, target.x, target);
+            target.battleDamageDealt += this.relicMods.thorns;
+            this.scene.events.emit('unitDamage', enemy.x, enemy.y, this.relicMods.thorns);
+          }
+        } else {
+          // No hero in range — melee enemies inadvertently smash nearby blocks
+          const nearBlock = this.nearestBlock(enemy.x, enemy.y, enemy.stats.combatRange);
+          if (nearBlock) {
+            const blockDmg = enemy.stats.combatDamage * MELEE_BLOCK_DAMAGE_MULT;
+            nearBlock.applyDamage(blockDmg);
+            const bx = nearBlock.body.position.x, by = nearBlock.body.position.y;
+            this.scene.events.emit('blockDamage', bx, by, Math.round(blockDmg));
+            enemy.lastAttackTime = now;
+            this.flashEnemyAttackAnim(enemy);
+            this.onDamageEvent?.();
+            this.spawnMeleeFlash(bx, by);
+          }
         }
       }
     }
@@ -314,15 +376,10 @@ export class CombatSystem {
       if (pct < bestHpPct) { bestHpPct = pct; best = other; }
     }
     if (best && bestHpPct < 1) {
-      (best as any)._hp = Math.min(best.maxHp, best.hp + stats.healAmount);
-      (best as any).drawHpBar();
-      // Green flash on healed target
-      best.sprite?.setTint(0x44ff88);
-      this.scene.time.delayedCall(200, () => {
-        if (best!.state !== 'dead') (best as any).restoreTint?.();
-      });
+      best.heal(stats.healAmount);
       this.spawnHealFlash(best.x, best.y);
       healer.lastHealTime = now;
+      this.flashEnemyAttackAnim(healer);
     }
   }
 
@@ -360,6 +417,7 @@ export class CombatSystem {
     if (isIce) (p as any).isIce = true;
     this.projectiles.push(p);
     enemy.lastAttackTime = now;
+    this.flashEnemyAttackAnim(enemy);
   }
 
   private nearestBlock(ox: number, oy: number, maxRange: number): Block | null {
@@ -416,7 +474,9 @@ export class CombatSystem {
       } else {
         for (const enemy of liveEnemies) {
           if (Math.hypot(px - enemy.x, py - enemy.y) < enemy.stats.radius + 5) {
-            enemy.applyDamage(p.damage);
+            const srcHero = p.sourceHero;
+            enemy.applyDamage(p.damage, undefined, srcHero ?? undefined);
+            if (srcHero) srcHero.battleDamageDealt += p.damage;
             this.scene.events.emit('unitDamage', enemy.x, enemy.y, Math.round(p.damage));
             // Ranger poison DoT: deal poison damage per second for 3 seconds
             const poisonDmg = (p as any).poisonDamage as number | undefined;
@@ -427,7 +487,8 @@ export class CombatSystem {
                 repeat: 2,
                 callback: () => {
                   if (enemy.state !== 'dead') {
-                    enemy.applyDamage(poisonDmg);
+                    enemy.applyDamage(poisonDmg, undefined, srcHero ?? undefined);
+                    if (srcHero) srcHero.battleDamageDealt += poisonDmg;
                     this.scene.events.emit('unitDamage', enemy.x, enemy.y, Math.round(poisonDmg));
                   }
                   ticks++;

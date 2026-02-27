@@ -6,10 +6,11 @@ export const GAME_HEIGHT = 720;
 export const LAUNCH_COOLDOWN_MS = 1000;
 export const SLING_X = 160;
 export const SLING_Y = 510;
-export const MAX_DRAG_DISTANCE = 160;
+export const MAX_DRAG_DISTANCE = 190;
 // Velocity = dist_px * MULTIPLIER → px/frame. No *60.
-// At max drag (160px) 45°: ~12.5 px/frame, lands at ~x=1150 (back of right tower)
-// At half drag (80px)  45°: ~6 px/frame,   lands at ~x=475  (front of left tower)
+// At max drag (190px) 45°: ~14.8 px/frame, lands at ~x=1490 (structures stop it sooner)
+// At max drag 70° steep arc: lands at ~x=957 (can clear tall structures and still reach far enemies)
+// Structure templates keep rightmost enemies ≤ x≈950 for comfortable margin
 export const LAUNCH_POWER_MULTIPLIER = 0.11;
 export const TRAJECTORY_POINTS = 25; // dots to draw
 export const TRAJECTORY_SIM_FRAMES = 220; // total frames to simulate per preview
@@ -28,6 +29,10 @@ export const STALL_WARN_MS = 5000;
 // ─── Squad ────────────────────────────────────────────────────────────────────
 export const STARTER_SQUAD_SIZE = 4;
 export const MAX_SQUAD_SIZE = 6;
+
+// ─── Combat vs Blocks ────────────────────────────────────────────────────────
+// Melee combat damage is multiplied by this when hitting blocks (both heroes & enemies)
+export const MELEE_BLOCK_DAMAGE_MULT = 4;
 
 // ─── Physics Materials ────────────────────────────────────────────────────────
 export const MATERIAL = {

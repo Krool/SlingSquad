@@ -250,6 +250,33 @@ export class BootScene extends Phaser.Scene {
         }
       }
     }
+
+    // ── RPG icon sprites (upgrade cards, codex tabs) ──────────────────────
+    const iconBase = 'sprites/rpggame1700plusicons/RPG Graphics Pack - Icons/Pack 1A-Renamed';
+    const ICON_MAP: Record<string, string> = {
+      // Upgrade icons
+      icon_gold_pouch:   `${iconBase}/accessory/accessory_05.png`,
+      icon_health_potion:`${iconBase}/potion/potion_001.png`,
+      icon_gold_ring:    `${iconBase}/ring/ring_001.png`,
+      icon_sword_skill:  `${iconBase}/skill/skill_001.png`,
+      icon_amulet:       `${iconBase}/accessory/accessory_16.png`,
+      icon_power_skill:  `${iconBase}/skill/skill_005.png`,
+      icon_bard_skill:   `${iconBase}/skill/skill_003.png`,
+      icon_rogue_skill:  `${iconBase}/skill/skill_002.png`,
+      icon_paladin_skill:`${iconBase}/skill/skill_009.png`,
+      icon_druid_skill:  `${iconBase}/skill/skill_004.png`,
+      icon_squad_skill:  `${iconBase}/skill/skill_007.png`,
+      icon_forge_skill:  `${iconBase}/skill/skill_014.png`,
+      icon_ward_skill:   `${iconBase}/skill/skill_015.png`,
+      icon_crystal_skill:`${iconBase}/skill/skill_016.png`,
+      // Codex tab icons
+      icon_tab_heroes:   `${iconBase}/skill/skill_010.png`,
+      icon_tab_bestiary: `${iconBase}/skill/skill_012.png`,
+      icon_tab_relics:   `${iconBase}/accessory/accessory_01.png`,
+    };
+    for (const [key, path] of Object.entries(ICON_MAP)) {
+      this.load.image(key, path);
+    }
   }
 
   create() {
@@ -266,6 +293,16 @@ export class BootScene extends Phaser.Scene {
           repeat: anim.repeat,
         });
       }
+    }
+
+    // Set nearest-neighbor filtering on icon textures for crisp pixel art
+    const iconKeys = this.textures.getTextureKeys().filter(k => k.startsWith('icon_'));
+    for (const key of iconKeys) {
+      const src = this.textures.get(key).getSourceImage();
+      if (src instanceof HTMLImageElement) {
+        (src as HTMLImageElement).style.imageRendering = 'pixelated';
+      }
+      this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
 
     // Instantiate MusicSystem once and share via registry (cross-scene singleton)

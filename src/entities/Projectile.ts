@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { Hero } from './Hero';
 
 /** Short-lived sub-projectile (Ranger arrows, etc.) */
 export class Projectile {
@@ -7,6 +8,7 @@ export class Projectile {
   readonly graphics: Phaser.GameObjects.Graphics;
   readonly damage: number;
   source: 'hero' | 'enemy' = 'hero';
+  sourceHero: Hero | null = null;
   private lifetime = 3000; // ms
   destroyed = false;
 

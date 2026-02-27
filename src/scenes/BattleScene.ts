@@ -122,7 +122,13 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const run = getRunState();
-    this.activeNode = data?.node ?? run.nodeMap.find(n => n.id === run.currentNodeId)!;
+    const foundNode = data?.node ?? run.nodeMap.find(n => n.id === run.currentNodeId);
+    if (!foundNode) {
+      console.error('BattleScene: could not find node', run.currentNodeId);
+      this.scene.start('OverworldScene');
+      return;
+    }
+    this.activeNode = foundNode;
 
     const music = this.registry.get('music') as MusicSystem | null;
     music?.play(this.activeNode.type === 'BOSS' ? 'boss' : 'battle');
@@ -395,362 +401,437 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // Template 1 — "Two Towers" (difficulty 1–2)
-  // GAP=0 (no settle jitter), bigger blocks, hollow rooms, narrow load-bearing pillar
+  // Angry Birds style: thin pillars + plank floors, ~30% fill, open rooms
   private buildTemplateTwoTowers() {
     const groundY = GAME_HEIGHT - 100;
-    const BW = 56, BH = 30;
-    const cx = (origin: number, c: number) => origin + BW / 2 + c * BW;
-    const cy = (r: number) => groundY - BH / 2 - r * BH;
-    const block = (x: number, y: number, mat: 'WOOD' | 'STONE', w = BW, h = BH) =>
+    const b = (x: number, y: number, w: number, h: number, mat: 'WOOD' | 'STONE') =>
       this.blocks.push(new Block(this, x, y, w, h, mat));
 
-    // ── Left castle: 4-wide, hollow room in rows 2-4 ────────────────────────
-    const LX = 450;
-    // Solid stone base (rows 0-1)
-    for (let r = 0; r <= 1; r++)
-      for (let c = 0; c < 4; c++) block(cx(LX, c), cy(r), 'STONE');
-    // Stone outer walls only (rows 2-4) — hollow room inside
-    for (let r = 2; r <= 4; r++) {
-      block(cx(LX, 0), cy(r), 'STONE');
-      block(cx(LX, 3), cy(r), 'STONE');
-    }
-    // Wood ceiling beam spanning full width (row 5)
-    block(LX + 2 * BW, cy(5), 'WOOD', 4 * BW, BH);
-    // Upper story: stone outer + wood inner (rows 6-7)
-    for (let r = 6; r <= 7; r++) {
-      block(cx(LX, 0), cy(r), 'STONE');
-      block(cx(LX, 3), cy(r), 'STONE');
-      for (let c = 1; c <= 2; c++) block(cx(LX, c), cy(r), 'WOOD');
-    }
-    // Stone capstone beam (row 8)
-    block(LX + 2 * BW, cy(8), 'STONE', 4 * BW, BH);
+    // ── Left tower: 2 levels, pillar+plank construction ─────────────────────
+    const LX = 460;          // left pillar center
+    const span = 110;        // distance between pillar pair centers
+    const pillarH = 60;      // wood pillar height per level
+    const plankW = 140;      // stone floor plank width
 
-    // ── Middle: narrow pillar + heavy cap — destroy it and everything falls ──
-    const MX = 810;
-    for (let r = 0; r <= 5; r++) block(MX, cy(r), 'STONE', 24, BH);
-    block(MX, cy(6), 'STONE', BW * 3, BH);
+    // Level 1: two wood pillars + stone plank
+    const lv1y = groundY - pillarH / 2;
+    b(LX, lv1y, 14, pillarH, 'WOOD');
+    b(LX + span, lv1y, 14, pillarH, 'WOOD');
+    const floor1 = groundY - pillarH - 6;      // plank top sits on pillars
+    b(LX + span / 2, floor1, plankW, 12, 'STONE');
 
-    // ── Right tower: 4-wide, taller, hollow lower room ──────────────────────
-    const RX = 920;
-    // Solid stone base (rows 0-1)
-    for (let r = 0; r <= 1; r++)
-      for (let c = 0; c < 4; c++) block(cx(RX, c), cy(r), 'STONE');
-    // Stone outer walls (rows 2-3), hollow interior
-    for (let r = 2; r <= 3; r++) {
-      block(cx(RX, 0), cy(r), 'STONE');
-      block(cx(RX, 3), cy(r), 'STONE');
-    }
-    // Wood ceiling (row 4)
-    block(RX + 2 * BW, cy(4), 'WOOD', 4 * BW, BH);
-    // Wooden upper section (rows 5-8)
-    for (let r = 5; r <= 8; r++) {
-      block(cx(RX, 0), cy(r), 'WOOD');
-      block(cx(RX, 3), cy(r), 'WOOD');
-      for (let c = 1; c <= 2; c++) block(cx(RX, c), cy(r), 'WOOD');
-    }
-    // Stone cap (row 9)
-    block(RX + 2 * BW, cy(9), 'STONE', 4 * BW, BH);
+    // Level 2: two wood pillars + stone plank
+    const lv2base = floor1 - 6;
+    const lv2y = lv2base - pillarH / 2;
+    b(LX, lv2y, 14, pillarH, 'WOOD');
+    b(LX + span, lv2y, 14, pillarH, 'WOOD');
+    const floor2 = lv2base - pillarH - 6;
+    b(LX + span / 2, floor2, plankW, 12, 'STONE');
 
-    this.barrels.push(new Barrel(this, LX + 2 * BW, groundY - 18));
-    this.barrels.push(new Barrel(this, MX, groundY - 18));
-    this.barrels.push(new Barrel(this, RX + 2 * BW, groundY - 18));
+    // Cap: stone square on top
+    b(LX + span / 2, floor2 - 20, 28, 28, 'STONE');
 
-    const eR = 20; // standard enemy body radius for placement
+    // ── Right tower: 3 levels, taller ───────────────────────────────────────
+    const RX = 780;
+
+    // Level 1
+    b(RX, lv1y, 14, pillarH, 'WOOD');
+    b(RX + span, lv1y, 14, pillarH, 'WOOD');
+    const rFloor1 = groundY - pillarH - 6;
+    b(RX + span / 2, rFloor1, plankW, 12, 'STONE');
+
+    // Level 2
+    const rLv2base = rFloor1 - 6;
+    const rLv2y = rLv2base - pillarH / 2;
+    b(RX, rLv2y, 14, pillarH, 'WOOD');
+    b(RX + span, rLv2y, 14, pillarH, 'WOOD');
+    const rFloor2 = rLv2base - pillarH - 6;
+    b(RX + span / 2, rFloor2, plankW, 12, 'STONE');
+
+    // Level 3
+    const rLv3base = rFloor2 - 6;
+    const rLv3y = rLv3base - 50 / 2;  // shorter pillar for top level
+    b(RX, rLv3y, 14, 50, 'WOOD');
+    b(RX + span, rLv3y, 14, 50, 'WOOD');
+    const rFloor3 = rLv3base - 50 - 6;
+    b(RX + span / 2, rFloor3, plankW, 12, 'STONE');
+
+    // Cap
+    b(RX + span / 2, rFloor3 - 20, 28, 28, 'STONE');
+
+    // ── Barrels ─────────────────────────────────────────────────────────────
+    this.barrels.push(new Barrel(this, RX + span / 2, groundY - 18));  // between right tower pillars
+    this.barrels.push(new Barrel(this, LX + span / 2, groundY - 18));
+
+    // ── Enemies ─────────────────────────────────────────────────────────────
+    const eR = 20;
     this.placeEnemies([
-      { x: LX + 2 * BW, y: groundY - 2 * BH - eR },    // on floor of left room
-      { x: MX,          y: cy(6) - BH / 2 - eR },        // on top of load-bearing cap
-      { x: RX + 2 * BW, y: groundY - 2 * BH - eR },     // on floor of right room
-      { x: RX + 2 * BW, y: cy(9) - BH / 2 - eR },       // atop right tower cap
+      { x: LX + span / 2, y: floor1 - 6 - eR },          // inside left tower level 1
+      { x: 620,            y: groundY - eR },               // on ground between towers
+      { x: RX + span / 2, y: rFloor1 - 6 - eR },          // inside right tower level 1
+      { x: RX + span / 2, y: rFloor3 - 6 - 28 - eR },    // on top of right tower cap block
     ]);
   }
 
   // Template 2 — "Fortress Wall" (difficulty 3)
-  // GAP=0, hollow gate arch, flanking towers with hollow rooms
+  // Colonnade/arcade: evenly-spaced tall pillars with plank rows, flanking towers
   private buildTemplateFortress() {
     const groundY = GAME_HEIGHT - 100;
-    const BW = 50, BH = 26;
-    const cx = (o: number, c: number) => o + BW / 2 + c * BW;
-    const cy = (r: number) => groundY - BH / 2 - r * BH;
-    const block = (x: number, y: number, mat: 'WOOD' | 'STONE', w = BW, h = BH) =>
+    const b = (x: number, y: number, w: number, h: number, mat: 'WOOD' | 'STONE') =>
       this.blocks.push(new Block(this, x, y, w, h, mat));
 
-    // ── Main wall: 10 cols × 4 rows, gate arch hollow at cols 4-5 rows 0-3 ──
-    const WX = 470;
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 10; c++) {
-        if (c >= 4 && c <= 5 && r <= 3) continue; // gate opening + lintel row
-        block(cx(WX, c), cy(r), r < 2 ? 'STONE' : 'WOOD');
-      }
-    }
-    // Stone lintel beam spanning the gate arch at row 3
-    block(WX + 5 * BW, cy(3), 'STONE', 2 * BW, BH);
-    // Battlements: alternating merlons at row 4
-    for (let c = 0; c < 10; c += 2)
-      block(cx(WX, c), cy(4), 'STONE');
+    // ── Main colonnade: 5 tall pillars with 3 rows of stone planks ──────────
+    const WX = 580;           // first pillar center (must clear hill at ~x=410)
+    const colSpacing = 80;    // between pillar centers (creates ~66px archways)
+    const pillarH = 80;       // tall wood pillars
 
-    // ── Two flanking towers: 2-wide, stone base + tall wooden upper section ──
-    const T1X = WX - 2 * BW;  // left of wall
-    const T2X = WX + 10 * BW; // right of wall
-    for (const TX of [T1X, T2X]) {
-      // Stone lower section (rows 0-5)
-      for (let r = 0; r <= 5; r++) {
-        block(cx(TX, 0), cy(r), 'STONE');
-        block(cx(TX, 1), cy(r), 'STONE');
-      }
-      // Wood upper section (rows 6-7)
-      for (let r = 6; r <= 7; r++) {
-        block(cx(TX, 0), cy(r), 'WOOD');
-        block(cx(TX, 1), cy(r), 'WOOD');
-      }
-      // Stone tower cap
-      block(TX + BW, cy(8), 'STONE', 2 * BW, BH);
+    // 5 evenly-spaced tall wood pillars rising from ground
+    for (let i = 0; i < 5; i++) {
+      b(WX + i * colSpacing, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+    }
+    const colRight = WX + 4 * colSpacing;
+
+    // 3 stone plank rows spanning all pillars
+    const plankW = colRight - WX + 40;  // extend slightly past outer pillars
+    const plankCX = WX + 2 * colSpacing;
+    const row1Y = groundY - pillarH - 6;
+    b(plankCX, row1Y, plankW, 12, 'STONE');
+
+    // Second tier: shorter pillars + plank
+    const tier2H = 50;
+    for (let i = 0; i < 5; i++) {
+      b(WX + i * colSpacing, row1Y - 6 - tier2H / 2, 14, tier2H, 'WOOD');
+    }
+    const row2Y = row1Y - 6 - tier2H - 6;
+    b(plankCX, row2Y, plankW, 12, 'STONE');
+
+    // Third tier: short pillars + cap plank (battlements)
+    const tier3H = 30;
+    for (let i = 0; i < 5; i += 2) {
+      b(WX + i * colSpacing, row2Y - 6 - tier3H / 2, 14, tier3H, 'WOOD');
+    }
+    const capY = row2Y - 6 - tier3H - 6;
+    b(plankCX, capY, plankW * 0.6, 12, 'STONE');
+
+    // ── Flanking pillar towers (2 levels each) ──────────────────────────────
+    const towerSpan = 60;
+    const towerPillarH = 70;
+
+    for (const tx of [WX - 115, colRight + 120]) {
+      // Level 1
+      b(tx - towerSpan / 2, groundY - towerPillarH / 2, 14, towerPillarH, 'WOOD');
+      b(tx + towerSpan / 2, groundY - towerPillarH / 2, 14, towerPillarH, 'WOOD');
+      const tFloor1 = groundY - towerPillarH - 6;
+      b(tx, tFloor1, 100, 12, 'STONE');
+
+      // Level 2
+      b(tx - towerSpan / 2, tFloor1 - 6 - 50 / 2, 14, 50, 'WOOD');
+      b(tx + towerSpan / 2, tFloor1 - 6 - 50 / 2, 14, 50, 'WOOD');
+      const tFloor2 = tFloor1 - 6 - 50 - 6;
+      b(tx, tFloor2, 100, 12, 'STONE');
+
+      // Cap stone
+      b(tx, tFloor2 - 20, 28, 28, 'STONE');
     }
 
-    this.barrels.push(new Barrel(this, cx(WX, 2), groundY - 18));
-    this.barrels.push(new Barrel(this, cx(WX, 7), groundY - 18));
+    // ── Barrels ─────────────────────────────────────────────────────────────
+    // Barrels offset from pillar centers to avoid overlap
+    this.barrels.push(new Barrel(this, WX + 2.5 * colSpacing, groundY - 18));
+    this.barrels.push(new Barrel(this, WX + 1.5 * colSpacing, row1Y - 6 - 18));
 
     const eR = 20;
     this.placeEnemies([
-      { x: T1X + BW,  y: cy(8) - BH / 2 - eR },   // on top of left tower cap
-      { x: cx(WX, 2), y: groundY - eR },             // on ground behind wall
-      { x: cx(WX, 7), y: groundY - eR },             // on ground behind wall
-      { x: T2X + BW,  y: cy(8) - BH / 2 - eR },    // on top of right tower cap
+      { x: WX - 115,              y: groundY - towerPillarH - 6 - 6 - eR },  // left tower floor
+      { x: WX + 1.5 * colSpacing, y: row1Y - 6 - eR },        // between pillars on plank
+      { x: WX + 2.5 * colSpacing, y: row1Y - 6 - eR },        // between pillars on plank
+      { x: colRight + 120,        y: groundY - towerPillarH - 6 - 6 - eR },  // right tower floor
     ]);
   }
 
   // Template 3 — "Keep" (difficulty 4+)
-  // GAP=0, hollow corner tower rooms, same grand scale
+  // Grand multi-tier: 4 pillar-pair rooms below, 2 above, central spire weak point
   private buildTemplateKeep() {
     const groundY = GAME_HEIGHT - 100;
-    const BW = 44, BH = 22;
-    const cx = (o: number, c: number) => o + BW / 2 + c * BW;
-    const cy = (r: number) => groundY - BH / 2 - r * BH;
-    const block = (x: number, y: number, mat: 'WOOD' | 'STONE', w = BW, h = BH) =>
+    const b = (x: number, y: number, w: number, h: number, mat: 'WOOD' | 'STONE') =>
       this.blocks.push(new Block(this, x, y, w, h, mat));
 
-    // Massive stone base 14 wide × 3 high
-    const BX = 420;
-    for (let r = 0; r < 3; r++)
-      for (let c = 0; c < 14; c++)
-        block(cx(BX, c), cy(r), 'STONE');
+    const span = 100;        // room width (pillar-to-pillar)
+    const gap = 30;          // gap between rooms
+    const pillarH = 70;      // ground-floor pillar height
+    const startX = 432;      // first pillar center (must clear hill at ~x=410)
 
-    // Four corner towers (3-wide each): hollow rooms in rows 3-5
-    const towerOrigins = [BX, BX + 3 * BW, BX + 7 * BW, BX + 11 * BW];
-    for (const TX of towerOrigins) {
-      // Hollow room: outer walls only rows 3-5
-      for (let r = 3; r <= 5; r++) {
-        block(cx(TX, 0), cy(r), 'STONE');
-        block(cx(TX, 2), cy(r), 'STONE');
-        // col 1 empty = room
-      }
-      // Wood ceiling at row 6
-      block(TX + BW + BW / 2, cy(6), 'WOOD', 3 * BW, BH);
-      // Upper section rows 7-9
-      for (let r = 7; r <= 9; r++) {
-        block(cx(TX, 0), cy(r), r < 9 ? 'STONE' : 'WOOD');
-        block(cx(TX, 1), cy(r), 'WOOD');
-        block(cx(TX, 2), cy(r), r < 9 ? 'STONE' : 'WOOD');
-      }
+    // ── Lower tier: 4 open rooms (4 pillar pairs + 4 planks) ────────────────
+    const roomCenters: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      const rx = startX + i * (span + gap);
+      roomCenters.push(rx + span / 2);
+
+      // Two wood pillars
+      b(rx, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+      b(rx + span, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+
+      // Stone plank floor on top
+      const floorY = groundY - pillarH - 6;
+      b(rx + span / 2, floorY, 140, 12, 'STONE');
+    }
+    const lowerFloorY = groundY - pillarH - 6;
+
+    // ── Upper tier: 2 rooms centered above lower rooms 1-2 and 3-4 ─────────
+    const upperPillarH = 60;
+    const upperBase = lowerFloorY - 6;
+    const upperRoomCenters: number[] = [];
+
+    for (let i = 0; i < 2; i++) {
+      // Center between two lower rooms
+      const lc = (roomCenters[i * 2] + roomCenters[i * 2 + 1]) / 2;
+      upperRoomCenters.push(lc);
+      const ulx = lc - span / 2;
+      const urx = lc + span / 2;
+
+      b(ulx, upperBase - upperPillarH / 2, 14, upperPillarH, 'WOOD');
+      b(urx, upperBase - upperPillarH / 2, 14, upperPillarH, 'WOOD');
+
+      const uFloorY = upperBase - upperPillarH - 6;
+      // Wide planks (260px) so the two upper rooms meet at the center
+      b(lc, uFloorY, 260, 12, 'STONE');
+    }
+    const upperFloorY = upperBase - upperPillarH - 6;
+
+    // ── Stone caps on lower room planks (adds visual weight) ──────────────
+    for (let i = 0; i < 4; i++) {
+      b(roomCenters[i], lowerFloorY - 6 - 14, 28, 28, 'STONE');
     }
 
-    // Connecting walls between towers
-    for (let r = 3; r < 5; r++) {
-      for (let c = 3; c < 7; c++) block(cx(BX, c), cy(r), 'STONE');
-      for (let c = 10; c < 14; c++) block(cx(BX, c), cy(r), 'STONE');
-    }
-    // Upper wooden bridges
-    for (let r = 5; r < 7; r++) {
-      for (let c = 3; c < 7; c++) block(cx(BX, c), cy(r), 'WOOD');
-      for (let c = 10; c < 14; c++) block(cx(BX, c), cy(r), 'WOOD');
-    }
+    // ── Central spire: single tall pillar + heavy stone cap ─────────────────
+    // Sits at junction of two upper planks — destroy the pillar for spectacular collapse
+    const spireX = (upperRoomCenters[0] + upperRoomCenters[1]) / 2;
+    const spireH = 50;
+    b(spireX, upperFloorY - 6 - spireH / 2, 14, spireH, 'WOOD');
+    const capY = upperFloorY - 6 - spireH - 6;
+    b(spireX, capY, 100, 12, 'STONE');
+    b(spireX - 25, capY - 6 - 14, 28, 28, 'STONE');  // on cap plank top
+    b(spireX + 25, capY - 6 - 14, 28, 28, 'STONE');
 
-    // Central keep (tallest): rows 3-11
-    const KX = BX + 7 * BW;
-    for (let r = 3; r < 12; r++)
-      for (let c = 0; c < 3; c++)
-        block(cx(KX, c), cy(r), r < 8 ? 'STONE' : 'WOOD');
-
-    // Battlements
-    for (let c = 0; c < 3; c++) block(cx(KX, c), cy(12), 'STONE');
-    block(BX + 7 * BW, cy(9), 'STONE', 14 * BW, BH);
-
-    // Barrels — lots for the big fight
-    this.barrels.push(new Barrel(this, cx(BX, 2),  groundY - 18));
-    this.barrels.push(new Barrel(this, cx(BX, 7),  groundY - 18));
-    this.barrels.push(new Barrel(this, cx(BX, 11), groundY - 18));
-    this.barrels.push(new Barrel(this, cx(KX, 1),  cy(12) - BH));
+    // ── Barrels ─────────────────────────────────────────────────────────────
+    this.barrels.push(new Barrel(this, roomCenters[0], groundY - 18));
+    this.barrels.push(new Barrel(this, roomCenters[3], groundY - 18));
+    this.barrels.push(new Barrel(this, upperRoomCenters[0], lowerFloorY - 6 - 18));
+    this.barrels.push(new Barrel(this, upperRoomCenters[1], upperFloorY - 6 - 18));
 
     const eR = 20;
     this.placeEnemies([
-      { x: cx(BX, 1),  y: groundY - eR },
-      { x: cx(BX, 6),  y: groundY - eR },
-      { x: cx(BX, 11), y: groundY - eR },
-      { x: cx(KX, 1),  y: cy(9) - BH / 2 - eR },   // atop the central keep
+      { x: roomCenters[1],      y: lowerFloorY - 6 - 28 - eR },  // on top of stone cap block
+      { x: roomCenters[2],      y: lowerFloorY - 6 - 28 - eR },  // on top of stone cap block
+      { x: upperRoomCenters[1], y: upperFloorY - 6 - eR },    // upper room right
+      { x: spireX,              y: capY - 6 - 28 - eR },        // atop the spire cap blocks
     ]);
   }
 
   // Template 4 — "The Bridge" (difficulty 2)
-  // Elevated narrow walkway with support pillars — destroy supports to collapse
+  // Long elevated walkway on thin stilts — very vulnerable, one solo center pillar
   private buildTemplateBridge() {
     const groundY = GAME_HEIGHT - 100;
-    const BW = 50, BH = 28;
-    const cx = (o: number, c: number) => o + BW / 2 + c * BW;
-    const cy = (r: number) => groundY - BH / 2 - r * BH;
-    const block = (x: number, y: number, mat: 'WOOD' | 'STONE', w = BW, h = BH) =>
+    const b = (x: number, y: number, w: number, h: number, mat: 'WOOD' | 'STONE') =>
       this.blocks.push(new Block(this, x, y, w, h, mat));
 
-    const BX = 480;
-    // Left support pillar (2 wide, 4 tall)
-    for (let r = 0; r < 4; r++) {
-      block(cx(BX, 0), cy(r), 'STONE');
-      block(cx(BX, 1), cy(r), 'STONE');
-    }
-    // Right support pillar (2 wide, 4 tall)
-    for (let r = 0; r < 4; r++) {
-      block(cx(BX, 8), cy(r), 'STONE');
-      block(cx(BX, 9), cy(r), 'STONE');
-    }
-    // Narrow center pillar (destroyable — load-bearing!)
-    for (let r = 0; r < 4; r++) {
-      block(cx(BX, 5), cy(r), 'WOOD', 24, BH);
-    }
-    // Bridge deck spanning full width at row 4
-    for (let c = 0; c < 10; c++) {
-      block(cx(BX, c), cy(4), 'WOOD');
-    }
-    // Railings (alternating blocks at row 5)
-    for (let c = 0; c < 10; c += 2) {
-      block(cx(BX, c), cy(5), 'WOOD');
+    const startX = 480;        // must clear hill at ~x=410 (deck left edge = 415)
+    const pillarSpacing = 110;  // between each stilt pair
+    const pillarH = 80;         // tall stilts
+    const deckW = 460;          // total bridge deck width
+
+    // 4 pillar positions: pairs at ends + middle, solo center pillar
+    const pillarXs = [
+      startX,                     // left stilt pair
+      startX + pillarSpacing,     // left-center: SOLO (weak point!)
+      startX + 2 * pillarSpacing, // right-center pair
+      startX + 3 * pillarSpacing, // right stilt pair
+    ];
+
+    // All pillars rise from ground
+    for (let i = 0; i < pillarXs.length; i++) {
+      const px = pillarXs[i];
+      if (i === 1) {
+        // Solo center pillar — the key weak point
+        b(px, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+      } else {
+        // Paired pillars (narrowly spaced)
+        b(px - 20, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+        b(px + 20, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+      }
     }
 
-    this.barrels.push(new Barrel(this, cx(BX, 5), groundY - 18));
-    this.barrels.push(new Barrel(this, cx(BX, 3), cy(4) - BH));
+    // Bridge deck: long stone plank at top of pillars
+    const deckY = groundY - pillarH - 6;
+    const deckCX = startX + 1.5 * pillarSpacing;
+    b(deckCX, deckY, deckW, 12, 'STONE');
+
+    // Railings: small square blocks on deck edges
+    for (let i = 0; i < 4; i++) {
+      b(startX + i * pillarSpacing, deckY - 6 - 14, 28, 28, 'WOOD');
+    }
+
+    // ── Barrels ─────────────────────────────────────────────────────────────
+    this.barrels.push(new Barrel(this, pillarXs[0] + pillarSpacing / 2, groundY - 18));  // between pillar positions 0 and 1
+    this.barrels.push(new Barrel(this, deckCX + 100, deckY - 6 - 18));  // between railings 2 and 3
 
     const eR = 20;
     this.placeEnemies([
-      { x: cx(BX, 2), y: cy(4) - BH / 2 - eR },   // on bridge left
-      { x: cx(BX, 5), y: cy(5) - BH / 2 - eR },   // on bridge center
-      { x: cx(BX, 8), y: cy(4) - BH / 2 - eR },   // on bridge right
-      { x: cx(BX, 5), y: groundY - eR },             // on ground below
+      { x: startX + 0.5 * pillarSpacing,  y: deckY - 6 - eR },   // on deck left
+      { x: startX + 1.5 * pillarSpacing,  y: deckY - 6 - eR },   // on deck center
+      { x: startX + 2.5 * pillarSpacing,  y: deckY - 6 - eR },   // on deck right
+      { x: startX + 1.5 * pillarSpacing,  y: groundY - eR },      // on ground below
     ]);
   }
 
-  // Template 5 — "The Pit" (difficulty 3)
-  // Sunken area with thick walls — requires arcing shots over walls or breaking through
+  // Template 5 — "The Cage" (difficulty 3)
+  // 3-tier skeletal frame: pillar+plank modules stacked, heavy stone cap
   private buildTemplatePit() {
     const groundY = GAME_HEIGHT - 100;
-    const BW = 48, BH = 26;
-    const cx = (o: number, c: number) => o + BW / 2 + c * BW;
-    const cy = (r: number) => groundY - BH / 2 - r * BH;
-    const block = (x: number, y: number, mat: 'WOOD' | 'STONE', w = BW, h = BH) =>
+    const b = (x: number, y: number, w: number, h: number, mat: 'WOOD' | 'STONE') =>
       this.blocks.push(new Block(this, x, y, w, h, mat));
 
-    const PX = 500;
-    // Pit floor (row 0, sunken — stone base)
-    for (let c = 0; c < 8; c++) block(cx(PX, c), cy(0), 'STONE');
-    // Left wall (3 tall stone)
-    for (let r = 1; r <= 5; r++) {
-      block(cx(PX, 0), cy(r), 'STONE');
-      block(cx(PX, 1), cy(r), r <= 3 ? 'STONE' : 'WOOD');
-    }
-    // Right wall (3 tall stone)
-    for (let r = 1; r <= 5; r++) {
-      block(cx(PX, 6), cy(r), r <= 3 ? 'STONE' : 'WOOD');
-      block(cx(PX, 7), cy(r), 'STONE');
-    }
-    // Weak wood ceiling over the center (breakable entry point)
-    for (let c = 2; c <= 5; c++) {
-      block(cx(PX, c), cy(3), 'WOOD');
-    }
-    // Inner floor platforms at different heights
-    block(cx(PX, 2), cy(1), 'WOOD');
-    block(cx(PX, 5), cy(1), 'WOOD');
+    const cx = 680;           // cage center x
+    const cageW = 160;        // pillar-to-pillar width
+    const frontL = cx - cageW / 2;
+    const frontR = cx + cageW / 2;
 
-    this.barrels.push(new Barrel(this, cx(PX, 3), groundY - 18));
-    this.barrels.push(new Barrel(this, cx(PX, 4), cy(3) - BH));
+    // ── Level 1: short pillars + mid-level plank ───────────────────────────
+    const lv1H = 50;
+    b(frontL, groundY - lv1H / 2, 14, lv1H, 'WOOD');
+    b(frontR, groundY - lv1H / 2, 14, lv1H, 'WOOD');
+    // Center support pillar — same height as outer pillars so it reaches the plank
+    b(cx, groundY - lv1H / 2, 14, lv1H, 'WOOD');
+    const midY = groundY - lv1H - 6;
+    b(cx, midY, cageW + 30, 12, 'WOOD');
+
+    // ── Level 2: taller pillars + stone upper floor ────────────────────────
+    const lv2H = 60;
+    b(frontL, midY - 6 - lv2H / 2, 14, lv2H, 'WOOD');
+    b(frontR, midY - 6 - lv2H / 2, 14, lv2H, 'WOOD');
+    const upperY = midY - 6 - lv2H - 6;
+    b(cx, upperY, cageW + 30, 12, 'STONE');
+
+    // ── Level 3: short pillars + heavy stone cap ───────────────────────────
+    const lv3H = 40;
+    b(frontL, upperY - 6 - lv3H / 2, 14, lv3H, 'WOOD');
+    b(frontR, upperY - 6 - lv3H / 2, 14, lv3H, 'WOOD');
+    const capY = upperY - 6 - lv3H - 6;
+    b(cx, capY, cageW + 50, 12, 'STONE');
+
+    // Heavy cap pieces — collapse spectacularly when pillars break
+    b(cx - 40, capY - 18, 50, 24, 'STONE');
+    b(cx + 40, capY - 18, 50, 24, 'STONE');
+
+    // ── Barrels ─────────────────────────────────────────────────────────────
+    this.barrels.push(new Barrel(this, frontL + 40, groundY - 18));    // offset from center pillar
+    this.barrels.push(new Barrel(this, frontR - 40, upperY - 6 - 18)); // on upper floor, offset from enemy
 
     const eR = 20;
     this.placeEnemies([
-      { x: cx(PX, 3), y: groundY - BH - eR },       // in pit floor
-      { x: cx(PX, 5), y: groundY - BH - eR },       // in pit floor
-      { x: cx(PX, 1), y: cy(5) - BH / 2 - eR },    // atop left wall
-      { x: cx(PX, 6), y: cy(5) - BH / 2 - eR },    // atop right wall
+      { x: cx,          y: midY - 6 - eR },        // on mid-level plank
+      { x: cx,          y: upperY - 6 - eR },       // on upper stone floor
+      { x: frontL + 50, y: groundY - eR },          // ground level left
+      { x: frontR - 50, y: groundY - eR },          // ground level right
     ]);
   }
 
   // Template 6 — "The Citadel" (difficulty 5+, Boss-specific)
-  // Multi-tier fortress with separate rooms, internal barrels, throne room at top
+  // Multi-wing palace: left tower, grand center hall, right tower, throne room on top
   private buildTemplateCitadel() {
     const groundY = GAME_HEIGHT - 100;
-    const BW = 40, BH = 20;
-    const cx = (o: number, c: number) => o + BW / 2 + c * BW;
-    const cy = (r: number) => groundY - BH / 2 - r * BH;
-    const block = (x: number, y: number, mat: 'WOOD' | 'STONE', w = BW, h = BH) =>
+    const b = (x: number, y: number, w: number, h: number, mat: 'WOOD' | 'STONE') =>
       this.blocks.push(new Block(this, x, y, w, h, mat));
 
-    const CX = 380;
-    // Massive stone foundation (16 wide × 3 tall)
-    for (let r = 0; r < 3; r++)
-      for (let c = 0; c < 16; c++)
-        block(cx(CX, c), cy(r), 'STONE');
+    const span = 100;         // room width
+    const pillarH = 70;       // floor-1 pillar height
 
-    // Lower level: two large rooms side by side (rows 3-6)
-    // Left room: walls at col 0, 7 (hollow 1-6)
-    for (let r = 3; r <= 6; r++) {
-      block(cx(CX, 0), cy(r), 'STONE');
-      block(cx(CX, 7), cy(r), 'STONE');
-    }
-    // Right room: walls at col 8, 15 (hollow 9-14)
-    for (let r = 3; r <= 6; r++) {
-      block(cx(CX, 8), cy(r), 'STONE');
-      block(cx(CX, 15), cy(r), 'STONE');
-    }
-    // Floor between levels
-    for (let c = 0; c < 16; c++)
-      block(cx(CX, c), cy(7), c < 8 ? 'STONE' : 'WOOD');
+    // ── Helper: build a pillar-plank level ──────────────────────────────────
+    const buildLevel = (cx: number, baseY: number, pH: number, plankW: number) => {
+      b(cx - span / 2, baseY - pH / 2, 14, pH, 'WOOD');
+      b(cx + span / 2, baseY - pH / 2, 14, pH, 'WOOD');
+      const floorY = baseY - pH - 6;
+      b(cx, floorY, plankW, 12, 'STONE');
+      return floorY;
+    };
 
-    // Upper level: central throne room (rows 8-12)
-    for (let r = 8; r <= 12; r++) {
-      block(cx(CX, 4), cy(r), 'STONE');
-      block(cx(CX, 11), cy(r), 'STONE');
-    }
-    // Throne room interior wood elements
-    for (let r = 8; r <= 10; r++) {
-      block(cx(CX, 5), cy(r), 'WOOD');
-      block(cx(CX, 10), cy(r), 'WOOD');
-    }
-    // Throne room ceiling
-    for (let c = 4; c <= 11; c++)
-      block(cx(CX, c), cy(13), 'STONE');
-    // Battlements on top
-    for (let c = 4; c <= 11; c += 2)
-      block(cx(CX, c), cy(14), 'STONE');
+    // ── Left wing: 3-level tower ────────────────────────────────────────────
+    const LX = 482;           // must clear hill at ~x=410 (left plank edge at LX - 70 = 412)
+    const lf1 = buildLevel(LX, groundY, pillarH, 140);
+    const lf2 = buildLevel(LX, lf1 - 6, 55, 140);
+    const lf3 = buildLevel(LX, lf2 - 6, 45, 100);
+    b(LX, lf3 - 20, 28, 28, 'STONE');  // cap
 
-    // Side towers (flanking)
-    for (let r = 8; r <= 11; r++) {
-      block(cx(CX, 0), cy(r), 'STONE');
-      block(cx(CX, 1), cy(r), 'WOOD');
-      block(cx(CX, 14), cy(r), 'WOOD');
-      block(cx(CX, 15), cy(r), 'STONE');
-    }
-    block(cx(CX, 0) + BW / 2, cy(12), 'STONE', 2 * BW, BH);
-    block(cx(CX, 14) + BW / 2, cy(12), 'STONE', 2 * BW, BH);
+    // ── Center grand hall: 4 levels, wider span ─────────────────────────────
+    const CX = 680;
+    const hallSpan = 140;     // wider room
 
-    // Barrels — many for the epic boss fight
-    this.barrels.push(new Barrel(this, cx(CX, 3), groundY - 18));
-    this.barrels.push(new Barrel(this, cx(CX, 12), groundY - 18));
-    this.barrels.push(new Barrel(this, cx(CX, 7), cy(7) - BH));
-    this.barrels.push(new Barrel(this, cx(CX, 8), cy(7) - BH));
-    this.barrels.push(new Barrel(this, cx(CX, 7), cy(13) - BH));
+    // Level 1: 3 pillars (2 outer + 1 center weak point)
+    b(CX - hallSpan / 2, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+    b(CX, groundY - pillarH / 2, 14, pillarH, 'WOOD');  // center weak point
+    b(CX + hallSpan / 2, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+    const cf1 = groundY - pillarH - 6;
+    b(CX, cf1, hallSpan + 40, 12, 'STONE');
+
+    // Level 2: 2 outer pillars (no center — open)
+    const cPH2 = 60;
+    b(CX - hallSpan / 2, cf1 - 6 - cPH2 / 2, 14, cPH2, 'WOOD');
+    b(CX + hallSpan / 2, cf1 - 6 - cPH2 / 2, 14, cPH2, 'WOOD');
+    const cf2 = cf1 - 6 - cPH2 - 6;
+    b(CX, cf2, hallSpan + 40, 12, 'STONE');
+
+    // Level 3: narrower, 2 pillars
+    const cPH3 = 50;
+    b(CX - span / 2, cf2 - 6 - cPH3 / 2, 14, cPH3, 'WOOD');
+    b(CX + span / 2, cf2 - 6 - cPH3 / 2, 14, cPH3, 'WOOD');
+    const cf3 = cf2 - 6 - cPH3 - 6;
+    b(CX, cf3, 140, 12, 'STONE');
+
+    // Level 4 — Throne room: single pillar + wide stone cap (boss sits here)
+    const throneH = 40;
+    b(CX, cf3 - 6 - throneH / 2, 14, throneH, 'WOOD');
+    const throneFloor = cf3 - 6 - throneH - 6;
+    b(CX, throneFloor, 100, 12, 'STONE');
+    // Heavy throne cap — satisfying collapse when pillar breaks
+    b(CX - 30, throneFloor - 18, 50, 24, 'STONE');
+    b(CX + 30, throneFloor - 18, 50, 24, 'STONE');
+
+    // ── Right wing: 3-level tower ───────────────────────────────────────────
+    const RX = 940;
+    const rf1 = buildLevel(RX, groundY, pillarH, 140);
+    const rf2 = buildLevel(RX, rf1 - 6, 55, 140);
+    const rf3 = buildLevel(RX, rf2 - 6, 45, 100);
+    b(RX, rf3 - 20, 28, 28, 'STONE');  // cap
+
+    // ── Connecting bridges at level 2 ───────────────────────────────────────
+    // Bridge planks must NOT overlap adjacent structure planks (same Y = collision)
+    // Left wing plank right edge: LX + 70 = 552. Center hall plank left edge: CX - 90 = 590.
+    const lBridgeX = (LX + 70 + CX - 90) / 2;  // centered in gap (=571)
+    const lBridgeW = (CX - 90) - (LX + 70);     // spans the gap exactly (=38)
+    b(lBridgeX, cf1, lBridgeW, 12, 'WOOD');
+    // Support pillar under left bridge (from ground)
+    b(lBridgeX, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+
+    // Right bridge: center hall plank right edge (CX + 90 = 770) to right wing left edge (RX - 70 = 870)
+    const rBridgeX = (CX + 90 + RX - 70) / 2;
+    const rBridgeW = (RX - 70) - (CX + 90);
+    b(rBridgeX, cf1, rBridgeW, 12, 'WOOD');
+    // Support pillar under right bridge (from ground)
+    b(rBridgeX, groundY - pillarH / 2, 14, pillarH, 'WOOD');
+
+    // ── Barrels — lots for the epic boss fight ──────────────────────────────
+    this.barrels.push(new Barrel(this, LX, groundY - 18));
+    this.barrels.push(new Barrel(this, CX - hallSpan / 4, groundY - 18));  // offset from center pillar
+    this.barrels.push(new Barrel(this, RX, groundY - 18));
+    this.barrels.push(new Barrel(this, CX + 40, cf1 - 6 - 18));  // on hall floor, offset from enemies/pillars
 
     const eR = 20;
     this.placeEnemies([
-      { x: cx(CX, 3),  y: groundY - 3 * BH - eR },   // left room
-      { x: cx(CX, 12), y: groundY - 3 * BH - eR },   // right room
-      { x: cx(CX, 7),  y: cy(13) - BH / 2 - eR },    // throne room
-      { x: cx(CX, 1),  y: cy(12) - BH / 2 - eR },    // left tower top
-      { x: cx(CX, 14), y: cy(12) - BH / 2 - eR },    // right tower top
-      { x: cx(CX, 7),  y: groundY - eR },              // ground level
+      { x: LX,  y: lf1 - 6 - eR },           // left wing level 1
+      { x: CX,  y: cf1 - 6 - eR },           // center hall level 1
+      { x: RX,  y: rf1 - 6 - eR },           // right wing level 1
+      { x: CX,  y: cf2 - 6 - eR },           // center hall level 2
+      { x: CX,  y: throneFloor - 6 - 24 - eR }, // on top of throne cap blocks
+      { x: lBridgeX, y: cf1 - 6 - eR },        // on left bridge
     ]);
   }
 
@@ -922,7 +1003,9 @@ export class BattleScene extends Phaser.Scene {
         if (block && !block.destroyed) {
           const v = hero.body?.velocity ?? { x: 0, y: 0 };
           const speed = Math.hypot(v.x, v.y);
-          block.applyDamage(speed * 15); // piercing damage
+          const pierceDmg = speed * 15;
+          block.applyDamage(pierceDmg); // piercing damage
+          hero.battleBlockDamage += pierceDmg;
           hero.piercing = false; // clear after first pierce
         }
         return; // don't trigger normal impact — hero keeps flying
@@ -1007,12 +1090,13 @@ export class BattleScene extends Phaser.Scene {
       }
     });
 
-    this.events.on('priestHealAura', (x: number, y: number, radius: number, amount: number) => {
+    this.events.on('priestHealAura', (x: number, y: number, radius: number, amount: number, healer?: Hero) => {
       for (const h of this.heroes) {
         if (h.state === 'dead') continue;
         const d = Math.hypot(h.x - x, h.y - y);
         if (d < radius) {
           h.heal(amount);
+          if (healer) healer.battleHealingDone += amount;
           DamageNumber.heal(this, h.x, h.y, amount);
         }
       }
@@ -1035,8 +1119,9 @@ export class BattleScene extends Phaser.Scene {
       this.audio.playExplosion();
     });
 
-    this.events.on('enemyDied', (enemy?: Enemy) => {
+    this.events.on('enemyDied', (enemy?: Enemy, killer?: Hero) => {
       this.audio.playEnemyDeath();
+      if (killer) killer.battleEnemiesKilled++;
       // Gold-on-kill relic
       this.coinGoldBonus += this.combatSystem.killGoldBonus;
       this.combatSystem.killGoldBonus = 0;
@@ -1057,6 +1142,7 @@ export class BattleScene extends Phaser.Scene {
         for (const h of this.heroes) {
           if (h.state !== 'dead' && h !== hero) {
             h.heal(15);
+            hero.battleHealingDone += 15;
             DamageNumber.heal(this, h.x, h.y, 15);
           }
         }
@@ -1077,8 +1163,8 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // Druid ability: spawn wolf minions that deal damage to nearby enemies
-    this.events.on('spawnWolf', (x: number, y: number, dmg: number, hp: number) => {
-      this.spawnWolfMinion(x, y, dmg, hp);
+    this.events.on('spawnWolf', (x: number, y: number, dmg: number, hp: number, druid?: Hero) => {
+      this.spawnWolfMinion(x, y, dmg, hp, druid);
     });
 
     // DEMON_KNIGHT thorns: reflect damage to nearest hero
@@ -1189,8 +1275,16 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
+    const heroStats = this.heroes.map(h => ({
+      heroClass: h.heroClass,
+      damageDealt: Math.round(h.battleDamageDealt),
+      blockDamage: Math.round(h.battleBlockDamage),
+      enemiesKilled: h.battleEnemiesKilled,
+      healingDone: Math.round(h.battleHealingDone),
+    }));
+
     this.time.delayedCall(800, () => {
-      this.scene.start('ResultScene', { victory, reason, gold, nodeId: this.activeNode.id });
+      this.scene.start('ResultScene', { victory, reason, gold, nodeId: this.activeNode.id, heroStats });
     });
   }
 
@@ -1330,7 +1424,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ─── Wolf minion (Druid ability) ────────────────────────────────────────────
-  private spawnWolfMinion(x: number, y: number, dmg: number, hp: number) {
+  private spawnWolfMinion(x: number, y: number, dmg: number, hp: number, druid?: Hero) {
     const wolf = this.add.graphics().setDepth(12);
     wolf.fillStyle(0x16a085, 0.9);
     wolf.fillCircle(0, 0, 10);
@@ -1373,7 +1467,8 @@ export class BattleScene extends Phaser.Scene {
         attackTimer += 50; // update runs every 50ms
         if (dist < 30 && attackTimer >= 1000) {
           attackTimer = 0;
-          nearest.applyDamage(dmg);
+          nearest.applyDamage(dmg, undefined, druid);
+          if (druid) druid.battleDamageDealt += dmg;
           DamageNumber.damage(this, nearest.x, nearest.y, dmg);
           // Wolf takes counter-damage
           wolfHp -= 5;

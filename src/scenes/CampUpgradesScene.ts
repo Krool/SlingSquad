@@ -4,22 +4,14 @@ import {
   getShards, purchaseUpgrade, canPurchase, getPurchaseCount,
   getAllUpgrades, type UpgradeDef,
 } from '@/systems/MetaState';
-
-const RARITY_COLOR: Record<string, number> = {
-  common:   0x4a7a9b,
-  uncommon: 0x27ae60,
-  rare:     0x8e44ad,
-};
-
-const RARITY_LABEL: Record<string, string> = {
-  common:   'COMMON',
-  uncommon: 'UNCOMMON',
-  rare:     'RARE',
-};
+import { ScrollablePanel } from '@/ui/ScrollablePanel';
+import { CAMP_STRUCTURES } from '@/data/campBuildings';
 
 export class CampUpgradesScene extends Phaser.Scene {
   private callerKey = '';
   private _shardText: Phaser.GameObjects.Text | null = null;
+  private _scrollPanel: ScrollablePanel | null = null;
+  private _cardContainers: Map<string, Phaser.GameObjects.Container> = new Map();
 
   constructor() {
     super({ key: 'CampUpgradesScene' });
@@ -29,14 +21,16 @@ export class CampUpgradesScene extends Phaser.Scene {
     this.callerKey = data?.callerKey ?? '';
     if (this.callerKey) this.scene.pause(this.callerKey);
 
+    this._cardContainers.clear();
+
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
 
-    // ── Full-screen dim ────────────────────────────────────────────────────
+    // ── Full-screen dim ──────────────────────────────────────────────────
     this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.78)
       .setDepth(0).setInteractive();
 
-    // ── Panel ──────────────────────────────────────────────────────────────
+    // ── Panel ────────────────────────────────────────────────────────────
     const pw = GAME_WIDTH - 80, ph = GAME_HEIGHT - 60, pr = 14;
     const panelX = cx - pw / 2, panelY = cy - ph / 2;
 
@@ -48,186 +42,296 @@ export class CampUpgradesScene extends Phaser.Scene {
     panel.lineStyle(1, 0x3a5070, 0.20);
     panel.strokeRoundedRect(panelX + 4, panelY + 4, pw - 8, ph - 8, pr - 2);
 
-    // ── Title ──────────────────────────────────────────────────────────────
+    // ── Fixed header ─────────────────────────────────────────────────────
     this.add.text(cx, panelY + 32, 'CAMP UPGRADES', {
       fontSize: '26px', fontFamily: 'Georgia, serif',
       color: '#7ec8e3', stroke: '#000', strokeThickness: 3,
       letterSpacing: 2,
-    }).setOrigin(0.5).setDepth(2);
+    }).setOrigin(0.5).setDepth(20);
 
     // Divider
-    const div = this.add.graphics().setDepth(2);
+    const div = this.add.graphics().setDepth(20);
     div.lineStyle(1, 0x7ec8e3, 0.18);
-    div.lineBetween(cx - 340, panelY + 55, cx + 340, panelY + 55);
+    div.lineBetween(panelX + 20, panelY + 55, panelX + pw - 20, panelY + 55);
 
-    // ── Shard display ──────────────────────────────────────────────────────
-    this.buildShardDisplay();
+    this.buildShardDisplay(panelX, panelY);
 
-    // ── Upgrade grid ───────────────────────────────────────────────────────
-    this.buildUpgradeGrid();
+    // ── Scrollable area ──────────────────────────────────────────────────
+    const scrollX = panelX + 20;
+    const scrollY = panelY + 65;
+    const scrollW = pw - 40;
+    const scrollH = ph - 120; // room for header + footer
 
-    // ── Close button ───────────────────────────────────────────────────────
+    this._scrollPanel = new ScrollablePanel(this, scrollX, scrollY, scrollW, scrollH, 5);
+    this.buildUpgradeGrid(scrollW);
+
+    // ── Fixed footer: Close button ───────────────────────────────────────
     this.buildCloseButton(cx, panelY + ph - 38);
 
     // ESC key closes
     this.input.keyboard?.addKey('ESC').on('down', () => this.closeOverlay());
   }
 
-  // ── Shard display (top-right of panel) ──────────────────────────────────
-  private buildShardDisplay() {
-    const px = GAME_WIDTH - 60, py = 48;
-    const W = 180, H = 44;
-
-    const panel = this.add.graphics().setDepth(5);
-    panel.fillStyle(0x0d1526, 0.92);
-    panel.fillRoundedRect(px - W, py, W, H, 7);
-    panel.lineStyle(1, 0x3a5570, 0.7);
-    panel.strokeRoundedRect(px - W, py, W, H, 7);
-
-    this.add.text(px - W / 2, py + 7, 'SHARDS', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
-    }).setOrigin(0.5, 0).setDepth(6);
-
-    this._shardText = this.add.text(px - W / 2, py + 20, `◆ ${getShards()}`, {
-      fontSize: '18px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
-      color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5, 0).setDepth(6);
+  shutdown() {
+    this._scrollPanel?.destroy();
+    this._scrollPanel = null;
+    this._cardContainers.clear();
   }
 
-  // ── Upgrade grid ────────────────────────────────────────────────────────
-  private buildUpgradeGrid() {
-    const upgrades = getAllUpgrades();
-    const cols = 4;
-    const cardW = 240, cardH = 148, gapX = 20, gapY = 16;
-    const rows = Math.ceil(upgrades.length / cols);
-    const gridW = cols * cardW + (cols - 1) * gapX;
-    const startX = (GAME_WIDTH - gridW) / 2;
-    const startY = 130;
+  // ── Shard display (top-right of panel) ─────────────────────────────────
+  private buildShardDisplay(panelX: number, panelY: number) {
+    const px = panelX + (GAME_WIDTH - 80) - 20;
+    const py = panelY + 12;
+    const W = 160, H = 38;
 
-    // Section label
-    this.add.text(GAME_WIDTH / 2, startY - 22, 'PERMANENT UPGRADES', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#3a5a7a', letterSpacing: 3,
-    }).setOrigin(0.5).setDepth(5);
+    const bg = this.add.graphics().setDepth(20);
+    bg.fillStyle(0x0d1526, 0.92);
+    bg.fillRoundedRect(px - W, py, W, H, 7);
+    bg.lineStyle(1, 0x3a5570, 0.7);
+    bg.strokeRoundedRect(px - W, py, W, H, 7);
+
+    this.add.text(px - W / 2, py + 5, 'SHARDS', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+    }).setOrigin(0.5, 0).setDepth(21);
+
+    this._shardText = this.add.text(px - W / 2, py + 18, `\u25c6 ${getShards()}`, {
+      fontSize: '16px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+      color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 0).setDepth(21);
+  }
+
+  // ── Upgrade grid (3 columns) ───────────────────────────────────────────
+  private buildUpgradeGrid(scrollW: number) {
+    const upgrades = getAllUpgrades().filter(u => !u.hidden);
+    const cols = 3;
+    const cardW = 340, cardH = 140, gapX = 16, gapY = 14;
+    const gridW = cols * cardW + (cols - 1) * gapX;
+    const offsetX = (scrollW - gridW) / 2;
+    const startY = 8;
+
+    const rows = Math.ceil(upgrades.length / cols);
+    const totalH = rows * (cardH + gapY) + startY + 10;
+
+    const container = this._scrollPanel!.getContainer();
 
     upgrades.forEach((upgrade, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const cx = startX + col * (cardW + gapX) + cardW / 2;
+      const cx = offsetX + col * (cardW + gapX) + cardW / 2;
       const cy = startY + row * (cardH + gapY) + cardH / 2;
-      this.buildUpgradeCard(upgrade, cx, cy, cardW, cardH);
+      this.buildUpgradeCard(container, upgrade, cx, cy, cardW, cardH);
     });
+
+    this._scrollPanel!.setContentHeight(totalH);
   }
 
-  private buildUpgradeCard(upgrade: UpgradeDef, cx: number, cy: number, W: number, H: number) {
-    const count    = getPurchaseCount(upgrade.id);
-    const maxed    = count >= upgrade.maxStack;
-    const buyable  = canPurchase(upgrade.id);
-    const accentCol = RARITY_COLOR[upgrade.rarity] ?? 0x4a7a9b;
+  private buildUpgradeCard(
+    parent: Phaser.GameObjects.Container,
+    upgrade: UpgradeDef, cx: number, cy: number, W: number, H: number,
+  ) {
+    const count   = getPurchaseCount(upgrade.id);
+    const maxed   = count >= upgrade.maxStack;
+    const buyable = canPurchase(upgrade.id);
     const R = 8;
 
-    const container = this.add.container(cx, cy).setDepth(10);
+    const card = this.add.container(cx, cy);
+    this._cardContainers.set(upgrade.id, card);
 
+    // ── Background ──
     const bg = this.add.graphics();
     const drawBg = (hovered: boolean) => {
       bg.clear();
-      const fillAlpha = maxed ? 0.12 : hovered && buyable ? 0.28 : 0.18;
-      bg.fillStyle(0x0d1526, fillAlpha + 0.5);
+      let borderColor: number, borderAlpha: number, fillColor: number;
+      if (maxed) {
+        borderColor = 0x2a6a2a; borderAlpha = 0.9; fillColor = 0x0a160a;
+      } else if (buyable) {
+        borderColor = hovered ? 0x7ec8e3 : 0x4a8aaa;
+        borderAlpha = hovered ? 1 : 0.7;
+        fillColor = hovered ? 0x122838 : 0x0d1e2e;
+      } else {
+        borderColor = 0x2a3040; borderAlpha = 0.4; fillColor = 0x0a0e16;
+      }
+      bg.fillStyle(fillColor, 1);
       bg.fillRoundedRect(-W / 2, -H / 2, W, H, R);
-      bg.lineStyle(1.5, maxed ? 0x2a4a2a : hovered && buyable ? accentCol : 0x1e3050,
-        maxed ? 0.9 : hovered && buyable ? 1 : 0.5);
+      bg.lineStyle(1.5, borderColor, borderAlpha);
       bg.strokeRoundedRect(-W / 2, -H / 2, W, H, R);
     };
     drawBg(false);
-    container.add(bg);
+    card.add(bg);
 
-    // Rarity tag
-    container.add(
-      this.add.text(-W / 2 + 10, -H / 2 + 9, RARITY_LABEL[upgrade.rarity], {
-        fontSize: '8px', fontFamily: 'monospace',
-        color: '#' + accentCol.toString(16).padStart(6, '0'),
-        letterSpacing: 1,
+    // ── Left column: Icon (48×48) ──
+    const iconX = -W / 2 + 34;
+    const iconY = -14;
+    if (this.textures.exists(upgrade.icon)) {
+      const icon = this.add.image(iconX, iconY, upgrade.icon)
+        .setDisplaySize(48, 48);
+      if (!buyable && !maxed) icon.setTint(0x555555);
+      if (maxed) icon.setTint(0x66aa66);
+      card.add(icon);
+    } else {
+      // Fallback: colored square
+      const fallback = this.add.graphics();
+      fallback.fillStyle(maxed ? 0x2a6a2a : buyable ? 0x3a6a8a : 0x2a2a3a, 1);
+      fallback.fillRect(iconX - 24, iconY - 24, 48, 48);
+      card.add(fallback);
+    }
+
+    // ── Mini building thumbnail (below icon, if applicable) ──
+    const buildingDef = upgrade.building ? CAMP_STRUCTURES[upgrade.building] : null;
+    if (buildingDef) {
+      const thumbG = this.add.graphics();
+      const thumbX = iconX;
+      const thumbY = iconY + 38;
+      // Draw at a small offset within the graphics context
+      buildingDef.buildFn(thumbG, thumbX, thumbY + 25, count);
+      thumbG.setScale(0.45);
+      thumbG.setPosition(
+        thumbG.x + thumbX * (1 - 0.45),
+        thumbG.y + (thumbY + 25) * (1 - 0.45),
+      );
+      thumbG.setAlpha(0.6);
+      card.add(thumbG);
+    }
+
+    // ── Center column: Name + Description ──
+    const textX = -W / 2 + 72;
+    const nameColor = maxed ? '#66aa66' : '#c8d8e8';
+    card.add(
+      this.add.text(textX, -H / 2 + 14, upgrade.name, {
+        fontSize: '15px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+        color: nameColor, stroke: '#000', strokeThickness: 2,
       }),
     );
 
-    // Name
-    container.add(
-      this.add.text(0, -H / 2 + 26, upgrade.name, {
-        fontSize: '15px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
-        color: maxed ? '#4a7a4a' : '#c8d8e8',
-        stroke: '#000', strokeThickness: 2,
-      }).setOrigin(0.5),
+    const descColor = maxed ? '#3a6a3a' : buyable ? '#7a9ab8' : '#4a5a68';
+    card.add(
+      this.add.text(textX, -H / 2 + 34, upgrade.desc, {
+        fontSize: '11px', fontFamily: 'Georgia, serif', color: descColor,
+        wordWrap: { width: W - 150 },
+      }),
     );
 
-    // Description
-    container.add(
-      this.add.text(0, -4, upgrade.desc, {
-        fontSize: '12px', fontFamily: 'Georgia, serif',
-        color: maxed ? '#3a5a3a' : '#7a9ab8',
-        wordWrap: { width: W - 24 }, align: 'center',
-      }).setOrigin(0.5),
-    );
+    // ── Segmented progress bar ──
+    const barX = textX;
+    const barY = H / 2 - 34;
+    const segW = 28, segH = 10, segGap = 3;
+    const totalBarW = upgrade.maxStack * (segW + segGap) - segGap;
 
-    // Stack pips
-    if (upgrade.maxStack > 1) {
-      for (let pip = 0; pip < upgrade.maxStack; pip++) {
-        const filled = pip < count;
-        const px = (pip - (upgrade.maxStack - 1) / 2) * 14;
-        const pipG = this.add.graphics();
-        pipG.fillStyle(filled ? accentCol : 0x1e3050, filled ? 1 : 0.6);
-        pipG.fillCircle(px, H / 2 - 28, 5);
-        pipG.lineStyle(1, accentCol, 0.5);
-        pipG.strokeCircle(px, H / 2 - 28, 5);
-        container.add(pipG);
+    for (let s = 0; s < upgrade.maxStack; s++) {
+      const sx = barX + s * (segW + segGap);
+      const filled = s < count;
+      const segG = this.add.graphics();
+      // Filled segment
+      if (filled) {
+        segG.fillStyle(maxed ? 0x2ecc71 : 0x4a9abb, 1);
+      } else {
+        segG.fillStyle(0x1a2030, 1);
       }
+      segG.fillRoundedRect(sx, barY, segW, segH, 2);
+      segG.lineStyle(1, filled ? (maxed ? 0x3adc81 : 0x5abadb) : 0x2a3040, 0.5);
+      segG.strokeRoundedRect(sx, barY, segW, segH, 2);
+      card.add(segG);
     }
 
-    // Cost / maxed badge
-    const costLabel = maxed
-      ? '✓ MAXED'
-      : `◆ ${upgrade.shardCost} shards`;
-    const costColor = maxed ? '#4a9a4a' : buyable ? '#7ec8e3' : '#4a5a6a';
-    container.add(
-      this.add.text(0, H / 2 - 14, costLabel, {
-        fontSize: '11px', fontFamily: 'monospace', color: costColor, letterSpacing: 1,
-      }).setOrigin(0.5),
+    // Progress label
+    const progressLabel = `${count}/${upgrade.maxStack}`;
+    card.add(
+      this.add.text(barX + totalBarW + 10, barY + segH / 2, progressLabel, {
+        fontSize: '10px', fontFamily: 'monospace',
+        color: maxed ? '#2ecc71' : '#5a7a8a',
+      }).setOrigin(0, 0.5),
     );
 
-    // Hit area + interaction (only if not maxed)
+    // ── Right column: Cost badge or MAXED badge ──
+    const badgeX = W / 2 - 50;
+    const badgeY = 0;
+    const badgeW = 80, badgeH = 34;
+
+    if (maxed) {
+      const badgeBg = this.add.graphics();
+      badgeBg.fillStyle(0x1a3a1a, 1);
+      badgeBg.fillRoundedRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6);
+      badgeBg.lineStyle(1, 0x2ecc71, 0.6);
+      badgeBg.strokeRoundedRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6);
+      card.add(badgeBg);
+      card.add(
+        this.add.text(badgeX, badgeY, '\u2713 MAXED', {
+          fontSize: '12px', fontFamily: 'monospace', color: '#2ecc71',
+        }).setOrigin(0.5),
+      );
+    } else {
+      const badgeBg = this.add.graphics();
+      badgeBg.fillStyle(buyable ? 0x0d2030 : 0x0a0e16, 1);
+      badgeBg.fillRoundedRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6);
+      badgeBg.lineStyle(1, buyable ? 0x4a8aaa : 0x2a2a3a, 0.6);
+      badgeBg.strokeRoundedRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6);
+      card.add(badgeBg);
+      card.add(
+        this.add.text(badgeX, badgeY, `\u25c6 ${upgrade.shardCost}`, {
+          fontSize: '14px', fontFamily: 'monospace', fontStyle: 'bold',
+          color: buyable ? '#7ec8e3' : '#4a3030',
+        }).setOrigin(0.5),
+      );
+    }
+
+    // ── Hit area + interaction ──
     if (!maxed) {
-      const hit = this.add.rectangle(0, 0, W, H, 0, 0).setInteractive();
-      container.add(hit);
-      hit.on('pointerover',  () => { drawBg(true);  this.tweens.add({ targets: container, scaleX: 1.03, scaleY: 1.03, duration: 70 }); });
-      hit.on('pointerout',   () => { drawBg(false); this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 70 }); });
-      hit.on('pointerdown',  () => {
+      const hit = this.add.rectangle(0, 0, W, H, 0, 0)
+        .setInteractive({ useHandCursor: buyable });
+      card.add(hit);
+      hit.on('pointerover', () => {
+        drawBg(true);
+        this.tweens.add({ targets: card, scaleX: 1.02, scaleY: 1.02, duration: 70 });
+      });
+      hit.on('pointerout', () => {
+        drawBg(false);
+        this.tweens.add({ targets: card, scaleX: 1, scaleY: 1, duration: 70 });
+      });
+      hit.on('pointerdown', () => {
         if (!canPurchase(upgrade.id)) {
-          this.flashDeny(container);
+          this.flashDeny(card);
           return;
         }
         if (purchaseUpgrade(upgrade.id)) {
-          container.destroy();
-          this.buildUpgradeCard(upgrade, cx, cy, W, H);
+          this.rebuildCard(upgrade);
           this.refreshShardDisplay();
         }
       });
     }
+
+    parent.add(card);
+  }
+
+  /** Rebuild a single card after purchase. */
+  private rebuildCard(upgrade: UpgradeDef) {
+    const old = this._cardContainers.get(upgrade.id);
+    if (!old) return;
+    const cx = old.x, cy = old.y;
+    const parent = old.parentContainer;
+    old.destroy(true);
+    this._cardContainers.delete(upgrade.id);
+    if (parent) {
+      this.buildUpgradeCard(parent, upgrade, cx, cy, 340, 140);
+    }
   }
 
   private flashDeny(container: Phaser.GameObjects.Container) {
+    const startX = container.x;
     this.tweens.add({
       targets: container,
-      x: container.x + 6, duration: 40, yoyo: true, repeat: 3,
-      onComplete: () => { container.setX(container.x); },
+      x: startX + 6, duration: 40, yoyo: true, repeat: 3,
+      onComplete: () => { container.setX(startX); },
     });
   }
 
   private refreshShardDisplay() {
-    this._shardText?.setText(`◆ ${getShards()}`);
+    this._shardText?.setText(`\u25c6 ${getShards()}`);
   }
 
-  // ── Close button ─────────────────────────────────────────────────────────
+  // ── Close button ───────────────────────────────────────────────────────
   private buildCloseButton(cx: number, cy: number) {
     const w = 160, h = 44, r = 8;
-    const bg = this.add.graphics().setDepth(10);
+    const bg = this.add.graphics().setDepth(20);
 
     const draw = (hovered: boolean) => {
       bg.clear();
@@ -240,16 +344,19 @@ export class CampUpgradesScene extends Phaser.Scene {
 
     this.add.text(cx, cy, 'Close', {
       fontSize: '18px', fontFamily: 'Georgia, serif', color: '#a0bcd0',
-    }).setOrigin(0.5).setDepth(11);
+    }).setOrigin(0.5).setDepth(21);
 
     const hit = this.add.rectangle(cx, cy, w, h, 0x000000, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(12);
+      .setInteractive({ useHandCursor: true }).setDepth(22);
     hit.on('pointerover', () => draw(true));
     hit.on('pointerout', () => draw(false));
     hit.on('pointerdown', () => this.closeOverlay());
   }
 
   private closeOverlay() {
+    this._scrollPanel?.destroy();
+    this._scrollPanel = null;
+    this._cardContainers.clear();
     if (this.callerKey) this.scene.resume(this.callerKey);
     this.scene.stop();
   }

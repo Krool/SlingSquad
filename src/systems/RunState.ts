@@ -274,20 +274,15 @@ export function reorderSquad(fromIndex: number, toIndex: number) {
 }
 
 /** Persist hero HP after a victory.
- *  Survivors carry their current HP forward. Dead heroes revive at 25 % of maxHp.
- *  Also syncs maxHp so relic bonuses are reflected in the overworld party panel. */
+ *  All heroes fully heal between battles. Also syncs maxHp so relic bonuses
+ *  are reflected in the overworld party panel. */
 export function syncSquadHp(heroes: Array<{ heroClass: HeroClass; hp: number; maxHp: number; state: string }>) {
   const s = getRunState();
   for (const h of heroes) {
     const entry = s.squad.find(e => e.heroClass === h.heroClass);
     if (!entry) continue;
-    // Always update maxHp — may have been inflated by relics applied in buildSquad
     entry.maxHp = h.maxHp;
-    if (h.state === 'dead') {
-      entry.currentHp = Math.max(1, Math.round(h.maxHp * 0.25)); // revive at 25 %
-    } else {
-      entry.currentHp = Math.max(1, h.hp); // persist actual HP
-    }
+    entry.currentHp = h.maxHp; // full heal after every battle
   }
   saveRun();
 }

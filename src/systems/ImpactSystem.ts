@@ -85,6 +85,7 @@ export class ImpactSystem {
       const mult = stats.impactDamageBonus * this.relicMods.warriorImpactMult;
       const dealt = dmg * mult * (1 - d / 80) * (1 + matBonus);
       b.applyDamage(dealt);
+      hero.battleBlockDamage += dealt;
       this.emitDamage(bx, by, dealt);
       // Push block outward (+ knockback relic bonus)
       if (!b.destroyed) {
@@ -100,7 +101,8 @@ export class ImpactSystem {
       const d = Math.hypot(e.x - x, e.y - y);
       if (d < 80) {
         const dealt = dmg * (1 - d / 80);
-        e.applyDamage(dealt);
+        e.applyDamage(dealt, undefined, hero);
+        hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -121,6 +123,7 @@ export class ImpactSystem {
       if (d < 70) {
         const dealt = crashDmg * (1 - d / 70);
         b.applyDamage(dealt);
+        hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
       }
     }
@@ -129,7 +132,8 @@ export class ImpactSystem {
       const d = Math.hypot(e.x - x, e.y - y);
       if (d < 70) {
         const dealt = crashDmg * (1 - d / 70);
-        e.applyDamage(dealt);
+        e.applyDamage(dealt, undefined, hero);
+        hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -155,6 +159,7 @@ export class ImpactSystem {
       const vx = Math.cos(angleRad) * speed;
       const vy = Math.sin(angleRad) * speed;
       const p = new Projectile(this.scene, x, y, vx, vy, stats.arrowDamage, 0x27ae60);
+      p.sourceHero = hero;
       if (poisonDmg > 0) (p as any).poisonDamage = poisonDmg;
       this.combatSystem.addProjectile(p);
     }
@@ -176,6 +181,7 @@ export class ImpactSystem {
         const matBonus = b.material === 'STONE' ? this.relicMods.stoneDamageBonus : 0;
         const dealt = mageDmg * (1 - d / r) * (1 + matBonus);
         b.applyDamage(dealt);
+        hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
       }
     }
@@ -186,7 +192,8 @@ export class ImpactSystem {
       const d = Math.hypot(e.x - x, e.y - y);
       if (d < r) {
         const dealt = mageDmg * (1 - d / r);
-        e.applyDamage(dealt);
+        e.applyDamage(dealt, undefined, hero);
+        hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
         hitEnemies.push(e);
       }
@@ -205,7 +212,8 @@ export class ImpactSystem {
       for (const e of enemies) {
         if (chains <= 0) break;
         if (e.state === 'dead' || hitEnemies.includes(e)) continue;
-        e.applyDamage(chainDmg);
+        e.applyDamage(chainDmg, undefined, hero);
+        hero.battleDamageDealt += chainDmg;
         this.emitDamage(e.x, e.y, chainDmg, true);
         this.spawnChainLightning(x, y, e.x, e.y);
         chains--;
@@ -234,6 +242,7 @@ export class ImpactSystem {
       if (d < 90) {
         const dealt = crashDmg * (1 - d / 90);
         b.applyDamage(dealt);
+        hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
       }
     }
@@ -242,7 +251,8 @@ export class ImpactSystem {
       const d = Math.hypot(e.x - x, e.y - y);
       if (d < 90) {
         const dealt = crashDmg * (1 - d / 90);
-        e.applyDamage(dealt);
+        e.applyDamage(dealt, undefined, hero);
+        hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -250,7 +260,7 @@ export class ImpactSystem {
 
     const healRadius = stats.healRadius + this.relicMods.priestHealRadiusBonus;
     const healAmount = stats.healAmount + this.relicMods.priestHealBonus;
-    this.scene.events.emit('priestHealAura', x, y, healRadius, healAmount);
+    this.scene.events.emit('priestHealAura', x, y, healRadius, healAmount, hero);
     this.spawnHealAura(x, y, healRadius);
 
     // Priest resurrect relic: revive dead heroes within heal radius
@@ -282,6 +292,7 @@ export class ImpactSystem {
       if (d < 80) {
         const dealt = crashDmg * (1 - d / 80);
         b.applyDamage(dealt);
+        hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
       }
     }
@@ -290,7 +301,8 @@ export class ImpactSystem {
       const d = Math.hypot(e.x - x, e.y - y);
       if (d < 80) {
         const dealt = crashDmg * (1 - d / 80);
-        e.applyDamage(dealt);
+        e.applyDamage(dealt, undefined, hero);
+        hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -345,6 +357,7 @@ export class ImpactSystem {
       if (d < 60) {
         const dealt = crashDmg * (1 - d / 60);
         b.applyDamage(dealt);
+        hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
       }
     }
@@ -357,7 +370,8 @@ export class ImpactSystem {
         const isBehind = x > e.x;
         const backstab = isBehind ? 2.0 : 1.0;
         const dealt = crashDmg * (1 - d / 60) * backstab;
-        e.applyDamage(dealt);
+        e.applyDamage(dealt, undefined, hero);
+        hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -377,6 +391,7 @@ export class ImpactSystem {
       if (d < 80) {
         const dealt = crashDmg * (1 - d / 80);
         b.applyDamage(dealt);
+        hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
       }
     }
@@ -385,7 +400,8 @@ export class ImpactSystem {
       const d = Math.hypot(e.x - x, e.y - y);
       if (d < 80) {
         const dealt = crashDmg * (1 - d / 80);
-        e.applyDamage(dealt);
+        e.applyDamage(dealt, undefined, hero);
+        hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -416,6 +432,7 @@ export class ImpactSystem {
         const woodBonus = b.material === 'WOOD' ? 1.3 : 1.0;
         const dealt = crashDmg * (1 - d / 70) * woodBonus;
         b.applyDamage(dealt);
+        hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
       }
     }
@@ -424,7 +441,8 @@ export class ImpactSystem {
       const d = Math.hypot(e.x - x, e.y - y);
       if (d < 70) {
         const dealt = crashDmg * (1 - d / 70);
-        e.applyDamage(dealt);
+        e.applyDamage(dealt, undefined, hero);
+        hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -434,7 +452,7 @@ export class ImpactSystem {
     for (let i = 0; i < wolfCount; i++) {
       const wx = x + Phaser.Math.Between(-40, 40);
       const wy = y - Phaser.Math.Between(10, 30);
-      this.scene.events.emit('spawnWolf', wx, wy, stats.wolfDamage, stats.wolfHp);
+      this.scene.events.emit('spawnWolf', wx, wy, stats.wolfDamage, stats.wolfHp, hero);
     }
 
     this.spawnImpactParticles(x, y, 0x16a085, 10);

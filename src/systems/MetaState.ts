@@ -7,12 +7,14 @@ export interface UpgradeDef {
   id: string;
   name: string;
   desc: string;
+  icon: string;
+  building?: string;
   effect: string;
   value: number | string;
   heroClass?: string;
   maxStack: number;
   shardCost: number;
-  rarity: 'common' | 'uncommon' | 'rare';
+  hidden?: boolean;
 }
 
 // ─── Meta bonus bundle applied to each new run ────────────────────────────────

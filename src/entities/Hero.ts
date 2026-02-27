@@ -39,6 +39,12 @@ export class Hero {
   // Rogue piercing — continues through first block hit
   piercing = false;
 
+  // Per-battle performance stats (auto-reset each battle since Hero instances are recreated)
+  battleDamageDealt = 0;
+  battleBlockDamage = 0;
+  battleEnemiesKilled = 0;
+  battleHealingDone = 0;
+
   // Last known position (saved before body is destroyed on death, used by revive)
   private _lastX = 0;
   private _lastY = 0;
@@ -144,7 +150,8 @@ export class Hero {
     const charKey = this.heroClass.toLowerCase();
     if (this.sprite) {
       this.sprite.setRotation(0);
-      this.sprite.play(`${charKey}_attack`);
+      // Start with idle — CombatSystem switches to attack only when actually swinging
+      this.sprite.play(`${charKey}_idle`);
     }
     this.drawHpBar();
   }
@@ -248,7 +255,7 @@ export class Hero {
     const charKey = this.heroClass.toLowerCase();
     this.sprite = this.scene.add.sprite(rx, ry - r * 0.25, `${charKey}_idle_1`)
       .setDisplaySize(r * 2.5, r * 2.5);
-    this.sprite.play(`${charKey}_attack`);
+    this.sprite.play(`${charKey}_idle`);
     // Green flash on revive
     this.sprite.setTint(0x44ff88);
     this.scene.time.delayedCall(400, () => {

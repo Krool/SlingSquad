@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import nodesData from '@/data/nodes.json';
 import type { MusicSystem } from '@/systems/MusicSystem';
-import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, type NodeDef } from '@/systems/RunState';
+import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, type NodeDef, type RelicDef } from '@/systems/RunState';
 import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
 import { getMapById } from '@/data/maps/index';
@@ -29,6 +29,18 @@ const RARITY_COLOR: Record<string, string> = {
   common:   '#95a5a6',
   uncommon: '#2ecc71',
   rare:     '#9b59b6',
+};
+const RARITY_HEX: Record<string, number> = {
+  common:   0x95a5a6,
+  uncommon: 0x2ecc71,
+  rare:     0x9b59b6,
+  curse:    0xe74c3c,
+};
+const RARITY_ICON: Record<string, string> = {
+  common:   '●',
+  uncommon: '◆',
+  rare:     '★',
+  curse:    '☠',
 };
 
 /** Visual state of a node from the player's perspective */
@@ -62,6 +74,10 @@ export class OverworldScene extends Phaser.Scene {
   private tooltip!: Phaser.GameObjects.Container;
   /** Tracks which node was last tapped on touch — used for two-tap confirm. */
   private touchSelectedNodeId: number | null = null;
+
+  // Relic detail popup
+  private relicDetailPanel: Phaser.GameObjects.Container | null = null;
+  private relicDetailVeil:  Phaser.GameObjects.Rectangle | null = null;
 
   // Party management panel
   private partyPanel:    Phaser.GameObjects.Container | null = null;
@@ -681,7 +697,7 @@ export class OverworldScene extends Phaser.Scene {
       fontSize: '13px', fontFamily: 'monospace', color: '#5a7a9a',
     }).setOrigin(0.5).setDepth(21);
 
-    this.relicRow = this.add.container(14, GAME_HEIGHT - 48).setDepth(21);
+    this.relicRow = this.add.container(14, GAME_HEIGHT - 96).setDepth(21);
     this.refreshRelicRow();
   }
 
@@ -690,29 +706,187 @@ export class OverworldScene extends Phaser.Scene {
     this.relicRow.removeAll(true);
     if (run.relics.length === 0) return;
 
-    const label = this.add.text(0, 0, 'Relics:', {
-      fontSize: '12px', color: '#6a7e94', fontFamily: 'Georgia, serif',
+    // "RELICS" label
+    const label = this.add.text(0, 0, 'RELICS', {
+      fontSize: '10px', color: '#5a7a9a', fontFamily: 'monospace', letterSpacing: 2,
     }).setOrigin(0, 0.5);
     this.relicRow.add(label);
 
-    let xOff = 52;
-    for (const relic of run.relics) {
-      const pillW = 108;
-      const pill = this.add.graphics();
-      pill.fillStyle(0x101828, 1);
-      pill.fillRoundedRect(xOff, -11, pillW, 22, 4);
-      const rarityHex = parseInt((RARITY_COLOR[relic.rarity ?? 'common'] ?? '#888').replace('#', ''), 16);
-      pill.lineStyle(1, rarityHex, 0.4);
-      pill.strokeRoundedRect(xOff, -11, pillW, 22, 4);
-      this.relicRow.add(pill);
+    const BADGE = 34;
+    const GAP = 6;
+    let xOff = 56;
 
-      const txt = this.add.text(xOff + 8, 0, relic.name, {
-        fontSize: '11px',
-        color: RARITY_COLOR[relic.rarity ?? 'common'] ?? '#888',
-        fontFamily: 'Georgia, serif',
-      }).setOrigin(0, 0.5);
-      this.relicRow.add(txt);
-      xOff += pillW + 6;
+    for (const relic of run.relics) {
+      const badgeX = xOff;  // capture per-iteration value for closures
+      const rarity = relic.curse ? 'curse' : (relic.rarity ?? 'common');
+      const col = RARITY_HEX[rarity] ?? 0x888888;
+      const iconChar = RARITY_ICON[rarity] ?? '●';
+      const colHex = '#' + col.toString(16).padStart(6, '0');
+
+      // Badge background
+      const badge = this.add.graphics();
+      const drawBadge = (hovered: boolean) => {
+        badge.clear();
+        badge.fillStyle(hovered ? 0x1a2838 : 0x101828, 1);
+        badge.fillRoundedRect(badgeX, -BADGE / 2, BADGE, BADGE, 4);
+        badge.lineStyle(hovered ? 2 : 1, col, hovered ? 0.9 : 0.5);
+        badge.strokeRoundedRect(badgeX, -BADGE / 2, BADGE, BADGE, 4);
+      };
+      drawBadge(false);
+      this.relicRow.add(badge);
+
+      // Icon symbol
+      const iconText = this.add.text(badgeX + BADGE / 2, 0, iconChar, {
+        fontSize: '16px', fontFamily: 'Georgia, serif',
+        color: colHex, stroke: '#000', strokeThickness: 1,
+      }).setOrigin(0.5);
+      this.relicRow.add(iconText);
+
+      // Hit area for click + hover
+      const hitRect = this.add.rectangle(
+        badgeX + BADGE / 2, 0, BADGE, BADGE, 0x000000, 0,
+      ).setInteractive({ useHandCursor: true });
+      this.relicRow.add(hitRect);
+
+      hitRect.on('pointerover', () => drawBadge(true));
+      hitRect.on('pointerout',  () => drawBadge(false));
+      hitRect.on('pointerdown', () => { drawBadge(false); this.showRelicDetail(relic); });
+
+      xOff += BADGE + GAP;
+    }
+  }
+
+  // ── Relic detail popup ──────────────────────────────────────────────────────
+  private showRelicDetail(relic: RelicDef) {
+    this.closeRelicDetail();
+    this.closePartyPanel();
+    this.clearTouchSelection();
+    this.hideTooltip();
+
+    const rarity = relic.curse ? 'curse' : (relic.rarity ?? 'common');
+    const col = RARITY_HEX[rarity] ?? 0x888888;
+    const colHex = '#' + col.toString(16).padStart(6, '0');
+    const iconChar = RARITY_ICON[rarity] ?? '●';
+
+    // Veil
+    this.relicDetailVeil = this.add.rectangle(
+      GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000,
+    ).setAlpha(0).setDepth(45).setInteractive();
+    this.relicDetailVeil.on('pointerdown', () => this.closeRelicDetail());
+    this.tweens.add({ targets: this.relicDetailVeil, alpha: 0.7, duration: 150 });
+
+    // Panel dimensions
+    const PW = 320, PH = 280;
+    const px = Math.round(GAME_WIDTH / 2 - PW / 2);
+    const py = Math.round(GAME_HEIGHT / 2 - PH / 2);
+
+    const panel = this.add.container(px, py).setDepth(46).setAlpha(0);
+    this.relicDetailPanel = panel;
+    this.tweens.add({ targets: panel, alpha: 1, duration: 150 });
+
+    // Panel shell
+    const shell = this.add.graphics();
+    shell.fillStyle(0x05101c, 0.98);
+    shell.fillRoundedRect(0, 0, PW, PH, 10);
+    shell.lineStyle(1, col, 0.5);
+    shell.strokeRoundedRect(0, 0, PW, PH, 10);
+    panel.add(shell);
+
+    // Rarity banner
+    const banner = this.add.graphics();
+    banner.fillStyle(col, 0.75);
+    banner.fillRoundedRect(0, 0, PW, 30, { tl: 10, tr: 10, bl: 0, br: 0 });
+    panel.add(banner);
+
+    const rarityLabel = rarity.toUpperCase();
+    panel.add(this.add.text(PW / 2, 15, rarityLabel, {
+      fontSize: '11px', fontFamily: 'monospace', color: '#fff',
+      stroke: '#000', strokeThickness: 2, letterSpacing: 3,
+    }).setOrigin(0.5));
+
+    // Close ✕
+    const closeBtn = this.add.text(PW - 18, 15, '✕', {
+      fontSize: '14px', color: '#aaa',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    closeBtn.on('pointerover', () => closeBtn.setColor('#ff6666'));
+    closeBtn.on('pointerout',  () => closeBtn.setColor('#aaa'));
+    closeBtn.on('pointerdown', () => this.closeRelicDetail());
+    panel.add(closeBtn);
+
+    // Icon circle
+    const iconGfx = this.add.graphics();
+    iconGfx.fillStyle(col, 0.15);
+    iconGfx.fillCircle(PW / 2, 78, 28);
+    iconGfx.lineStyle(1.5, col, 0.5);
+    iconGfx.strokeCircle(PW / 2, 78, 28);
+    panel.add(iconGfx);
+
+    panel.add(this.add.text(PW / 2, 78, iconChar, {
+      fontSize: '22px', fontFamily: 'Georgia, serif',
+      color: colHex, stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5));
+
+    // Relic name
+    panel.add(this.add.text(PW / 2, 122, relic.name, {
+      fontSize: '19px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
+      color: '#e8e0d0', stroke: '#000', strokeThickness: 3,
+      wordWrap: { width: PW - 40 }, align: 'center',
+    }).setOrigin(0.5));
+
+    // Description
+    panel.add(this.add.text(PW / 2, 158, relic.desc, {
+      fontSize: '13px', fontFamily: 'Georgia, serif', color: '#8a9aaa',
+      wordWrap: { width: PW - 48 }, align: 'center',
+    }).setOrigin(0.5));
+
+    // Effect line
+    const effectStr = this.formatRelicEffect(relic);
+    if (effectStr) {
+      // Separator
+      const sep = this.add.graphics();
+      sep.lineStyle(1, col, 0.2);
+      sep.lineBetween(20, 200, PW - 20, 200);
+      panel.add(sep);
+
+      const effectColor = relic.curse ? '#e74c3c' : '#66cc88';
+      panel.add(this.add.text(PW / 2, 222, effectStr, {
+        fontSize: '14px', fontFamily: 'monospace', fontStyle: 'bold',
+        color: effectColor, stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5));
+    }
+  }
+
+  private closeRelicDetail() {
+    if (this.relicDetailPanel) {
+      this.relicDetailPanel.destroy();
+      this.relicDetailPanel = null;
+    }
+    if (this.relicDetailVeil) {
+      this.relicDetailVeil.destroy();
+      this.relicDetailVeil = null;
+    }
+  }
+
+  private formatRelicEffect(relic: RelicDef): string {
+    const effect = relic.effect;
+    const value = relic.value;
+    if (!effect) return '';
+
+    const sign = relic.curse ? '' : '+';
+
+    switch (effect) {
+      case 'maxHp':        return `${sign}${value} Max HP`;
+      case 'combatDamage': return `${sign}${value} Combat Damage`;
+      case 'combatRange':  return `${sign}${value} Combat Range`;
+      case 'launchCooldown': return `${value > 0 ? '+' : ''}${value}s Launch Cooldown`;
+      case 'moveSpeed':    return `${sign}${value}% Move Speed`;
+      case 'critChance':   return `${sign}${value}% Crit Chance`;
+      case 'healOnBounce': return `${sign}${value} HP per Bounce`;
+      case 'goldBonus':    return `${sign}${value}% Gold Bonus`;
+      case 'arrowCount':   return `${sign}${value} Arrow${Math.abs(value) !== 1 ? 's' : ''}`;
+      case 'blastRadius':  return `${sign}${value}px Blast Radius`;
+      case 'healAura':     return `${sign}${value} Heal Aura`;
+      default:             return `${sign}${value} ${effect}`;
     }
   }
 
@@ -793,6 +967,7 @@ export class OverworldScene extends Phaser.Scene {
   // ── Party management panel ───────────────────────────────────────────────────
   private openPartyPanel() {
     if (this.partyPanel) return;
+    this.closeRelicDetail();
     const run = getRunState();
     const PANEL_W = 520;
     const CARD_H  = 100;

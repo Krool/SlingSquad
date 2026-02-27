@@ -98,7 +98,7 @@ export class LaunchSystem {
   private drawPreview() {
     this.preview.clear();
     // Destroy old preview sprite before creating a new one
-    this.previewSprite?.destroy();
+    if (this.previewSprite?.scene) this.previewSprite.destroy();
     this.previewSprite = null;
 
     const hero = this.currentHero;
@@ -174,7 +174,7 @@ export class LaunchSystem {
       this.trajectoryGraphics.clear();
       this.dragCurrent.set(ptr.worldX, ptr.worldY);
       // Destroy preview sprite — hero.launch() creates the real one
-      this.previewSprite?.destroy();
+      if (this.previewSprite?.scene) this.previewSprite.destroy();
       this.previewSprite = null;
       this.doLaunch();
       this.animateSlingSnapback(releaseX, releaseY);

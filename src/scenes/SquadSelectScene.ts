@@ -87,6 +87,13 @@ export class SquadSelectScene extends Phaser.Scene {
 
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
+    // Clean up scene-level drag listeners on shutdown to prevent accumulation
+    this.events.once('shutdown', () => {
+      this.input.off('drag');
+      this.input.off('dragend');
+      this.input.off('drop');
+    });
+
     this.buildBackground();
     this.buildSettingsButton();
     this.buildShardDisplay();

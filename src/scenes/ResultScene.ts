@@ -9,11 +9,20 @@ import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
 import { recordDailyScore, getTodayString } from '@/systems/DailyChallenge';
 import nodesData from '@/data/nodes.json';
 
+interface HeroBattleStats {
+  heroClass: string;
+  damageDealt: number;
+  blockDamage: number;
+  enemiesKilled: number;
+  healingDone: number;
+}
+
 interface ResultData {
   victory: boolean;
   reason?: string;
   gold?: number;
   nodeId?: number;
+  heroStats?: HeroBattleStats[];
 }
 
 export class ResultScene extends Phaser.Scene {
@@ -22,7 +31,7 @@ export class ResultScene extends Phaser.Scene {
   }
 
   create(data: ResultData) {
-    const { victory, reason, gold = 0, nodeId } = data;
+    const { victory, reason, gold = 0, nodeId, heroStats } = data;
     (this.registry.get('music') as MusicSystem | null)?.play(victory ? 'victory' : 'defeat');
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
@@ -76,7 +85,7 @@ export class ResultScene extends Phaser.Scene {
           nodesCleared: nodesCompleted,
         });
       }
-    } catch { /* standalone */ }
+    } catch (e) { console.warn('ResultScene: failed to read run state', e); }
 
     // ── Layered atmospheric overlay ─────────────────────────────────────────
     // Base blackout — fades in from transparent
@@ -97,14 +106,14 @@ export class ResultScene extends Phaser.Scene {
 
     if (victory) {
       this.spawnGoldParticles();
-      this.buildVictoryContent(cx, cy, reason, gold, shardsEarned);
+      this.buildVictoryContent(cx, cy, reason, gold, shardsEarned, heroStats);
     } else {
-      this.buildDefeatContent(cx, cy, reason, shardsEarned);
+      this.buildDefeatContent(cx, cy, reason, shardsEarned, heroStats);
     }
   }
 
   // ── Victory layout ────────────────────────────────────────────────────────
-  private buildVictoryContent(cx: number, cy: number, reason?: string, gold = 0, shards = 0) {
+  private buildVictoryContent(cx: number, cy: number, reason?: string, gold = 0, shards = 0, heroStats?: HeroBattleStats[]) {
     // Thin decorative rules that appear after title
     const divY1 = cy - 70, divY2 = cy + 30;
     const rules = this.add.graphics().setDepth(12).setAlpha(0);
@@ -164,7 +173,7 @@ export class ResultScene extends Phaser.Scene {
       this.tweens.add({ targets: st, alpha: 1, duration: 350, delay: 1020 });
     }
 
-    this.buildSquadSummary(cx, cy + (shards > 0 ? 108 : 92), 880);
+    this.buildSquadSummary(cx, cy + (shards > 0 ? 108 : 92), 880, heroStats);
 
     this.time.delayedCall(1100, () =>
       this.buildButton(cx, cy + 200, 'Continue to Map  →', 0x3a2800, 0xf1c40f, () => {
@@ -176,7 +185,7 @@ export class ResultScene extends Phaser.Scene {
   }
 
   // ── Defeat layout ─────────────────────────────────────────────────────────
-  private buildDefeatContent(cx: number, cy: number, reason?: string, shards = 0) {
+  private buildDefeatContent(cx: number, cy: number, reason?: string, shards = 0, heroStats?: HeroBattleStats[]) {
     // Pulsing blood glow behind title
     const glow = this.add.graphics().setDepth(9).setAlpha(0);
     glow.fillStyle(0x8b0000, 0.22);
@@ -210,7 +219,7 @@ export class ResultScene extends Phaser.Scene {
       this.tweens.add({ targets: st, alpha: 1, duration: 350, delay: 820 });
     }
 
-    this.buildSquadSummary(cx, cy + (shards > 0 ? 60 : 42), 720);
+    this.buildSquadSummary(cx, cy + (shards > 0 ? 60 : 42), 720, heroStats);
 
     this.time.delayedCall(880, () => {
       this.buildButton(cx - 115, cy + 178, 'Retry', 0x3a1010, 0xe74c3c, () => {
@@ -266,15 +275,27 @@ export class ResultScene extends Phaser.Scene {
   }
 
   // ── Squad summary ─────────────────────────────────────────────────────────
-  private buildSquadSummary(cx: number, cy: number, introDelay: number) {
+  private buildSquadSummary(cx: number, cy: number, introDelay: number, heroStats?: HeroBattleStats[]) {
     try {
       const run = getRunState();
       const heroColors: Record<string, number> = {
         WARRIOR: 0xc0392b, RANGER: 0x27ae60, MAGE: 0x8e44ad, PRIEST: 0xf39c12,
         BARD: 0x1abc9c, ROGUE: 0x2c3e50, PALADIN: 0xf1c40f, DRUID: 0x16a085,
       };
+
+      // Determine MVP (highest composite score; skip if solo hero or all zeros)
+      let mvpIndex = -1;
+      if (heroStats && heroStats.length > 1) {
+        let bestScore = 0;
+        heroStats.forEach((s, i) => {
+          const score = s.damageDealt + s.enemiesKilled * 50 + s.healingDone;
+          if (score > bestScore) { bestScore = score; mvpIndex = i; }
+        });
+        if (bestScore === 0) mvpIndex = -1;
+      }
+
       const count = run.squad.length;
-      const spacing = 100;
+      const spacing = 110;
       const startX = cx - ((count - 1) * spacing) / 2;
 
       run.squad.forEach((h, i) => {
@@ -282,40 +303,72 @@ export class ResultScene extends Phaser.Scene {
         const col = heroColors[h.heroClass] ?? 0x888888;
         const pct = Math.max(0, h.currentHp / h.maxHp);
         const alive = h.currentHp > 0;
+        const stats = heroStats?.[i];
 
         const container = this.add.container(hx, cy + 16).setDepth(15).setAlpha(0);
+
+        // MVP badge
+        if (i === mvpIndex) {
+          container.add(
+            this.add.text(0, -46, '\u2605 MVP', {
+              fontSize: '11px', fontFamily: 'Georgia, serif',
+              color: '#ffd700', stroke: '#5c3d00', strokeThickness: 2,
+            }).setOrigin(0.5),
+          );
+        }
 
         // Outer ring + filled circle background
         const g = this.add.graphics();
         g.fillStyle(col, alive ? 0.35 : 0.10);
-        g.fillCircle(0, 0, 28);
+        g.fillCircle(0, 0, 24);
         g.lineStyle(2, alive ? col : 0x3a3a3a, 1);
-        g.strokeCircle(0, 0, 28);
+        g.strokeCircle(0, 0, 24);
         container.add(g);
 
         // Character portrait sprite
         const charImg = this.add.image(0, -2, `${h.heroClass.toLowerCase()}_idle_1`)
-          .setDisplaySize(44, 44)
+          .setDisplaySize(38, 38)
           .setAlpha(alive ? 1 : 0.28);
         container.add(charImg);
 
         // HP bar track + fill
         const bar = this.add.graphics();
         bar.fillStyle(0x1a2235, 1);
-        bar.fillRoundedRect(-22, 33, 44, 6, 3);
+        bar.fillRoundedRect(-20, 28, 40, 5, 2);
         if (pct > 0) {
           bar.fillStyle(pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c, 1);
-          bar.fillRoundedRect(-22, 33, Math.max(4, 44 * pct), 6, 3);
+          bar.fillRoundedRect(-20, 28, Math.max(4, 40 * pct), 5, 2);
         }
         container.add(bar);
 
-        // HP / fallen label
-        container.add(
-          this.add.text(0, 46, alive ? `${Math.round(h.currentHp)} hp` : 'fallen', {
-            fontSize: '10px', color: alive ? '#8ca0b8' : '#4a2a2a',
-            fontFamily: 'Georgia, serif',
-          }).setOrigin(0.5),
-        );
+        // Stat lines (below portrait)
+        if (stats) {
+          const lineStyle = { fontSize: '9px', fontFamily: 'Georgia, serif', color: '#8ca0b8', stroke: '#000', strokeThickness: 1 };
+          let ly = 40;
+          if (stats.damageDealt > 0) {
+            container.add(this.add.text(0, ly, `\u2694 ${stats.damageDealt} dmg`, lineStyle).setOrigin(0.5));
+            ly += 12;
+          }
+          if (stats.blockDamage > 0) {
+            container.add(this.add.text(0, ly, `\u25FC ${stats.blockDamage} struct`, lineStyle).setOrigin(0.5));
+            ly += 12;
+          }
+          if (stats.enemiesKilled > 0) {
+            container.add(this.add.text(0, ly, `\u2726 ${stats.enemiesKilled} kills`, lineStyle).setOrigin(0.5));
+            ly += 12;
+          }
+          if (stats.healingDone > 0) {
+            container.add(this.add.text(0, ly, `\u2665 ${stats.healingDone} healed`, { ...lineStyle, color: '#55cc88' }).setOrigin(0.5));
+          }
+        } else {
+          // Fallback: show HP / fallen label
+          container.add(
+            this.add.text(0, 40, alive ? `${Math.round(h.currentHp)} hp` : 'fallen', {
+              fontSize: '10px', color: alive ? '#8ca0b8' : '#4a2a2a',
+              fontFamily: 'Georgia, serif',
+            }).setOrigin(0.5),
+          );
+        }
 
         // Staggered slide-up reveal
         this.tweens.add({

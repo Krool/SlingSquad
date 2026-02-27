@@ -91,6 +91,12 @@ export class SettingsScene extends Phaser.Scene {
 
     // ESC key closes
     this.input.keyboard?.addKey('ESC').on('down', () => this.closeSettings());
+
+    // Clean up scene-level listeners on shutdown to prevent accumulation
+    this.events.once('shutdown', () => {
+      this.input.off('pointermove');
+      this.input.off('pointerup');
+    });
   }
 
   // ── Draggable slider ────────────────────────────────────────────────────

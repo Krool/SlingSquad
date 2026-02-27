@@ -4,141 +4,150 @@
       "id": "starting_gold",
       "name": "Mercenary Cache",
       "desc": "Begin each run with +20 gold.",
+      "icon": "icon_gold_pouch",
+      "building": "starting_gold",
       "effect": "STARTING_GOLD",
       "value": 20,
       "maxStack": 3,
-      "shardCost": 3,
-      "rarity": "common"
+      "shardCost": 3
     },
     {
       "id": "hp_boost",
       "name": "Veteran's Grit",
       "desc": "All heroes start with +15% max HP.",
+      "icon": "icon_health_potion",
+      "building": "hp_boost",
       "effect": "FLAT_HP_PCT",
       "value": 0.15,
       "maxStack": 3,
-      "shardCost": 4,
-      "rarity": "common"
+      "shardCost": 4
     },
     {
       "id": "gold_gain",
       "name": "Plunderer's Eye",
       "desc": "Earn +25% gold from all sources per run.",
+      "icon": "icon_gold_ring",
+      "building": "gold_gain",
       "effect": "GOLD_GAIN_PCT",
       "value": 0.25,
       "maxStack": 2,
-      "shardCost": 4,
-      "rarity": "common"
+      "shardCost": 4
     },
     {
       "id": "damage_bonus",
       "name": "Blood Pact",
       "desc": "All hero combat damage +10%.",
+      "icon": "icon_sword_skill",
+      "building": "damage_bonus",
       "effect": "DAMAGE_PCT",
       "value": 0.10,
       "maxStack": 3,
-      "shardCost": 5,
-      "rarity": "uncommon"
+      "shardCost": 5
     },
     {
       "id": "starting_relic",
       "name": "Fortunate Start",
       "desc": "Begin each run with a random common relic.",
+      "icon": "icon_amulet",
+      "building": "starting_relic",
       "effect": "STARTING_RELIC",
       "value": 1,
       "maxStack": 1,
-      "shardCost": 6,
-      "rarity": "uncommon"
+      "shardCost": 6
     },
     {
       "id": "launch_power",
       "name": "Giant's Arm",
       "desc": "Sling launch power +10% per run.",
+      "icon": "icon_power_skill",
+      "building": "launch_power",
       "effect": "LAUNCH_POWER_PCT",
       "value": 0.10,
       "maxStack": 2,
-      "shardCost": 5,
-      "rarity": "uncommon"
+      "shardCost": 5
     },
     {
       "id": "unlock_bard",
       "name": "Wandering Minstrel",
       "desc": "Unlock the Bard hero class.",
+      "icon": "icon_bard_skill",
       "effect": "UNLOCK_HERO",
       "value": "BARD",
       "maxStack": 1,
-      "shardCost": 8,
-      "rarity": "rare"
+      "shardCost": 8
     },
     {
       "id": "unlock_rogue",
       "name": "Shadow Recruit",
       "desc": "Unlock the Rogue hero class.",
+      "icon": "icon_rogue_skill",
       "effect": "UNLOCK_HERO",
       "value": "ROGUE",
       "maxStack": 1,
-      "shardCost": 10,
-      "rarity": "rare"
+      "shardCost": 10
     },
     {
       "id": "unlock_paladin",
       "name": "Holy Calling",
       "desc": "Unlock the Paladin hero class.",
+      "icon": "icon_paladin_skill",
       "effect": "UNLOCK_HERO",
       "value": "PALADIN",
       "maxStack": 1,
-      "shardCost": 12,
-      "rarity": "rare"
+      "shardCost": 12
     },
     {
       "id": "unlock_druid",
       "name": "Nature's Bond",
       "desc": "Unlock the Druid hero class.",
+      "icon": "icon_druid_skill",
       "effect": "UNLOCK_HERO",
       "value": "DRUID",
       "maxStack": 1,
-      "shardCost": 12,
-      "rarity": "rare"
+      "shardCost": 12
     },
     {
       "id": "squad_size",
       "name": "Extended Barracks",
       "desc": "Start runs with 5 heroes instead of 4.",
+      "icon": "icon_squad_skill",
       "effect": "SQUAD_SIZE",
       "value": 1,
       "maxStack": 1,
-      "shardCost": 12,
-      "rarity": "rare"
+      "shardCost": 12
     },
     {
       "id": "forge_bonus",
       "name": "Master Smith",
       "desc": "Forge upgrades enhance relics by +75% instead of +50%.",
+      "icon": "icon_forge_skill",
       "effect": "FORGE_BONUS",
       "value": 0.25,
       "maxStack": 2,
       "shardCost": 5,
-      "rarity": "uncommon"
+      "hidden": true
     },
     {
       "id": "curse_resistance",
       "name": "Warded Soul",
       "desc": "25% chance to negate gaining a curse.",
+      "icon": "icon_ward_skill",
       "effect": "CURSE_RESISTANCE",
       "value": 0.25,
       "maxStack": 2,
       "shardCost": 4,
-      "rarity": "uncommon"
+      "hidden": true
     },
     {
       "id": "shard_magnet",
       "name": "Shard Magnet",
       "desc": "Earn +1 shard per run completion.",
+      "icon": "icon_crystal_skill",
       "effect": "SHARD_MAGNET",
       "value": 1,
       "maxStack": 3,
       "shardCost": 3,
-      "rarity": "common"
+      "hidden": true
     }
   ]
 }

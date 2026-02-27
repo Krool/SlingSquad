@@ -65,6 +65,10 @@ export class MusicSystem {
   // Each async crossfadeTo captures its gen and bails out if it becomes stale.
   private _gen = 0;
 
+  // ── Fade interval tracking ───────────────────────────────────────────────
+  // Stores interval IDs from fadeIn/fadeOut so stop() can clear abandoned ones.
+  private _fadeIntervals: number[] = [];
+
   // ── Autoplay-unblock listener ─────────────────────────────────────────────
   // Stored so we can remove it before starting a new track (avoids stale
   // callbacks firing for a track that's no longer relevant).
@@ -105,6 +109,8 @@ export class MusicSystem {
   stop(fadeDuration = 800): void {
     this._gen++;                   // invalidates any in-flight crossfadeTo
     this._cancelPendingResume();
+    this._fadeIntervals.forEach(clearInterval);
+    this._fadeIntervals = [];
     if (!this.currentEl) return;
     const el = this.currentEl;
     this.currentEl       = null;
@@ -238,8 +244,9 @@ export class MusicSystem {
     const id = setInterval(() => {
       step++;
       el.volume = Math.max(0, startVol * (1 - step / STEPS));
-      if (step >= STEPS) { clearInterval(id); onDone(); }
-    }, interval);
+      if (step >= STEPS) { clearInterval(id); this._fadeIntervals = this._fadeIntervals.filter(i => i !== id); onDone(); }
+    }, interval) as unknown as number;
+    this._fadeIntervals.push(id);
   }
 
   private fadeIn(el: HTMLAudioElement, duration: number): void {
@@ -248,10 +255,11 @@ export class MusicSystem {
     const interval = duration / STEPS;
     let step = 0;
     const id = setInterval(() => {
-      if (this.currentEl !== el) { clearInterval(id); return; }
+      if (this.currentEl !== el) { clearInterval(id); this._fadeIntervals = this._fadeIntervals.filter(i => i !== id); return; }
       step++;
       el.volume = Math.min(target, target * (step / STEPS));
-      if (step >= STEPS) clearInterval(id);
-    }, interval);
+      if (step >= STEPS) { clearInterval(id); this._fadeIntervals = this._fadeIntervals.filter(i => i !== id); }
+    }, interval) as unknown as number;
+    this._fadeIntervals.push(id);
   }
 }

@@ -27,6 +27,12 @@ export class ShopScene extends Phaser.Scene {
   private node!: NodeDef;
   private isFree = false;
   private offeredRelics: RelicDef[] = [];
+  private _transitioning = false;
+
+  private goldLabel!: Phaser.GameObjects.Text;
+  private goldPanel!: Phaser.GameObjects.Graphics;
+  private cardContainers: Phaser.GameObjects.Container[] = [];
+  private soldSet = new Set<number>();
 
   constructor() {
     super({ key: 'ShopScene' });
@@ -36,6 +42,9 @@ export class ShopScene extends Phaser.Scene {
     (this.registry.get('music') as MusicSystem | null)?.play('shop');
     this.node = data.node;
     this.isFree = data.free;
+    this.cardContainers = [];
+    this.soldSet.clear();
+    this._transitioning = false;
 
     completeNode(this.node.id);
 
@@ -95,7 +104,7 @@ export class ShopScene extends Phaser.Scene {
     const title = this.isFree ? '✦  Supply Cache  ✦' : '◆  Wandering Trader  ◆';
     const sub = this.isFree
       ? 'Choose one relic — it\'s yours for free.'
-      : 'Spend your gold wisely.';
+      : 'Buy as many as you can afford.';
 
     this.add.text(GAME_WIDTH / 2, 64, title, {
       fontSize: '34px', fontFamily: 'Georgia, serif',
@@ -115,16 +124,21 @@ export class ShopScene extends Phaser.Scene {
 
   private buildGoldHUD() {
     const run = getRunState();
-    const panel = this.add.graphics().setDepth(10);
-    panel.fillStyle(0x0d1117, 0.9);
-    panel.fillRoundedRect(18, 18, 180, 44, 7);
-    panel.lineStyle(1, 0xf1c40f, 0.4);
-    panel.strokeRoundedRect(18, 18, 180, 44, 7);
+    this.goldPanel = this.add.graphics().setDepth(10);
+    this.goldPanel.fillStyle(0x0d1117, 0.9);
+    this.goldPanel.fillRoundedRect(18, 18, 180, 44, 7);
+    this.goldPanel.lineStyle(1, 0xf1c40f, 0.4);
+    this.goldPanel.strokeRoundedRect(18, 18, 180, 44, 7);
 
-    this.add.text(32, 32, `◆  ${run.gold} Gold`, {
+    this.goldLabel = this.add.text(32, 32, `◆  ${run.gold} Gold`, {
       fontSize: '20px', fontFamily: 'Georgia, serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
     }).setDepth(11);
+  }
+
+  private refreshGoldHUD() {
+    const run = getRunState();
+    this.goldLabel.setText(`◆  ${run.gold} Gold`);
   }
 
   // ── Pick 3 random relics the player doesn't have ───────────────────────────
@@ -146,7 +160,8 @@ export class ShopScene extends Phaser.Scene {
     this.offeredRelics.forEach((relic, i) => {
       const cx = startX + i * (cardW + 44) + cardW / 2;
       const finalY = cardCY + cardH / 2;
-      this.buildCard(cx, finalY, cardW, cardH, relic, i);
+      const c = this.buildCard(cx, finalY, cardW, cardH, relic, i);
+      this.cardContainers.push(c);
     });
   }
 
@@ -263,7 +278,7 @@ export class ShopScene extends Phaser.Scene {
         this.tweens.add({ targets: container, y: baseY, duration: 120, ease: 'Power2' });
         drawCardBg(false);
       });
-      container.on('pointerdown', () => this.onPickRelic(relic, cost));
+      container.on('pointerdown', () => this.onPickRelic(relic, cost, idx));
     }
 
     // ── Entrance animation (stagger by card index) ───────────────────────────
@@ -277,16 +292,86 @@ export class ShopScene extends Phaser.Scene {
     return container;
   }
 
-  private onPickRelic(relic: RelicDef, cost: number) {
+  private onPickRelic(relic: RelicDef, cost: number, idx: number) {
+    if (this.soldSet.has(idx)) return;
+
     if (!this.isFree) {
       if (!spendGold(cost)) return;
     }
     addRelic(relic);
     discoverRelic(relic.id);
-    // Check collector achievement
     checkAchievements({ relicCount: getRunState().relics.length });
     this.cameras.main.flash(260, 255, 240, 180, false);
-    this.time.delayedCall(380, () => this.goToOverworld());
+
+    this.soldSet.add(idx);
+    this.markCardSold(idx);
+    this.refreshGoldHUD();
+
+    if (this.isFree) {
+      // Free shop: pick one, disable the rest
+      this.offeredRelics.forEach((_r, i) => {
+        if (i !== idx && !this.soldSet.has(i)) this.disableCard(i);
+      });
+    } else {
+      this.refreshCardAffordability();
+    }
+  }
+
+  private markCardSold(idx: number) {
+    const container = this.cardContainers[idx];
+    if (!container) return;
+
+    // Remove interactivity
+    container.disableInteractive();
+
+    // Dim the whole card
+    this.tweens.add({ targets: container, alpha: 0.45, duration: 200 });
+
+    // SOLD overlay
+    const soldBg = this.add.graphics();
+    soldBg.fillStyle(0x000000, 0.5);
+    soldBg.fillRoundedRect(-60, -30, 120, 60, 8);
+    container.add(soldBg);
+
+    const soldText = this.add.text(0, -10, 'SOLD', {
+      fontSize: '22px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
+      color: '#2ecc71', stroke: '#000', strokeThickness: 3,
+    }).setOrigin(0.5).setAlpha(0);
+    container.add(soldText);
+
+    const checkText = this.add.text(0, 14, '✓ Acquired', {
+      fontSize: '12px', fontFamily: 'Georgia, serif',
+      color: '#88ddaa', stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5).setAlpha(0);
+    container.add(checkText);
+
+    // Entrance animation
+    this.tweens.add({
+      targets: [soldText, checkText],
+      alpha: 1, duration: 250, ease: 'Power2',
+    });
+    this.tweens.add({
+      targets: soldBg, alpha: 1, scaleX: { from: 0.5, to: 1 }, scaleY: { from: 0.5, to: 1 },
+      duration: 200, ease: 'Back.easeOut',
+    });
+  }
+
+  private disableCard(idx: number) {
+    const container = this.cardContainers[idx];
+    if (!container) return;
+    container.disableInteractive();
+    this.tweens.add({ targets: container, alpha: 0.35, duration: 200 });
+  }
+
+  private refreshCardAffordability() {
+    const run = getRunState();
+    this.offeredRelics.forEach((relic, i) => {
+      if (this.soldSet.has(i)) return;
+      const cost = relic.cost ?? 30;
+      if (run.gold < cost) {
+        this.disableCard(i);
+      }
+    });
   }
 
   // ── Skip / continue button ──────────────────────────────────────────────────
@@ -323,6 +408,8 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private goToOverworld() {
+    if (this._transitioning) return;
+    this._transitioning = true;
     this.cameras.main.fadeOut(300, 0, 0, 0, (_: unknown, progress: number) => {
       if (progress === 1) this.scene.start('OverworldScene', { fromBattle: false });
     });

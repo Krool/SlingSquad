@@ -127,10 +127,11 @@ export class SquadUI {
 
     for (let i = 0; i < this.heroes.length; i++) {
       const hero = this.heroes[i];
-      const g      = this.portraits.get(hero)!;
-      const dot    = this.statusDots.get(hero)!;
-      const sprite = this.portraitSprites.get(hero)!;
-      const tag    = this.nameLabels.get(hero)!;
+      const g      = this.portraits.get(hero);
+      const dot    = this.statusDots.get(hero);
+      const sprite = this.portraitSprites.get(hero);
+      const tag    = this.nameLabels.get(hero);
+      if (!g || !dot || !sprite || !tag) continue;
 
       const isDead   = hero.state === 'dead';
       const isFlying = hero.state === 'flying';

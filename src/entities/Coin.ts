@@ -102,6 +102,7 @@ export class Coin {
 
     this.bobTween.stop();
     this.idleTimer.destroy();
+    this.scene.matter.world.remove(this.body);
 
     const bx = this.x;
     const by = this.graphics.y; // honour current bob offset

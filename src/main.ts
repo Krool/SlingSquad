@@ -37,4 +37,7 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, MainMenuScene, SquadSelectScene, OverworldScene, BattleScene, ShopScene, ResultScene, CampUpgradesScene, SettingsScene, EventScene, ForgeScene, CodexScene],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+// Expose for automated testing / devtools
+(window as any).__PHASER_GAME__ = game;

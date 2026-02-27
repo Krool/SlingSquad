@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ENEMY_STATS, EnemyClass } from '@/config/constants';
+import type { Hero } from './Hero';
 
 export type EnemyState = 'idle' | 'combat' | 'dead';
 
@@ -27,6 +28,8 @@ export class Enemy {
   // Charmed: attacks other enemies instead of heroes
   charmed = false;
   charmEndTime = 0;
+  // Last hero that dealt damage — used for kill attribution
+  lastDamagedBy: Hero | null = null;
 
   constructor(
     scene: Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics },
@@ -96,8 +99,9 @@ export class Enemy {
   }
 
   /** Apply damage. sourceX is the attacker x position (for shield direction check). */
-  applyDamage(amount: number, sourceX?: number) {
+  applyDamage(amount: number, sourceX?: number, sourceHero?: Hero) {
     if (this.state === 'dead') return;
+    if (sourceHero) this.lastDamagedBy = sourceHero;
 
     let finalAmount = amount;
     // Shield: reduces frontal damage (from the left / hero side)
@@ -149,7 +153,7 @@ export class Enemy {
       this.scene.events.emit('bomberExploded', this.x, this.y, stats.explosionRadius, stats.explosionDamage);
     }
 
-    this.scene.events.emit('enemyDied', this);
+    this.scene.events.emit('enemyDied', this, this.lastDamagedBy);
     try { this.scene.matter.world.remove(this.body); } catch { /* */ }
 
     // Destroy HP bars immediately
@@ -197,11 +201,24 @@ export class Enemy {
     }
   }
 
-  /** Switch from idle stance to active combat — plays attack anim, called by CombatSystem */
+  /** Heal this enemy by the given amount, clamped to maxHp. */
+  heal(amount: number) {
+    if (this.state === 'dead') return;
+    this._hp = Math.min(this.maxHp, this._hp + amount);
+    this.drawHpBar();
+    // Green flash
+    this.sprite?.setTint(0x44ff88);
+    this.scene.time.delayedCall(200, () => {
+      if (this.state !== 'dead') this.restoreTint();
+    });
+  }
+
+  /** Switch from idle stance to active combat — CombatSystem controls attack anim */
   enterCombat() {
     if (this.state !== 'idle') return;
     this.state = 'combat';
-    this.sprite.play(`${this.enemyClass.toLowerCase()}_attack`);
+    // Stay on idle anim — CombatSystem switches to attack only when actually swinging
+    this.sprite.play(`${this.enemyClass.toLowerCase()}_idle`);
   }
 
   canAttack(now: number): boolean {
