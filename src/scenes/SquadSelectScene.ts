@@ -130,7 +130,7 @@ export class SquadSelectScene extends Phaser.Scene {
 
   // ── Settings gear (top-left) ──────────────────────────────────────────
   private buildSettingsButton() {
-    const size = 36, r = 8;
+    const size = 44, r = 8;
     const bg = this.add.graphics().setDepth(20);
     const draw = (hovered: boolean) => {
       bg.clear();
@@ -141,7 +141,7 @@ export class SquadSelectScene extends Phaser.Scene {
     };
     draw(false);
     this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '18px',
+      fontSize: '22px',
     }).setOrigin(0.5).setDepth(21);
 
     const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
@@ -266,7 +266,7 @@ export class SquadSelectScene extends Phaser.Scene {
       // Name label
       const label = CLASS_LABELS[heroClass] ?? heroClass;
       const nameText = this.add.text(0, h / 2 - 28, label, {
-        fontSize: '14px', fontFamily: 'Georgia, serif',
+        fontSize: '16px', fontFamily: 'Georgia, serif',
         color: '#' + color.toString(16).padStart(6, '0'),
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5);
@@ -274,18 +274,18 @@ export class SquadSelectScene extends Phaser.Scene {
       container.setData('nameText', nameText);
 
       // Remove button (X) — top right
-      const remBtn = this.add.container(w / 2 - 14, -h / 2 + 14);
+      const remBtn = this.add.container(w / 2 - 16, -h / 2 + 16);
       const remBg = this.add.graphics();
       remBg.fillStyle(0x2a0a0a, 0.9);
-      remBg.fillCircle(0, 0, 12);
+      remBg.fillCircle(0, 0, 16);
       remBg.lineStyle(1, 0xe74c3c, 0.7);
-      remBg.strokeCircle(0, 0, 12);
+      remBg.strokeCircle(0, 0, 16);
       remBtn.add(remBg);
       const remX = this.add.text(0, 0, '\u2715', {
-        fontSize: '12px', color: '#e74c3c',
+        fontSize: '14px', color: '#e74c3c',
       }).setOrigin(0.5);
       remBtn.add(remX);
-      const remHit = this.add.rectangle(0, 0, 24, 24, 0, 0)
+      const remHit = this.add.rectangle(0, 0, 32, 32, 0, 0)
         .setInteractive({ useHandCursor: true });
       remBtn.add(remHit);
       remHit.on('pointerdown', (pointer: Phaser.Input.Pointer, _lx: number, _ly: number, event: Phaser.Types.Input.EventData) => {
@@ -407,7 +407,7 @@ export class SquadSelectScene extends Phaser.Scene {
       // Label
       const label = CLASS_LABELS[cls] ?? cls;
       const nameText = this.add.text(0, cardH / 2 - 28, label, {
-        fontSize: '11px', fontFamily: 'Georgia, serif',
+        fontSize: '13px', fontFamily: 'Georgia, serif',
         color: isSlotted ? '#3a4a5a' : '#' + color.toString(16).padStart(6, '0'),
         stroke: '#000', strokeThickness: 1,
       }).setOrigin(0.5);
@@ -416,7 +416,7 @@ export class SquadSelectScene extends Phaser.Scene {
       // "In Squad" label if slotted
       if (isSlotted) {
         const inSquad = this.add.text(0, cardH / 2 - 14, 'In Squad', {
-          fontSize: '9px', fontFamily: 'monospace',
+          fontSize: '11px', fontFamily: 'monospace',
           color: '#4a5a6a',
         }).setOrigin(0.5);
         container.add(inSquad);
@@ -620,14 +620,14 @@ export class SquadSelectScene extends Phaser.Scene {
     // ── Map selection (left column) ──
     const mapCX = cx - 200;
     this.add.text(mapCX, panelY + 10, 'MAP', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const maps = getAllMaps();
     let mapIdx = maps.findIndex(m => m.id === this._selectedMapId);
     if (mapIdx < 0) mapIdx = 0;
     const mapLabel = this.add.text(mapCX, panelY + 32, maps[mapIdx].name, {
-      fontSize: '14px', fontFamily: 'Georgia, serif', color: '#f1c40f',
+      fontSize: '16px', fontFamily: 'Georgia, serif', color: '#f1c40f',
       stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
@@ -649,7 +649,7 @@ export class SquadSelectScene extends Phaser.Scene {
     // ── Ascension (center column) ──
     const ascCX = cx;
     this.add.text(ascCX, panelY + 10, 'ASCENSION', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const maxAsc = getUnlockedAscension();
@@ -676,7 +676,7 @@ export class SquadSelectScene extends Phaser.Scene {
     // ── Modifier toggles (right column) ──
     const modCX = cx + 200;
     this.add.text(modCX, panelY + 10, 'MODIFIERS', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const modDefs = [
@@ -702,15 +702,15 @@ export class SquadSelectScene extends Phaser.Scene {
     const draw = (hovered: boolean) => {
       g.clear();
       g.fillStyle(hovered ? 0x1a2a3e : 0x0d1526, 1);
-      g.fillRoundedRect(x - 14, y - 4, 28, 22, 5);
+      g.fillRoundedRect(x - 20, y - 6, 40, 32, 6);
       g.lineStyle(1, hovered ? 0x5a8ab8 : 0x2a4a60, hovered ? 0.9 : 0.5);
-      g.strokeRoundedRect(x - 14, y - 4, 28, 22, 5);
+      g.strokeRoundedRect(x - 20, y - 6, 40, 32, 6);
     };
     draw(false);
-    this.add.text(x, y + 7, char, {
-      fontSize: '10px', color: '#7a9ab8',
+    this.add.text(x, y + 10, char, {
+      fontSize: '14px', color: '#7a9ab8',
     }).setOrigin(0.5).setDepth(12);
-    const hit = this.add.rectangle(x, y + 7, 28, 22, 0, 0)
+    const hit = this.add.rectangle(x, y + 10, 40, 32, 0, 0)
       .setInteractive({ useHandCursor: true }).setDepth(13);
     hit.on('pointerover', () => draw(true));
     hit.on('pointerout', () => draw(false));
@@ -719,11 +719,11 @@ export class SquadSelectScene extends Phaser.Scene {
 
   /** Modifier toggle chip (used in run config panel) */
   private buildModChip(x: number, y: number, modId: string, label: string, color: number) {
-    const w = 100, h = 24, r = 5;
+    const w = 110, h = 30, r = 6;
     const isOn = this._activeModifiers.includes(modId);
     const g = this.add.graphics().setDepth(11);
     const textObj = this.add.text(x, y + h / 2, label, {
-      fontSize: '10px', fontFamily: 'Georgia, serif',
+      fontSize: '12px', fontFamily: 'Georgia, serif',
       color: isOn ? '#' + color.toString(16).padStart(6, '0') : '#4a5a6a',
       stroke: '#000', strokeThickness: 1,
     }).setOrigin(0.5).setDepth(12);

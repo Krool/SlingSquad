@@ -158,6 +158,7 @@ export class Hero {
   enterCombat() {
     if (this.state !== 'flying' || !this.body) return;
     this.state = 'combat';
+    this.scene.events.emit('heroLanded', this.body.position.x, this.body.position.y);
     // Increase friction so hero slows on rubble but stays dynamic — allows terrain traversal
     if (this.body) {
       this.body.frictionAir = 0.07;

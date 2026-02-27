@@ -363,7 +363,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // ── Subtitle — fades in after fling completes ──
     const subtitle = this.add.text(GAME_WIDTH / 2, finalY + 34, 'Ready Your Sling', {
-      fontSize: '14px', fontFamily: 'Georgia, serif',
+      fontSize: '16px', fontFamily: 'Georgia, serif',
       color: '#8a9ab0', fontStyle: 'italic',
     }).setOrigin(0.5).setDepth(10).setAlpha(0);
 
@@ -420,7 +420,7 @@ export class MainMenuScene extends Phaser.Scene {
     panel.strokeRoundedRect(px - W, py, W, H, 7);
 
     this.add.text(px - W / 2, py + 7, 'SHARDS', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     this._shardText = this.add.text(px - W / 2, py + 20, `\u25c6 ${getShards()}`, {
@@ -445,7 +445,7 @@ export class MainMenuScene extends Phaser.Scene {
 
   // ── Settings gear icon (top-left) ─────────────────────────────────────
   private buildSettingsButton() {
-    const size = 36, r = 8;
+    const size = 44, r = 8;
     const bg = this.add.graphics().setDepth(20);
     const draw = (hovered: boolean) => {
       bg.clear();
@@ -456,7 +456,7 @@ export class MainMenuScene extends Phaser.Scene {
     };
     draw(false);
     this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '18px',
+      fontSize: '22px',
     }).setOrigin(0.5).setDepth(21);
 
     const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
@@ -582,7 +582,7 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5));
 
     overlay.add(this.add.text(cx, cy - 24, 'Your saved run will be lost.', {
-      fontSize: '14px', fontFamily: 'Georgia, serif', color: '#7a9ab8',
+      fontSize: '16px', fontFamily: 'Georgia, serif', color: '#7a9ab8',
     }).setOrigin(0.5));
 
     this.buildDialogButton(overlay, cx - 90, cy + 46, 'Cancel', 0x3a5070, () => {

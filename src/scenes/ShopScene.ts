@@ -257,7 +257,7 @@ export class ShopScene extends Phaser.Scene {
     container.add(banner);
 
     const rarityLabel = this.add.text(0, -h / 2 + 15, rarity.toUpperCase(), {
-      fontSize: '11px', fontFamily: 'monospace',
+      fontSize: '13px', fontFamily: 'monospace',
       color: '#fff', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setAlpha(canAfford ? 1 : 0.4);
     container.add(rarityLabel);
@@ -452,9 +452,9 @@ export class ShopScene extends Phaser.Scene {
     const drawBtn = (hovered: boolean) => {
       btnBg.clear();
       btnBg.fillStyle(hovered ? 0x243040 : 0x151f2a, 1);
-      btnBg.fillRoundedRect(-90, -18, 180, 36, 7);
+      btnBg.fillRoundedRect(-100, -21, 200, 42, 7);
       btnBg.lineStyle(1, 0x3a5070, hovered ? 0.9 : 0.45);
-      btnBg.strokeRoundedRect(-90, -18, 180, 36, 7);
+      btnBg.strokeRoundedRect(-100, -21, 200, 42, 7);
     };
     drawBtn(false);
     container.add(btnBg);
@@ -466,7 +466,7 @@ export class ShopScene extends Phaser.Scene {
     );
 
     container.setInteractive(
-      new Phaser.Geom.Rectangle(-90, -18, 180, 36),
+      new Phaser.Geom.Rectangle(-100, -21, 200, 42),
       Phaser.Geom.Rectangle.Contains,
     );
     container.on('pointerover', () => drawBtn(true));

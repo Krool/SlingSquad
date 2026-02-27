@@ -19,6 +19,7 @@ import { LaunchSystem } from '@/systems/LaunchSystem';
 import { CombatSystem } from '@/systems/CombatSystem';
 import { ImpactSystem } from '@/systems/ImpactSystem';
 import { TimeoutSystem } from '@/systems/TimeoutSystem';
+import { VFXSystem } from '@/systems/VFXSystem';
 import { SquadUI } from '@/ui/SquadUI';
 import { DamageNumber } from '@/ui/DamageNumber';
 
@@ -59,6 +60,7 @@ export class BattleScene extends Phaser.Scene {
   private combatSystem!: CombatSystem;
   private impactSystem!: ImpactSystem;
   private timeoutSystem!: TimeoutSystem;
+  private vfxSystem!: VFXSystem;
   private squadUI!: SquadUI;
 
   // Node being played
@@ -134,6 +136,7 @@ export class BattleScene extends Phaser.Scene {
     music?.play(this.activeNode.type === 'BOSS' ? 'boss' : 'battle');
 
     this.buildBackground();
+    this.vfxSystem = new VFXSystem(this, this.activeNode.difficulty ?? 1);
     this.buildGround();
     this.buildStructure();
     this.spawnCoins();
@@ -316,13 +319,7 @@ export class BattleScene extends Phaser.Scene {
       this.bg.fillCircle(GAME_WIDTH - 108, 72, 30);
     }
 
-    // Stars
-    for (let i = 0; i < 60; i++) {
-      const sx = Phaser.Math.Between(0, GAME_WIDTH);
-      const sy = Phaser.Math.Between(0, GAME_HEIGHT * 0.55);
-      this.bg.fillStyle(0xffffff, Math.random() * 0.5 + 0.2);
-      this.bg.fillCircle(sx, sy, Math.random() < 0.15 ? 2 : 1);
-    }
+    // Stars — handled by VFXSystem (twinkling)
 
     // Ground
     this.bg.fillStyle(groundColor, 1);
@@ -1544,6 +1541,8 @@ export class BattleScene extends Phaser.Scene {
 
     this.events.on('blockDestroyed', (x: number, y: number, mat: string) => {
       this.spawnDebris(x, y, mat as 'WOOD' | 'STONE');
+      if (mat === 'WOOD') this.vfxSystem.dustCloud(x, y);
+      else if (mat === 'STONE') this.vfxSystem.stoneSparkShower(x, y);
       this.cameras.main.shake(80, 0.003);
       this.audio.playBlockHit(mat as 'WOOD' | 'STONE');
       this.blocksDestroyedThisBattle++;
@@ -1589,6 +1588,17 @@ export class BattleScene extends Phaser.Scene {
     });
     this.events.on('unitDamage', (x: number, y: number, amount: number) => {
       DamageNumber.damage(this, x, y, amount);
+    });
+
+    // VFX: hero landing dust, melee hit sparks, mage explosion
+    this.events.on('heroLanded', (x: number, y: number) => {
+      this.vfxSystem.landingDust(x, y);
+    });
+    this.events.on('meleeHit', (x: number, y: number, type: string) => {
+      this.vfxSystem.meleeHitSparks(x, y, type);
+    });
+    this.events.on('mageExplosion', (x: number, y: number, r: number) => {
+      this.vfxSystem.mageExplosion(x, y, r);
     });
 
     // Bomber death explosion — damages heroes nearby (similar to barrel but smaller)
@@ -2021,7 +2031,10 @@ export class BattleScene extends Phaser.Scene {
     if (this.trailTimer > 45) {
       this.trailTimer -= 45;
       for (const hero of this.heroes) {
-        if (hero.state === 'flying') this.spawnTrailDot(hero.x, hero.y, hero.heroClass);
+        if (hero.state === 'flying') {
+          if (hero.heroClass === 'MAGE') this.vfxSystem.mageTrailDot(hero.x, hero.y);
+          else this.spawnTrailDot(hero.x, hero.y, hero.heroClass);
+        }
       }
     }
 
@@ -2029,6 +2042,7 @@ export class BattleScene extends Phaser.Scene {
     this.combatSystem.update(delta);
     this.timeoutSystem.update(delta);
     this.squadUI.update();
+    this.vfxSystem.update(delta);
 
     // Update enemy counter
     const alive = this.enemies.filter(e => e.state !== 'dead').length;

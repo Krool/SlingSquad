@@ -311,7 +311,7 @@ export class ResultScene extends Phaser.Scene {
         if (i === mvpIndex) {
           container.add(
             this.add.text(0, -46, '\u2605 MVP', {
-              fontSize: '11px', fontFamily: 'Georgia, serif',
+              fontSize: '13px', fontFamily: 'Georgia, serif',
               color: '#ffd700', stroke: '#5c3d00', strokeThickness: 2,
             }).setOrigin(0.5),
           );
@@ -343,7 +343,7 @@ export class ResultScene extends Phaser.Scene {
 
         // Stat lines (below portrait)
         if (stats) {
-          const lineStyle = { fontSize: '9px', fontFamily: 'Georgia, serif', color: '#8ca0b8', stroke: '#000', strokeThickness: 1 };
+          const lineStyle = { fontSize: '11px', fontFamily: 'Georgia, serif', color: '#8ca0b8', stroke: '#000', strokeThickness: 1 };
           let ly = 40;
           if (stats.damageDealt > 0) {
             container.add(this.add.text(0, ly, `\u2694 ${stats.damageDealt} dmg`, lineStyle).setOrigin(0.5));
@@ -364,7 +364,7 @@ export class ResultScene extends Phaser.Scene {
           // Fallback: show HP / fallen label
           container.add(
             this.add.text(0, 40, alive ? `${Math.round(h.currentHp)} hp` : 'fallen', {
-              fontSize: '10px', color: alive ? '#8ca0b8' : '#4a2a2a',
+              fontSize: '12px', color: alive ? '#8ca0b8' : '#4a2a2a',
               fontFamily: 'Georgia, serif',
             }).setOrigin(0.5),
           );

@@ -214,7 +214,7 @@ export class ForgeScene extends Phaser.Scene {
     // Action label in strip
     container.add(
       this.add.text(0, -h / 2 + 17, opt.label.toUpperCase(), {
-        fontSize: '12px', fontFamily: 'monospace',
+        fontSize: '14px', fontFamily: 'monospace',
         color: '#fff', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setAlpha(canUse ? 1 : 0.4),
     );
@@ -231,7 +231,7 @@ export class ForgeScene extends Phaser.Scene {
     // Description
     container.add(
       this.add.text(0, -h / 2 + 108, opt.desc, {
-        fontSize: '13px', fontFamily: 'Georgia, serif',
+        fontSize: '14px', fontFamily: 'Georgia, serif',
         color: canUse ? '#8a7a6a' : '#3a3a3a',
         wordWrap: { width: w - 36 }, align: 'center',
       }).setOrigin(0.5),
@@ -256,7 +256,7 @@ export class ForgeScene extends Phaser.Scene {
       if (previewText) {
         container.add(
           this.add.text(0, -h / 2 + 145, previewText, {
-            fontSize: '11px', fontFamily: 'Georgia, serif',
+            fontSize: '13px', fontFamily: 'Georgia, serif',
             color: '#6a5a4a',
             wordWrap: { width: w - 30 }, align: 'center',
           }).setOrigin(0.5),
@@ -268,16 +268,16 @@ export class ForgeScene extends Phaser.Scene {
     const btnY = h / 2 - 32;
     const btnGfx = this.add.graphics();
     btnGfx.fillStyle(canUse ? ACCENT : 0x2a2a2a, canUse ? 0.8 : 0.3);
-    btnGfx.fillRoundedRect(-60, btnY - 14, 120, 28, 6);
+    btnGfx.fillRoundedRect(-70, btnY - 18, 140, 36, 6);
     if (canUse) {
       btnGfx.lineStyle(1, ACCENT, 0.5);
-      btnGfx.strokeRoundedRect(-60, btnY - 14, 120, 28, 6);
+      btnGfx.strokeRoundedRect(-70, btnY - 18, 140, 36, 6);
     }
     container.add(btnGfx);
 
     container.add(
       this.add.text(0, btnY, canUse ? 'SELECT' : 'N/A', {
-        fontSize: '14px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+        fontSize: '16px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
         color: canUse ? '#fff' : '#444',
       }).setOrigin(0.5),
     );
@@ -337,7 +337,7 @@ export class ForgeScene extends Phaser.Scene {
       }).setOrigin(0.5),
     );
 
-    const btnW = 180, btnH = 36;
+    const btnW = 200, btnH = 42;
     const btnGfx = this.add.graphics();
     const drawBtn = (hovered: boolean) => {
       btnGfx.clear();
@@ -350,8 +350,8 @@ export class ForgeScene extends Phaser.Scene {
     panel.add(btnGfx);
 
     panel.add(
-      this.add.text(0, 58, 'Continue  →', {
-        fontSize: '16px', fontFamily: 'Georgia, serif', color: ACCENT_HEX,
+      this.add.text(0, 61, 'Continue  →', {
+        fontSize: '17px', fontFamily: 'Georgia, serif', color: ACCENT_HEX,
       }).setOrigin(0.5),
     );
 
@@ -377,9 +377,9 @@ export class ForgeScene extends Phaser.Scene {
     const drawBtn = (hovered: boolean) => {
       btnBg.clear();
       btnBg.fillStyle(hovered ? 0x243020 : 0x151f1a, 1);
-      btnBg.fillRoundedRect(-90, -18, 180, 36, 7);
+      btnBg.fillRoundedRect(-100, -21, 200, 42, 7);
       btnBg.lineStyle(1, 0x3a5040, hovered ? 0.9 : 0.45);
-      btnBg.strokeRoundedRect(-90, -18, 180, 36, 7);
+      btnBg.strokeRoundedRect(-100, -21, 200, 42, 7);
     };
     drawBtn(false);
     container.add(btnBg);
@@ -391,7 +391,7 @@ export class ForgeScene extends Phaser.Scene {
     );
 
     container.setInteractive(
-      new Phaser.Geom.Rectangle(-90, -18, 180, 36),
+      new Phaser.Geom.Rectangle(-100, -21, 200, 42),
       Phaser.Geom.Rectangle.Contains,
     );
     container.on('pointerover', () => drawBtn(true));

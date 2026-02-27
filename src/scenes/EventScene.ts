@@ -156,7 +156,7 @@ export class EventScene extends Phaser.Scene {
 
   private buildNarrative() {
     this.add.text(GAME_WIDTH / 2, 186, this.event.text, {
-      fontSize: '16px', fontFamily: 'Georgia, serif',
+      fontSize: '18px', fontFamily: 'Georgia, serif',
       color: '#9a8aaa', fontStyle: 'italic',
       wordWrap: { width: 700 }, align: 'center',
     }).setOrigin(0.5).setDepth(5);
@@ -253,7 +253,7 @@ export class EventScene extends Phaser.Scene {
     // Outcome badge (replaces arrow)
     const badge = this.getOutcomeBadge(choice.outcome);
     const badgeText = this.add.text(0, 0, badge.text, {
-      fontSize: '12px', fontFamily: 'Georgia, serif',
+      fontSize: '14px', fontFamily: 'Georgia, serif',
       color: '#' + badge.color.toString(16).padStart(6, '0'),
     }).setOrigin(0.5);
     const badgePadX = 10, badgePadY = 4;
@@ -550,7 +550,7 @@ export class EventScene extends Phaser.Scene {
     );
 
     // Continue button
-    const btnW = 180, btnH = 36;
+    const btnW = 200, btnH = 42;
     const btnGfx = this.add.graphics();
     const drawBtn = (hovered: boolean) => {
       btnGfx.clear();
@@ -562,8 +562,8 @@ export class EventScene extends Phaser.Scene {
     drawBtn(false);
     panel.add(btnGfx);
 
-    const btnText = this.add.text(0, 68, 'Continue  \u2192', {
-      fontSize: '16px', fontFamily: 'Georgia, serif', color: ACCENT_HEX,
+    const btnText = this.add.text(0, 71, 'Continue  \u2192', {
+      fontSize: '17px', fontFamily: 'Georgia, serif', color: ACCENT_HEX,
     }).setOrigin(0.5);
     panel.add(btnText);
 

@@ -220,7 +220,7 @@ export class ImpactSystem {
       }
     }
 
-    this.spawnExplosion(x, y, r, 0x8e44ad);
+    this.scene.events.emit('mageExplosion', x, y, r);
   }
 
   private spawnChainLightning(fromX: number, fromY: number, toX: number, toY: number) {

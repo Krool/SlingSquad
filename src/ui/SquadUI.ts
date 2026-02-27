@@ -40,7 +40,7 @@ export class SquadUI {
 
     // "NEXT" label — floats above the queued hero portrait
     this.nextLabel = scene.add.text(0, 0, 'NEXT', {
-      fontSize: '9px', fontFamily: 'monospace',
+      fontSize: '11px', fontFamily: 'monospace',
       color: '#2ecc71', stroke: '#000', strokeThickness: 2,
       letterSpacing: 1,
     }).setOrigin(0.5).setDepth(44).setAlpha(0);
@@ -87,7 +87,7 @@ export class SquadUI {
       const nameTag = this.scene.add.text(
         startX, cy + PORTRAIT_SIZE / 2 - 14,
         hero.heroClass.slice(0, 3),
-        { fontSize: '9px', fontFamily: 'monospace', color: '#a0b8d0' },
+        { fontSize: '11px', fontFamily: 'monospace', color: '#a0b8d0' },
       ).setOrigin(0.5).setDepth(43);
 
       // ── Status dot ───────────────────────────────────────────────────────

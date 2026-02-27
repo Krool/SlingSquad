@@ -91,7 +91,7 @@ export class CampUpgradesScene extends Phaser.Scene {
     bg.strokeRoundedRect(px - W, py, W, H, 7);
 
     this.add.text(px - W / 2, py + 5, 'SHARDS', {
-      fontSize: '9px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(21);
 
     this._shardText = this.add.text(px - W / 2, py + 18, `\u25c6 ${getShards()}`, {
@@ -206,7 +206,7 @@ export class CampUpgradesScene extends Phaser.Scene {
     const descColor = maxed ? '#3a6a3a' : buyable ? '#7a9ab8' : '#4a5a68';
     card.add(
       this.add.text(textX, -H / 2 + 34, upgrade.desc, {
-        fontSize: '11px', fontFamily: 'Georgia, serif', color: descColor,
+        fontSize: '13px', fontFamily: 'Georgia, serif', color: descColor,
         wordWrap: { width: W - 150 },
       }),
     );
@@ -237,7 +237,7 @@ export class CampUpgradesScene extends Phaser.Scene {
     const progressLabel = `${count}/${upgrade.maxStack}`;
     card.add(
       this.add.text(barX + totalBarW + 10, barY + segH / 2, progressLabel, {
-        fontSize: '10px', fontFamily: 'monospace',
+        fontSize: '12px', fontFamily: 'monospace',
         color: maxed ? '#2ecc71' : '#5a7a8a',
       }).setOrigin(0, 0.5),
     );
@@ -256,7 +256,7 @@ export class CampUpgradesScene extends Phaser.Scene {
       card.add(badgeBg);
       card.add(
         this.add.text(badgeX, badgeY, '\u2713 MAXED', {
-          fontSize: '12px', fontFamily: 'monospace', color: '#2ecc71',
+          fontSize: '14px', fontFamily: 'monospace', color: '#2ecc71',
         }).setOrigin(0.5),
       );
     } else {

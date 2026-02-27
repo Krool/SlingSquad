@@ -228,7 +228,7 @@ export class CodexScene extends Phaser.Scene {
         statLines.forEach((line, li) => {
           container.add(
             this.add.text(cx, cy + 10 + li * 16, line, {
-              fontSize: '11px', fontFamily: 'monospace', color: '#6a7a8a',
+              fontSize: '13px', fontFamily: 'monospace', color: '#6a7a8a',
             }).setOrigin(0.5),
           );
         });
@@ -237,7 +237,7 @@ export class CodexScene extends Phaser.Scene {
         if (passive) {
           container.add(
             this.add.text(cx, cy + 64, passive.name, {
-              fontSize: '10px', fontFamily: 'Georgia, serif', color: '#a0906a',
+              fontSize: '12px', fontFamily: 'Georgia, serif', color: '#a0906a',
             }).setOrigin(0.5),
           );
         }
@@ -260,7 +260,7 @@ export class CodexScene extends Phaser.Scene {
 
         container.add(
           this.add.text(cx, barY + barH + 8, `Mastery Lv.${level}`, {
-            fontSize: '9px', fontFamily: 'monospace', color: '#556060',
+            fontSize: '11px', fontFamily: 'monospace', color: '#556060',
           }).setOrigin(0.5),
         );
       }
@@ -333,12 +333,12 @@ export class CodexScene extends Phaser.Scene {
         const kills = getEnemyKillCount(cls);
         container.add(
           this.add.text(cx, cy + 28, `HP: ${stats.hp}  DMG: ${stats.combatDamage}`, {
-            fontSize: '10px', fontFamily: 'monospace', color: '#6a5a5a',
+            fontSize: '12px', fontFamily: 'monospace', color: '#6a5a5a',
           }).setOrigin(0.5),
         );
         container.add(
           this.add.text(cx, cy + 46, `Kills: ${kills}`, {
-            fontSize: '10px', fontFamily: 'monospace', color: '#aa6666',
+            fontSize: '12px', fontFamily: 'monospace', color: '#aa6666',
           }).setOrigin(0.5),
         );
       }
@@ -425,7 +425,7 @@ export class CodexScene extends Phaser.Scene {
         const count = getRelicDiscoveryCount(relic.id);
         container.add(
           this.add.text(textX, cy + 10, relic.desc, {
-            fontSize: '9px', fontFamily: 'Georgia, serif', color: '#5a6a7a',
+            fontSize: '11px', fontFamily: 'Georgia, serif', color: '#5a6a7a',
             wordWrap: { width: cardW - 90 },
           }).setOrigin(0, 0.5),
         );
@@ -443,7 +443,7 @@ export class CodexScene extends Phaser.Scene {
 
   // ── Back Button ────────────────────────────────────────────────────────────
   private buildBackButton() {
-    const w = 120, h = 36;
+    const w = 140, h = 42;
     const bx = 30, by = GAME_HEIGHT - 50;
     const container = this.add.container(bx + w / 2, by + h / 2).setDepth(20);
 

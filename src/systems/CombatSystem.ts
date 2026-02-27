@@ -271,7 +271,7 @@ export class CombatSystem {
         for (const t of targets) {
           t.applyDamage(heroDmg, hero.x, hero);
           hero.battleDamageDealt += heroDmg;
-          this.spawnMeleeFlash(t.x, t.y);
+          this.scene.events.emit('meleeHit', t.x, t.y, 'enemy');
           this.scene.events.emit('unitDamage', t.x, t.y, Math.round(heroDmg));
         }
         hero.lastAttackTime = now;
@@ -292,7 +292,7 @@ export class CombatSystem {
           hero.lastAttackTime = now;
           this.flashAttackAnim(hero);
           this.onDamageEvent?.();
-          this.spawnMeleeFlash(bx, by);
+          this.scene.events.emit('meleeHit', bx, by, nearestBlock.material);
         }
       }
     }
@@ -320,7 +320,7 @@ export class CombatSystem {
           enemy.lastAttackTime = now;
           this.flashEnemyAttackAnim(enemy);
           this.onDamageEvent?.();
-          this.spawnMeleeFlash(target.x, target.y);
+          this.scene.events.emit('meleeHit', target.x, target.y, 'enemy');
         }
         continue;
       }
@@ -338,7 +338,7 @@ export class CombatSystem {
           enemy.lastAttackTime = now;
           this.flashEnemyAttackAnim(enemy);
           this.onDamageEvent?.();
-          this.spawnMeleeFlash(target.x, target.y);
+          this.scene.events.emit('meleeHit', target.x, target.y, 'enemy');
           // Thorns relic: reflect damage back
           if (this.relicMods.thorns > 0) {
             enemy.applyDamage(this.relicMods.thorns, target.x, target);
@@ -428,13 +428,6 @@ export class CombatSystem {
       if (d < bestDist) { bestDist = d; best = item; }
     }
     return best;
-  }
-
-  private spawnMeleeFlash(x: number, y: number) {
-    const g = this.scene.add.graphics().setDepth(20);
-    g.fillStyle(0xffffff, 0.7);
-    g.fillCircle(x + Phaser.Math.Between(-10, 10), y + Phaser.Math.Between(-10, 10), 8);
-    this.scene.time.delayedCall(120, () => g.destroy());
   }
 
   /** Check all projectiles against their targets (called every frame from update). */
