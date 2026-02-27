@@ -70,6 +70,7 @@ export class LaunchSystem {
 
     this.readyText = scene.add.text(SLING_X, SLING_Y - 70, 'READY', {
       fontSize: '18px',
+      fontFamily: 'Nunito, sans-serif',
       fontStyle: 'bold',
       color: '#2ecc71',
       stroke: '#000',
@@ -216,6 +217,11 @@ export class LaunchSystem {
       hero.piercing = true;
     }
 
+    // Ranger triple split: emit event so BattleScene spawns flanking arrow projectiles
+    if (hero.heroClass === 'RANGER') {
+      this.scene.events.emit('rangerSplitLaunch', hero, vx, vy);
+    }
+
     this.onLaunch?.(hero);
     this.currentIndex++;
     this.cooldownRemaining = this.effectiveCooldownMs;
@@ -244,6 +250,9 @@ export class LaunchSystem {
     );
 
     // ── Frame-by-frame simulation (matches actual physics exactly) ──
+    // Warrior gravityScale: nearly flat trajectory
+    const gravScale = (this.currentHero?.stats as any).gravityScale ?? 1.0;
+
     let px = SLING_X, py = SLING_Y;
     let pvx = vx, pvy = vy;
     let dotsDrawn = 0;
@@ -257,7 +266,7 @@ export class LaunchSystem {
     for (let frame = 0; frame < TRAJECTORY_SIM_FRAMES && dotsDrawn < effectiveDots; frame++) {
       // Apply same physics as Matter.js body (frictionAir + gravity)
       pvx *= (1 - HERO_FRICTION_AIR);
-      pvy += GRAVITY_PER_FRAME;
+      pvy += GRAVITY_PER_FRAME * gravScale;
       px += pvx;
       py += pvy;
 
@@ -275,6 +284,34 @@ export class LaunchSystem {
       if (py > GAME_HEIGHT + 20) break;
     }
 
+    // Ranger: draw 2 flanking trajectory trails at ±splitSpreadDeg
+    if (this.currentHero?.heroClass === 'RANGER') {
+      const stats = this.currentHero.stats as any;
+      const spreadDeg = stats.splitSpreadDeg ?? 10;
+      const launchAngle = Math.atan2(vy, vx);
+      const launchSpeed = Math.hypot(vx, vy) * 0.85; // flanking arrows 85% speed
+      for (const sign of [-1, 1]) {
+        const angle = launchAngle + Phaser.Math.DegToRad(spreadDeg * sign);
+        let fx = SLING_X, fy = SLING_Y;
+        let fvx = Math.cos(angle) * launchSpeed;
+        let fvy = Math.sin(angle) * launchSpeed;
+        let fDots = 0;
+        for (let frame = 0; frame < TRAJECTORY_SIM_FRAMES && fDots < effectiveDots; frame++) {
+          fvx *= (1 - HERO_FRICTION_AIR);
+          fvy += GRAVITY_PER_FRAME;
+          fx += fvx;
+          fy += fvy;
+          if (frame % TRAJECTORY_DOT_EVERY === 0) {
+            const alpha = (1 - fDots / TRAJECTORY_POINTS) * 0.5;
+            this.trajectoryGraphics.fillStyle(0x27ae60, alpha);
+            this.trajectoryGraphics.fillCircle(fx, fy, 2.5);
+            fDots++;
+          }
+          if (fy > GAME_HEIGHT + 20) break;
+        }
+      }
+    }
+
     // Mage: draw AoE impact preview at projected landing point
     if (this.currentHero?.heroClass === 'MAGE') {
       const mageAoeRadius = 150 + this.relicMods.mageAoeRadiusBonus; // matches HERO_STATS.MAGE.aoeRadius
@@ -285,6 +322,15 @@ export class LaunchSystem {
       // Inner ring at half-radius for depth cue
       this.trajectoryGraphics.lineStyle(1, 0xb065e0, 0.22);
       this.trajectoryGraphics.strokeCircle(landX, landY, mageAoeRadius * 0.5);
+      // Cluster bomblet indicator: 5 small dots in a ring around the landing point
+      const clusterCount = (this.currentHero.stats as any).clusterCount ?? 5;
+      for (let i = 0; i < clusterCount; i++) {
+        const angle = (i / clusterCount) * Math.PI * 2;
+        const cx = landX + Math.cos(angle) * 40;
+        const cy = landY + Math.sin(angle) * 40;
+        this.trajectoryGraphics.fillStyle(0x8e44ad, 0.4);
+        this.trajectoryGraphics.fillCircle(cx, cy, 3);
+      }
     }
 
     // Power indicator: subtle scale of drag distance

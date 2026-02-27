@@ -308,6 +308,9 @@ export class BootScene extends Phaser.Scene {
     // Instantiate MusicSystem once and share via registry (cross-scene singleton)
     const music = new MusicSystem();
     this.registry.set('music', music);
-    this.scene.start('MainMenuScene');
+
+    // Wait for Google Fonts to load before starting first scene
+    // (Phaser canvas text caches the font on first render — must be ready)
+    document.fonts.ready.then(() => this.scene.start('MainMenuScene'));
   }
 }

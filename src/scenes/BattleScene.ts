@@ -5,6 +5,7 @@ import {
   STARTER_SQUAD_SIZE,
   HeroClass, EnemyClass,
   HERO_STATS,
+  HERO_FRICTION_AIR,
   LAUNCH_COOLDOWN_MS,
   HUD_BAR_HEIGHT,
 } from '@/config/constants';
@@ -14,6 +15,7 @@ import { Enemy } from '@/entities/Enemy';
 import { Block } from '@/entities/Block';
 import { Barrel } from '@/entities/Barrel';
 import { Coin } from '@/entities/Coin';
+import { Projectile } from '@/entities/Projectile';
 
 import { LaunchSystem } from '@/systems/LaunchSystem';
 import { CombatSystem } from '@/systems/CombatSystem';
@@ -161,7 +163,7 @@ export class BattleScene extends Phaser.Scene {
 
   // ─── Settings button ──────────────────────────────────────────────────────
   private buildSettingsButton() {
-    const size = 36, r = 8;
+    const size = 44, r = 8;
     const bg = this.add.graphics().setDepth(55);
     const draw = (hovered: boolean) => {
       bg.clear();
@@ -172,7 +174,7 @@ export class BattleScene extends Phaser.Scene {
     };
     draw(false);
     const icon = this.add.text(10 + size / 2, 10 + size / 2, '⚙', {
-      fontSize: '18px',
+      fontSize: '22px', fontFamily: 'Nunito, sans-serif',
     }).setOrigin(0.5).setDepth(56);
 
     const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
@@ -186,7 +188,7 @@ export class BattleScene extends Phaser.Scene {
 
   // ─── End-run button ───────────────────────────────────────────────────────
   private buildEndRunButton() {
-    const W = 130, H = 36, R = 7;
+    const W = 160, H = 44, R = 7;
     // Bottom-right corner of the HUD bar, 10px from edge, vertically centered in bar
     const bx = GAME_WIDTH - W / 2 - 10;
     const by = GAME_HEIGHT - HUD_BAR_HEIGHT / 2;
@@ -202,7 +204,7 @@ export class BattleScene extends Phaser.Scene {
     drawBg(false);
 
     const label = this.add.text(0, 0, 'END RUN', {
-      fontSize: '13px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+      fontSize: '16px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
       color: '#e74c3c', stroke: '#000', strokeThickness: 2,
       letterSpacing: 2,
     }).setOrigin(0.5);
@@ -228,7 +230,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const banner = this.add.text(GAME_WIDTH / 2, 60, this.activeNode.name.toUpperCase(), {
-      fontSize: '28px', fontFamily: 'serif',
+      fontSize: '34px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 4,
       letterSpacing: 3,
     }).setOrigin(0.5).setDepth(60).setAlpha(0);
@@ -265,7 +267,7 @@ export class BattleScene extends Phaser.Scene {
 
     // "⚠  BOSS BATTLE  ⚠" warning line
     const warn = this.add.text(cx, cy - 70, '⚠  BOSS BATTLE  ⚠', {
-      fontSize: '20px', fontFamily: 'Georgia, serif',
+      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
       color: '#e74c3c', stroke: '#2a0000', strokeThickness: 4,
       letterSpacing: 5,
     }).setOrigin(0.5).setDepth(90).setAlpha(0);
@@ -279,7 +281,7 @@ export class BattleScene extends Phaser.Scene {
 
     // Boss name — large, slams in from scale
     const nameText = this.add.text(cx, cy + 20, this.activeNode.name.toUpperCase(), {
-      fontSize: '72px', fontFamily: 'Georgia, serif',
+      fontSize: '80px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#c0392b', stroke: '#1a0000', strokeThickness: 10,
     }).setOrigin(0.5).setDepth(90).setAlpha(0).setScale(1.35);
     this.tweens.add({
@@ -1416,13 +1418,13 @@ export class BattleScene extends Phaser.Scene {
 
     // Static "ENEMIES" label
     this.add.text(GAME_WIDTH - 93, 20, 'ENEMIES', {
-      fontSize: '9px', fontFamily: 'monospace',
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif',
       color: '#5a3a3a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(50);
 
     this.enemyCountText = this.add.text(GAME_WIDTH - 93, 32,
       `${this.enemies.length}`, {
-        fontSize: '20px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+        fontSize: '24px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
         color: '#e74c3c', stroke: '#000', strokeThickness: 3,
       },
     ).setOrigin(0.5, 0).setDepth(50);
@@ -1695,6 +1697,46 @@ export class BattleScene extends Phaser.Scene {
       if (nearest) {
         nearest.applyDamage(dmg);
         DamageNumber.damage(this, nearest.x, nearest.y, Math.round(dmg));
+      }
+    });
+
+    // Ranger triple split: spawn 2 flanking arrow projectiles on launch
+    this.events.on('rangerSplitLaunch', (hero: Hero, vx: number, vy: number) => {
+      const stats = HERO_STATS.RANGER as any;
+      const splitCount = stats.splitCount ?? 2;
+      const spreadDeg = stats.splitSpreadDeg ?? 10;
+      const splitDmg = stats.splitDamage ?? 20;
+      const launchAngle = Math.atan2(vy, vx);
+      const launchSpeed = Math.hypot(vx, vy) * 0.85;
+      for (let i = 0; i < splitCount; i++) {
+        const sign = i === 0 ? -1 : 1;
+        const angle = launchAngle + Phaser.Math.DegToRad(spreadDeg * sign);
+        const pvx = Math.cos(angle) * launchSpeed;
+        const pvy = Math.sin(angle) * launchSpeed;
+        const p = new Projectile(this, SLING_X, SLING_Y, pvx, pvy, splitDmg, 0x27ae60);
+        p.sourceHero = hero;
+        // Override frictionAir to match hero trajectory
+        if (p.body) (p.body as any).frictionAir = HERO_FRICTION_AIR;
+        this.combatSystem.addProjectile(p);
+      }
+    });
+
+    // Mage cluster grenade: spawn 5 bomblets that radiate outward from impact
+    this.events.on('mageClusterSpawn', (x: number, y: number, hero: Hero) => {
+      const stats = HERO_STATS.MAGE as any;
+      const count = stats.clusterCount ?? 5;
+      const dmg = stats.clusterDamage ?? 18;
+      const speed = 8; // px/frame
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        // Slight upward bias so bomblets arc visibly
+        const pvx = Math.cos(angle) * speed;
+        const pvy = Math.sin(angle) * speed - 2;
+        const p = new Projectile(this, x, y, pvx, pvy, dmg, 0x8e44ad);
+        p.sourceHero = hero;
+        // Higher air friction so bomblets slow down quickly
+        if (p.body) (p.body as any).frictionAir = 0.02;
+        this.combatSystem.addProjectile(p);
       }
     });
   }
@@ -2015,7 +2057,7 @@ export class BattleScene extends Phaser.Scene {
     if (!step) return;
     const text = getTutorialText(step);
     this.tutorialHint = this.add.text(GAME_WIDTH / 2, 100, text, {
-      fontSize: '18px', fontFamily: 'Georgia, serif',
+      fontSize: '18px', fontFamily: 'Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
       backgroundColor: '#00000088', padding: { x: 12, y: 6 },
     }).setOrigin(0.5).setDepth(80).setAlpha(0);

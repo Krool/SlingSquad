@@ -19,7 +19,7 @@ export class DamageNumber {
     const txt = scene.add.text(x + jitter, y - 8, label, {
       fontSize: `${fontSize}px`,
       fontStyle: 'bold',
-      fontFamily: 'serif',
+      fontFamily: 'Nunito, sans-serif',
       color,
       stroke: '#000000',
       strokeThickness: 4,

@@ -133,7 +133,7 @@ export class ResultScene extends Phaser.Scene {
 
     // VICTORY — slides down from above
     const title = this.add.text(cx, cy - 110, 'VICTORY', {
-      fontSize: '86px', fontFamily: 'Georgia, serif',
+      fontSize: '86px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#f1c40f', stroke: '#5c3d00', strokeThickness: 7,
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
     this.tweens.add({
@@ -145,7 +145,7 @@ export class ResultScene extends Phaser.Scene {
     // Reason sub-text
     if (reason) {
       const rt = this.add.text(cx, cy - 42, reason, {
-        fontSize: '19px', fontFamily: 'Georgia, serif', color: '#c8a840',
+        fontSize: '22px', fontFamily: 'Nunito, sans-serif', color: '#c8a840',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);
       this.tweens.add({ targets: rt, alpha: 1, duration: 350, delay: 780 });
@@ -155,7 +155,7 @@ export class ResultScene extends Phaser.Scene {
     if (gold > 0) {
       const goldY = reason ? cy - 6 : cy - 28;
       const gt = this.add.text(cx, goldY, `✦  +${gold} Gold  ✦`, {
-        fontSize: '28px', fontFamily: 'Georgia, serif', color: '#ffe070',
+        fontSize: '32px', fontFamily: 'Nunito, sans-serif', color: '#ffe070',
         stroke: '#000', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(15).setAlpha(0).setScale(1.4);
       this.tweens.add({
@@ -167,7 +167,7 @@ export class ResultScene extends Phaser.Scene {
     // Shard earn display
     if (shards > 0) {
       const st = this.add.text(cx, cy + 74, `◆  +${shards} Shards`, {
-        fontSize: '16px', fontFamily: 'Georgia, serif',
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif',
         color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);
       this.tweens.add({ targets: st, alpha: 1, duration: 350, delay: 1020 });
@@ -197,14 +197,14 @@ export class ResultScene extends Phaser.Scene {
 
     // DEFEAT — bleeds in
     const title = this.add.text(cx, cy - 130, 'DEFEAT', {
-      fontSize: '86px', fontFamily: 'Georgia, serif',
+      fontSize: '86px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#e74c3c', stroke: '#5a0000', strokeThickness: 7,
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
     this.tweens.add({ targets: title, alpha: 1, duration: 650, ease: 'Power3', delay: 200 });
 
     if (reason) {
       const rt = this.add.text(cx, cy - 55, reason, {
-        fontSize: '19px', fontFamily: 'Georgia, serif', color: '#c06860',
+        fontSize: '22px', fontFamily: 'Nunito, sans-serif', color: '#c06860',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);
       this.tweens.add({ targets: rt, alpha: 1, duration: 350, delay: 760 });
@@ -213,7 +213,7 @@ export class ResultScene extends Phaser.Scene {
     // Shard earn display
     if (shards > 0) {
       const st = this.add.text(cx, cy - 15, `◆  +${shards} Shards earned`, {
-        fontSize: '16px', fontFamily: 'Georgia, serif',
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif',
         color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);
       this.tweens.add({ targets: st, alpha: 1, duration: 350, delay: 820 });
@@ -311,7 +311,7 @@ export class ResultScene extends Phaser.Scene {
         if (i === mvpIndex) {
           container.add(
             this.add.text(0, -46, '\u2605 MVP', {
-              fontSize: '13px', fontFamily: 'Georgia, serif',
+              fontSize: '15px', fontFamily: 'Nunito, sans-serif',
               color: '#ffd700', stroke: '#5c3d00', strokeThickness: 2,
             }).setOrigin(0.5),
           );
@@ -343,7 +343,7 @@ export class ResultScene extends Phaser.Scene {
 
         // Stat lines (below portrait)
         if (stats) {
-          const lineStyle = { fontSize: '11px', fontFamily: 'Georgia, serif', color: '#8ca0b8', stroke: '#000', strokeThickness: 1 };
+          const lineStyle = { fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#8ca0b8', stroke: '#000', strokeThickness: 1 };
           let ly = 40;
           if (stats.damageDealt > 0) {
             container.add(this.add.text(0, ly, `\u2694 ${stats.damageDealt} dmg`, lineStyle).setOrigin(0.5));
@@ -364,8 +364,8 @@ export class ResultScene extends Phaser.Scene {
           // Fallback: show HP / fallen label
           container.add(
             this.add.text(0, 40, alive ? `${Math.round(h.currentHp)} hp` : 'fallen', {
-              fontSize: '12px', color: alive ? '#8ca0b8' : '#4a2a2a',
-              fontFamily: 'Georgia, serif',
+              fontSize: '14px', color: alive ? '#8ca0b8' : '#4a2a2a',
+              fontFamily: 'Nunito, sans-serif',
             }).setOrigin(0.5),
           );
         }
@@ -413,7 +413,7 @@ export class ResultScene extends Phaser.Scene {
 
     container.add(
       this.add.text(0, 0, label, {
-        fontSize: '18px', fontFamily: 'Georgia, serif',
+        fontSize: '20px', fontFamily: 'Nunito, sans-serif',
         color: '#' + accentColor.toString(16).padStart(6, '0'),
       }).setOrigin(0.5),
     );

@@ -70,7 +70,7 @@ export class CodexScene extends Phaser.Scene {
 
   private buildTitle() {
     this.add.text(GAME_WIDTH / 2, 32, 'CODEX', {
-      fontSize: '24px', fontFamily: 'Georgia, serif',
+      fontSize: '30px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: ACCENT_HEX, stroke: '#000', strokeThickness: 3,
       letterSpacing: 6,
     }).setOrigin(0.5).setDepth(10);
@@ -104,7 +104,7 @@ export class CodexScene extends Phaser.Scene {
       }
 
       const txt = this.add.text(8, 0, tab.label, {
-        fontSize: '14px', fontFamily: 'Georgia, serif',
+        fontSize: '16px', fontFamily: 'Nunito, sans-serif',
         color: ACCENT_HEX,
       }).setOrigin(0.5);
       container.add(txt);
@@ -188,10 +188,10 @@ export class CodexScene extends Phaser.Scene {
 
       // Name
       const name = discovered ? stats.label : '???';
-      const color = discovered ? '#' + stats.color.toString(16).padStart(6, '0') : '#333';
+      const color = discovered ? '#' + stats.color.toString(16).padStart(6, '0') : '#5a5a6a';
       container.add(
         this.add.text(cx, cy - cardH / 2 + 18, name, {
-          fontSize: '16px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
+          fontSize: '18px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
           color, stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5),
       );
@@ -213,7 +213,7 @@ export class CodexScene extends Phaser.Scene {
         container.add(sil);
         container.add(
           this.add.text(cx, cy - 36, '?', {
-            fontSize: '28px', fontFamily: 'Georgia, serif', color: '#222',
+            fontSize: '32px', fontFamily: 'Nunito, sans-serif', color: '#4a4a5a',
           }).setOrigin(0.5),
         );
       }
@@ -228,7 +228,7 @@ export class CodexScene extends Phaser.Scene {
         statLines.forEach((line, li) => {
           container.add(
             this.add.text(cx, cy + 10 + li * 16, line, {
-              fontSize: '13px', fontFamily: 'monospace', color: '#6a7a8a',
+              fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#6a7a8a',
             }).setOrigin(0.5),
           );
         });
@@ -237,7 +237,7 @@ export class CodexScene extends Phaser.Scene {
         if (passive) {
           container.add(
             this.add.text(cx, cy + 64, passive.name, {
-              fontSize: '12px', fontFamily: 'Georgia, serif', color: '#a0906a',
+              fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
             }).setOrigin(0.5),
           );
         }
@@ -260,7 +260,7 @@ export class CodexScene extends Phaser.Scene {
 
         container.add(
           this.add.text(cx, barY + barH + 8, `Mastery Lv.${level}`, {
-            fontSize: '11px', fontFamily: 'monospace', color: '#556060',
+            fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#556060',
           }).setOrigin(0.5),
         );
       }
@@ -300,10 +300,10 @@ export class CodexScene extends Phaser.Scene {
 
       // Name
       const name = discovered ? stats.label : '???';
-      const color = discovered ? '#' + stats.color.toString(16).padStart(6, '0') : '#333';
+      const color = discovered ? '#' + stats.color.toString(16).padStart(6, '0') : '#5a5a6a';
       container.add(
         this.add.text(cx, cy - cardH / 2 + 16, name, {
-          fontSize: '13px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
+          fontSize: '15px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
           color, stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5),
       );
@@ -324,7 +324,7 @@ export class CodexScene extends Phaser.Scene {
         container.add(sil);
         container.add(
           this.add.text(cx, cy - 12, '?', {
-            fontSize: '22px', fontFamily: 'Georgia, serif', color: '#222',
+            fontSize: '26px', fontFamily: 'Nunito, sans-serif', color: '#4a4a5a',
           }).setOrigin(0.5),
         );
       }
@@ -333,12 +333,12 @@ export class CodexScene extends Phaser.Scene {
         const kills = getEnemyKillCount(cls);
         container.add(
           this.add.text(cx, cy + 28, `HP: ${stats.hp}  DMG: ${stats.combatDamage}`, {
-            fontSize: '12px', fontFamily: 'monospace', color: '#6a5a5a',
+            fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#6a5a5a',
           }).setOrigin(0.5),
         );
         container.add(
           this.add.text(cx, cy + 46, `Kills: ${kills}`, {
-            fontSize: '12px', fontFamily: 'monospace', color: '#aa6666',
+            fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#aa6666',
           }).setOrigin(0.5),
         );
       }
@@ -393,7 +393,7 @@ export class CodexScene extends Phaser.Scene {
         container.add(iconG);
         container.add(
           this.add.text(iconX, cy, isCurse ? '\u2620' : '\u25c6', {
-            fontSize: '16px', color: isCurse ? '#aa3333' : '#' + rarityCol.toString(16).padStart(6, '0'),
+            fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: isCurse ? '#aa3333' : '#' + rarityCol.toString(16).padStart(6, '0'),
           }).setOrigin(0.5),
         );
       } else {
@@ -402,7 +402,7 @@ export class CodexScene extends Phaser.Scene {
         container.add(iconG);
         container.add(
           this.add.text(iconX, cy, '?', {
-            fontSize: '16px', color: '#222',
+            fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#4a4a5a',
           }).setOrigin(0.5),
         );
       }
@@ -412,11 +412,11 @@ export class CodexScene extends Phaser.Scene {
       const name = discovered ? relic.name : '???';
       const nameCol = discovered
         ? (isCurse ? '#cc4444' : '#' + rarityCol.toString(16).padStart(6, '0'))
-        : '#333';
+        : '#5a5a6a';
 
       container.add(
         this.add.text(textX, cy - 14, name, {
-          fontSize: '13px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
+          fontSize: '15px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
           color: nameCol, stroke: '#000', strokeThickness: 1,
         }).setOrigin(0, 0.5),
       );
@@ -425,13 +425,13 @@ export class CodexScene extends Phaser.Scene {
         const count = getRelicDiscoveryCount(relic.id);
         container.add(
           this.add.text(textX, cy + 10, relic.desc, {
-            fontSize: '11px', fontFamily: 'Georgia, serif', color: '#5a6a7a',
+            fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
             wordWrap: { width: cardW - 90 },
           }).setOrigin(0, 0.5),
         );
         container.add(
           this.add.text(cx + cardW / 2 - 14, cy, `\u00d7${count}`, {
-            fontSize: '11px', fontFamily: 'monospace', color: '#556060',
+            fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#556060',
           }).setOrigin(1, 0.5),
         );
       }
@@ -459,7 +459,7 @@ export class CodexScene extends Phaser.Scene {
     container.add(bg);
     container.add(
       this.add.text(0, 0, '\u2190 Back', {
-        fontSize: '15px', fontFamily: 'Georgia, serif', color: ACCENT_HEX,
+        fontSize: '17px', fontFamily: 'Nunito, sans-serif', color: ACCENT_HEX,
       }).setOrigin(0.5),
     );
 

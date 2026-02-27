@@ -94,18 +94,18 @@ export class ForgeScene extends Phaser.Scene {
     iconBg.strokeCircle(GAME_WIDTH / 2, 72, 30);
 
     this.add.text(GAME_WIDTH / 2, 72, '⚒', {
-      fontSize: '28px', fontFamily: 'Georgia, serif',
+      fontSize: '32px', fontFamily: 'Nunito, sans-serif',
       color: ACCENT_HEX, stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(6);
 
     this.add.text(GAME_WIDTH / 2, 122, 'The Forge', {
-      fontSize: '30px', fontFamily: 'Georgia, serif',
+      fontSize: '36px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#f0d8b0', stroke: '#000', strokeThickness: 4,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(5);
 
     this.add.text(GAME_WIDTH / 2, 158, 'Choose one action to improve your arsenal.', {
-      fontSize: '15px', fontFamily: 'Georgia, serif',
+      fontSize: '17px', fontFamily: 'Nunito, sans-serif',
       color: '#8a7060', fontStyle: 'italic',
     }).setOrigin(0.5).setDepth(5);
 
@@ -214,16 +214,16 @@ export class ForgeScene extends Phaser.Scene {
     // Action label in strip
     container.add(
       this.add.text(0, -h / 2 + 17, opt.label.toUpperCase(), {
-        fontSize: '14px', fontFamily: 'monospace',
+        fontSize: '16px', fontFamily: 'Nunito, sans-serif',
         color: '#fff', stroke: '#000', strokeThickness: 2,
-      }).setOrigin(0.5).setAlpha(canUse ? 1 : 0.4),
+      }).setOrigin(0.5).setAlpha(canUse ? 1 : 0.65),
     );
 
     // Big label
     container.add(
       this.add.text(0, -h / 2 + 72, opt.label, {
-        fontSize: '20px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
-        color: canUse ? '#f0d8b0' : '#555',
+        fontSize: '22px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+        color: canUse ? '#f0d8b0' : '#8a8a9a',
         stroke: '#000', strokeThickness: 3,
       }).setOrigin(0.5),
     );
@@ -231,8 +231,8 @@ export class ForgeScene extends Phaser.Scene {
     // Description
     container.add(
       this.add.text(0, -h / 2 + 108, opt.desc, {
-        fontSize: '14px', fontFamily: 'Georgia, serif',
-        color: canUse ? '#8a7a6a' : '#3a3a3a',
+        fontSize: '16px', fontFamily: 'Nunito, sans-serif',
+        color: canUse ? '#8a7a6a' : '#6a6a7a',
         wordWrap: { width: w - 36 }, align: 'center',
       }).setOrigin(0.5),
     );
@@ -256,7 +256,7 @@ export class ForgeScene extends Phaser.Scene {
       if (previewText) {
         container.add(
           this.add.text(0, -h / 2 + 145, previewText, {
-            fontSize: '13px', fontFamily: 'Georgia, serif',
+            fontSize: '15px', fontFamily: 'Nunito, sans-serif',
             color: '#6a5a4a',
             wordWrap: { width: w - 30 }, align: 'center',
           }).setOrigin(0.5),
@@ -277,8 +277,8 @@ export class ForgeScene extends Phaser.Scene {
 
     container.add(
       this.add.text(0, btnY, canUse ? 'SELECT' : 'N/A', {
-        fontSize: '16px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
-        color: canUse ? '#fff' : '#444',
+        fontSize: '18px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+        color: canUse ? '#fff' : '#6a6a7a',
       }).setOrigin(0.5),
     );
 
@@ -331,7 +331,7 @@ export class ForgeScene extends Phaser.Scene {
 
     panel.add(
       this.add.text(0, -30, text, {
-        fontSize: '17px', fontFamily: 'Georgia, serif',
+        fontSize: '19px', fontFamily: 'Nunito, sans-serif',
         color: '#f0d8b0', stroke: '#000', strokeThickness: 2,
         wordWrap: { width: panelW - 40 }, align: 'center',
       }).setOrigin(0.5),
@@ -351,7 +351,7 @@ export class ForgeScene extends Phaser.Scene {
 
     panel.add(
       this.add.text(0, 61, 'Continue  →', {
-        fontSize: '17px', fontFamily: 'Georgia, serif', color: ACCENT_HEX,
+        fontSize: '19px', fontFamily: 'Nunito, sans-serif', color: ACCENT_HEX,
       }).setOrigin(0.5),
     );
 
@@ -386,7 +386,7 @@ export class ForgeScene extends Phaser.Scene {
 
     container.add(
       this.add.text(0, 0, 'Skip  →', {
-        fontSize: '17px', fontFamily: 'Georgia, serif', color: '#6a8a7a',
+        fontSize: '19px', fontFamily: 'Nunito, sans-serif', color: '#6a8a7a',
       }).setOrigin(0.5),
     );
 

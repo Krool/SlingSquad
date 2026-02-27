@@ -79,7 +79,7 @@ export class EventScene extends Phaser.Scene {
     this.goldPanel.strokeRoundedRect(18, 18, 180, 44, 7);
 
     this.goldLabel = this.add.text(32, 32, `◆  ${run.gold} Gold`, {
-      fontSize: '20px', fontFamily: 'Georgia, serif',
+      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
     }).setDepth(11);
   }
@@ -137,13 +137,13 @@ export class EventScene extends Phaser.Scene {
     iconBg.strokeCircle(GAME_WIDTH / 2, 72, 30);
 
     this.add.text(GAME_WIDTH / 2, 72, '?', {
-      fontSize: '32px', fontFamily: 'Georgia, serif',
+      fontSize: '36px', fontFamily: 'Nunito, sans-serif',
       color: ACCENT_HEX, stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(6);
 
     // Event name
     this.add.text(GAME_WIDTH / 2, 122, this.event.name, {
-      fontSize: '30px', fontFamily: 'Georgia, serif',
+      fontSize: '36px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#e8d8f0', stroke: '#000', strokeThickness: 4,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(5);
@@ -156,7 +156,7 @@ export class EventScene extends Phaser.Scene {
 
   private buildNarrative() {
     this.add.text(GAME_WIDTH / 2, 186, this.event.text, {
-      fontSize: '18px', fontFamily: 'Georgia, serif',
+      fontSize: '20px', fontFamily: 'Nunito, sans-serif',
       color: '#9a8aaa', fontStyle: 'italic',
       wordWrap: { width: 700 }, align: 'center',
     }).setOrigin(0.5).setDepth(5);
@@ -236,8 +236,8 @@ export class EventScene extends Phaser.Scene {
     // Label
     container.add(
       this.add.text(-w / 2 + 20, -16, choice.label, {
-        fontSize: '20px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
-        color: canChoose ? '#e8d8f0' : '#555',
+        fontSize: '22px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+        color: canChoose ? '#e8d8f0' : '#8a8a9a',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0, 0.5),
     );
@@ -245,15 +245,15 @@ export class EventScene extends Phaser.Scene {
     // Description
     container.add(
       this.add.text(-w / 2 + 20, 10, choice.desc, {
-        fontSize: '14px', fontFamily: 'Georgia, serif',
-        color: canChoose ? '#8a7a9a' : '#3a3a3a',
+        fontSize: '16px', fontFamily: 'Nunito, sans-serif',
+        color: canChoose ? '#8a7a9a' : '#6a6a7a',
       }).setOrigin(0, 0.5),
     );
 
     // Outcome badge (replaces arrow)
     const badge = this.getOutcomeBadge(choice.outcome);
     const badgeText = this.add.text(0, 0, badge.text, {
-      fontSize: '14px', fontFamily: 'Georgia, serif',
+      fontSize: '15px', fontFamily: 'Nunito, sans-serif',
       color: '#' + badge.color.toString(16).padStart(6, '0'),
     }).setOrigin(0.5);
     const badgePadX = 10, badgePadY = 4;
@@ -535,7 +535,7 @@ export class EventScene extends Phaser.Scene {
     const resultIcon = this.getResultIcon(text);
     panel.add(
       this.add.text(0, -55, resultIcon.icon, {
-        fontSize: '28px', fontFamily: 'Georgia, serif',
+        fontSize: '32px', fontFamily: 'Nunito, sans-serif',
         color: resultIcon.color, stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5),
     );
@@ -543,7 +543,7 @@ export class EventScene extends Phaser.Scene {
     // Result text
     panel.add(
       this.add.text(0, -20, text, {
-        fontSize: '17px', fontFamily: 'Georgia, serif',
+        fontSize: '19px', fontFamily: 'Nunito, sans-serif',
         color: '#e8d8f0', stroke: '#000', strokeThickness: 2,
         wordWrap: { width: panelW - 40 }, align: 'center',
       }).setOrigin(0.5),
@@ -563,7 +563,7 @@ export class EventScene extends Phaser.Scene {
     panel.add(btnGfx);
 
     const btnText = this.add.text(0, 71, 'Continue  \u2192', {
-      fontSize: '17px', fontFamily: 'Georgia, serif', color: ACCENT_HEX,
+      fontSize: '18px', fontFamily: 'Nunito, sans-serif', color: ACCENT_HEX,
     }).setOrigin(0.5);
     panel.add(btnText);
 

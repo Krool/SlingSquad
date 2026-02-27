@@ -141,7 +141,7 @@ export class SquadSelectScene extends Phaser.Scene {
     };
     draw(false);
     this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '22px',
+      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
     }).setOrigin(0.5).setDepth(21);
 
     const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
@@ -165,7 +165,7 @@ export class SquadSelectScene extends Phaser.Scene {
     panel.strokeRoundedRect(px - W, py, W, H, 7);
 
     this.add.text(px - W / 2, py + H / 2, `\u25c6 ${getShards()}`, {
-      fontSize: '16px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+      fontSize: '16px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
       color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(11);
   }
@@ -173,7 +173,7 @@ export class SquadSelectScene extends Phaser.Scene {
   // ── Title ─────────────────────────────────────────────────────────────
   private buildTitleText() {
     this.add.text(GAME_WIDTH / 2, 56, 'ASSEMBLE YOUR SQUAD', {
-      fontSize: '32px', fontFamily: 'Georgia, serif',
+      fontSize: '36px', fontFamily: 'Nunito, sans-serif',
       color: '#c8a840', stroke: '#000', strokeThickness: 4,
       letterSpacing: 4,
     }).setOrigin(0.5).setDepth(10);
@@ -266,7 +266,7 @@ export class SquadSelectScene extends Phaser.Scene {
       // Name label
       const label = CLASS_LABELS[heroClass] ?? heroClass;
       const nameText = this.add.text(0, h / 2 - 28, label, {
-        fontSize: '16px', fontFamily: 'Georgia, serif',
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif',
         color: '#' + color.toString(16).padStart(6, '0'),
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5);
@@ -282,7 +282,7 @@ export class SquadSelectScene extends Phaser.Scene {
       remBg.strokeCircle(0, 0, 16);
       remBtn.add(remBg);
       const remX = this.add.text(0, 0, '\u2715', {
-        fontSize: '14px', color: '#e74c3c',
+        fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#e74c3c',
       }).setOrigin(0.5);
       remBtn.add(remX);
       const remHit = this.add.rectangle(0, 0, 32, 32, 0, 0)
@@ -315,7 +315,7 @@ export class SquadSelectScene extends Phaser.Scene {
 
       // Plus icon
       const plus = this.add.text(0, -6, '+', {
-        fontSize: '36px', fontFamily: 'Georgia, serif',
+        fontSize: '36px', fontFamily: 'Nunito, sans-serif',
         color: '#2a3a50',
       }).setOrigin(0.5);
       container.add(plus);
@@ -407,8 +407,8 @@ export class SquadSelectScene extends Phaser.Scene {
       // Label
       const label = CLASS_LABELS[cls] ?? cls;
       const nameText = this.add.text(0, cardH / 2 - 28, label, {
-        fontSize: '13px', fontFamily: 'Georgia, serif',
-        color: isSlotted ? '#3a4a5a' : '#' + color.toString(16).padStart(6, '0'),
+        fontSize: '15px', fontFamily: 'Nunito, sans-serif',
+        color: isSlotted ? '#6a7a8a' : '#' + color.toString(16).padStart(6, '0'),
         stroke: '#000', strokeThickness: 1,
       }).setOrigin(0.5);
       container.add(nameText);
@@ -416,7 +416,7 @@ export class SquadSelectScene extends Phaser.Scene {
       // "In Squad" label if slotted
       if (isSlotted) {
         const inSquad = this.add.text(0, cardH / 2 - 14, 'In Squad', {
-          fontSize: '11px', fontFamily: 'monospace',
+          fontSize: '13px', fontFamily: 'Nunito, sans-serif',
           color: '#4a5a6a',
         }).setOrigin(0.5);
         container.add(inSquad);
@@ -544,7 +544,7 @@ export class SquadSelectScene extends Phaser.Scene {
 
     container.add(
       this.add.text(0, 0, label, {
-        fontSize: '18px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+        fontSize: '20px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
         color: '#' + accentColor.toString(16).padStart(6, '0'),
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5),
@@ -620,14 +620,14 @@ export class SquadSelectScene extends Phaser.Scene {
     // ── Map selection (left column) ──
     const mapCX = cx - 200;
     this.add.text(mapCX, panelY + 10, 'MAP', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const maps = getAllMaps();
     let mapIdx = maps.findIndex(m => m.id === this._selectedMapId);
     if (mapIdx < 0) mapIdx = 0;
     const mapLabel = this.add.text(mapCX, panelY + 32, maps[mapIdx].name, {
-      fontSize: '16px', fontFamily: 'Georgia, serif', color: '#f1c40f',
+      fontSize: '18px', fontFamily: 'Nunito, sans-serif', color: '#f1c40f',
       stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
@@ -649,12 +649,12 @@ export class SquadSelectScene extends Phaser.Scene {
     // ── Ascension (center column) ──
     const ascCX = cx;
     this.add.text(ascCX, panelY + 10, 'ASCENSION', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const maxAsc = getUnlockedAscension();
     const ascLabel = this.add.text(ascCX, panelY + 32, `${this._ascensionLevel}`, {
-      fontSize: '20px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+      fontSize: '20px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
       color: this._ascensionLevel > 0 ? '#e74c3c' : '#5a7a9a',
       stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5, 0).setDepth(11);
@@ -676,7 +676,7 @@ export class SquadSelectScene extends Phaser.Scene {
     // ── Modifier toggles (right column) ──
     const modCX = cx + 200;
     this.add.text(modCX, panelY + 10, 'MODIFIERS', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const modDefs = [
@@ -708,7 +708,7 @@ export class SquadSelectScene extends Phaser.Scene {
     };
     draw(false);
     this.add.text(x, y + 10, char, {
-      fontSize: '14px', color: '#7a9ab8',
+      fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
     }).setOrigin(0.5).setDepth(12);
     const hit = this.add.rectangle(x, y + 10, 40, 32, 0, 0)
       .setInteractive({ useHandCursor: true }).setDepth(13);
@@ -723,7 +723,7 @@ export class SquadSelectScene extends Phaser.Scene {
     const isOn = this._activeModifiers.includes(modId);
     const g = this.add.graphics().setDepth(11);
     const textObj = this.add.text(x, y + h / 2, label, {
-      fontSize: '12px', fontFamily: 'Georgia, serif',
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif',
       color: isOn ? '#' + color.toString(16).padStart(6, '0') : '#4a5a6a',
       stroke: '#000', strokeThickness: 1,
     }).setOrigin(0.5).setDepth(12);

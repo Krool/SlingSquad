@@ -315,6 +315,14 @@ export class Hero {
       }
     }
 
+    // Warrior battering ram: counteract 85% of gravity for a nearly flat trajectory
+    if (this.state === 'flying' && this.heroClass === 'WARRIOR') {
+      const gravScale = (this.stats as any).gravityScale ?? 1.0;
+      const cancelFactor = 1 - gravScale; // 0.85 for Warrior
+      const gravForce = this.body.mass * 1.08 * 0.001 * cancelFactor;
+      this.body.force.y -= gravForce;
+    }
+
     // Check if hero has settled (low velocity) — enter combat
     if (this.state === 'flying') {
       const speed = Math.hypot(this.body.velocity.x, this.body.velocity.y);

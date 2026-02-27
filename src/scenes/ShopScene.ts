@@ -167,13 +167,13 @@ export class ShopScene extends Phaser.Scene {
       : 'Buy as many as you can afford.';
 
     this.add.text(GAME_WIDTH / 2, 64, title, {
-      fontSize: '34px', fontFamily: 'Georgia, serif',
+      fontSize: '40px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: accentCol, stroke: '#000', strokeThickness: 4,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(5);
 
     this.add.text(GAME_WIDTH / 2, 108, sub, {
-      fontSize: '17px', fontFamily: 'Georgia, serif', color: '#6a7e94',
+      fontSize: '19px', fontFamily: 'Nunito, sans-serif', color: '#6a7e94',
     }).setOrigin(0.5).setDepth(5);
 
     // Thin rule under the subtitle
@@ -191,7 +191,7 @@ export class ShopScene extends Phaser.Scene {
     this.goldPanel.strokeRoundedRect(18, 18, 180, 44, 7);
 
     this.goldLabel = this.add.text(32, 32, `◆  ${run.gold} Gold`, {
-      fontSize: '20px', fontFamily: 'Georgia, serif',
+      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
     }).setDepth(11);
   }
@@ -257,9 +257,9 @@ export class ShopScene extends Phaser.Scene {
     container.add(banner);
 
     const rarityLabel = this.add.text(0, -h / 2 + 15, rarity.toUpperCase(), {
-      fontSize: '13px', fontFamily: 'monospace',
+      fontSize: '15px', fontFamily: 'Nunito, sans-serif',
       color: '#fff', stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5).setAlpha(canAfford ? 1 : 0.4);
+    }).setOrigin(0.5).setAlpha(canAfford ? 1 : 0.65);
     container.add(rarityLabel);
 
     // ── Icon circle ──────────────────────────────────────────────────────────
@@ -273,8 +273,8 @@ export class ShopScene extends Phaser.Scene {
     const iconSymbol = EFFECT_ICON[relic.effect] ?? RARITY_ICON[rarity] ?? '\u25cf';
     container.add(
       this.add.text(0, -h / 2 + 82, iconSymbol, {
-        fontSize: '24px', fontFamily: 'Georgia, serif',
-        color: canAfford ? '#' + accentColor.toString(16).padStart(6, '0') : '#333',
+        fontSize: '28px', fontFamily: 'Nunito, sans-serif',
+        color: canAfford ? '#' + accentColor.toString(16).padStart(6, '0') : '#6a6a7a',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5),
     );
@@ -282,8 +282,8 @@ export class ShopScene extends Phaser.Scene {
     // ── Relic name ───────────────────────────────────────────────────────────
     container.add(
       this.add.text(0, -h / 2 + 132, relic.name, {
-        fontSize: '19px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
-        color: canAfford ? '#e8e0d0' : '#555',
+        fontSize: '21px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+        color: canAfford ? '#e8e0d0' : '#8a8a9a',
         stroke: '#000', strokeThickness: 3,
         wordWrap: { width: w - 24 }, align: 'center',
       }).setOrigin(0.5),
@@ -294,8 +294,8 @@ export class ShopScene extends Phaser.Scene {
     if (preview) {
       container.add(
         this.add.text(0, -h / 2 + 155, preview, {
-          fontSize: '14px', fontFamily: 'Georgia, serif',
-          color: canAfford ? '#' + accentColor.toString(16).padStart(6, '0') : '#444',
+          fontSize: '16px', fontFamily: 'Nunito, sans-serif',
+          color: canAfford ? '#' + accentColor.toString(16).padStart(6, '0') : '#6a6a7a',
         }).setOrigin(0.5),
       );
     }
@@ -303,8 +303,8 @@ export class ShopScene extends Phaser.Scene {
     // ── Description ──────────────────────────────────────────────────────────
     container.add(
       this.add.text(0, -h / 2 + 190, relic.desc, {
-        fontSize: '14px', fontFamily: 'Georgia, serif',
-        color: canAfford ? '#8a9aaa' : '#3a3a3a',
+        fontSize: '16px', fontFamily: 'Nunito, sans-serif',
+        color: canAfford ? '#8a9aaa' : '#6a6a7a',
         wordWrap: { width: w - 40 }, align: 'center',
       }).setOrigin(0.5),
     );
@@ -327,8 +327,8 @@ export class ShopScene extends Phaser.Scene {
 
     container.add(
       this.add.text(0, btnY, btnLabel, {
-        fontSize: '15px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
-        color: canAfford ? '#fff' : '#444',
+        fontSize: '17px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+        color: canAfford ? '#fff' : '#6a6a7a',
       }).setOrigin(0.5),
     );
 
@@ -403,13 +403,13 @@ export class ShopScene extends Phaser.Scene {
     container.add(soldBg);
 
     const soldText = this.add.text(0, -10, 'SOLD', {
-      fontSize: '22px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
+      fontSize: '24px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
       color: '#2ecc71', stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5).setAlpha(0);
     container.add(soldText);
 
     const checkText = this.add.text(0, 14, '✓ Acquired', {
-      fontSize: '12px', fontFamily: 'Georgia, serif',
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif',
       color: '#88ddaa', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setAlpha(0);
     container.add(checkText);
@@ -461,7 +461,7 @@ export class ShopScene extends Phaser.Scene {
 
     container.add(
       this.add.text(0, 0, 'Continue  →', {
-        fontSize: '17px', fontFamily: 'Georgia, serif', color: '#6a8aaa',
+        fontSize: '19px', fontFamily: 'Nunito, sans-serif', color: '#6a8aaa',
       }).setOrigin(0.5),
     );
 

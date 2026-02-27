@@ -34,7 +34,7 @@ export class SettingsScene extends Phaser.Scene {
 
     // ── Title ────────────────────────────────────────────────────────────────
     this.add.text(cx, cy - 150, '⚙  SETTINGS', {
-      fontSize: '26px', fontFamily: 'Georgia, serif',
+      fontSize: '30px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(2);
@@ -52,7 +52,7 @@ export class SettingsScene extends Phaser.Scene {
 
     // ── SFX Volume slider ────────────────────────────────────────────────────
     this.add.text(cx - 200, cy - 95, 'SFX Volume', {
-      fontSize: '14px', fontFamily: 'Georgia, serif', color: '#8aa0be',
+      fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#8aa0be',
       letterSpacing: 1,
     }).setDepth(2);
 
@@ -66,7 +66,7 @@ export class SettingsScene extends Phaser.Scene {
 
     // ── Music Volume ──────────────────────────────────────────────────────
     this.add.text(cx - 200, cy + 10, 'Music Volume', {
-      fontSize: '14px', fontFamily: 'Georgia, serif', color: '#8aa0be',
+      fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#8aa0be',
       letterSpacing: 1,
     }).setDepth(2);
 
@@ -140,8 +140,8 @@ export class SettingsScene extends Phaser.Scene {
 
     // Value text
     const valueTxt = this.add.text(cx + trackW / 2 + 20, cy, `${Math.round(initialValue * 100)}%`, {
-      fontSize: '14px', fontFamily: 'Georgia, serif',
-      color: disabled ? '#3a4a5a' : '#f1c40f',
+      fontSize: '16px', fontFamily: 'Nunito, sans-serif',
+      color: disabled ? '#6a7a8a' : '#f1c40f',
     }).setOrigin(0, 0.5).setDepth(4);
 
     if (disabled || !onChange) return;
@@ -180,7 +180,7 @@ export class SettingsScene extends Phaser.Scene {
 
     const bg = this.add.graphics().setDepth(3);
     const lbl = this.add.text(cx, cy, '', {
-      fontSize: '15px', fontFamily: 'Georgia, serif',
+      fontSize: '17px', fontFamily: 'Nunito, sans-serif',
     }).setOrigin(0.5).setDepth(4);
 
     const redraw = () => {
@@ -227,7 +227,7 @@ export class SettingsScene extends Phaser.Scene {
     draw(false);
 
     this.add.text(cx, cy, 'Close', {
-      fontSize: '18px', fontFamily: 'Georgia, serif', color: '#a0bcd0',
+      fontSize: '20px', fontFamily: 'Nunito, sans-serif', color: '#a0bcd0',
     }).setOrigin(0.5).setDepth(4);
 
     const hit = this.add.rectangle(cx, cy, w, h, 0x000000, 0)

@@ -71,7 +71,8 @@ export const HERO_STATS = {
     combatSpeed: 500,           // ms between attacks
     walkSpeed: 0.7,             // px/frame while in combat
     color: 0xc0392b,
-    radius: 15,
+    radius: 24,
+    gravityScale: 0.15,         // battering ram — nearly flat trajectory (85% gravity cancelled)
     label: 'Warrior',
   },
   RANGER: {
@@ -86,7 +87,10 @@ export const HERO_STATS = {
     combatSpeed: 600,
     walkSpeed: 1.4,
     color: 0x27ae60,
-    radius: 13,
+    radius: 20,
+    splitCount: 2,              // 2 flanking arrow projectiles on launch (+ hero body = 3)
+    splitSpreadDeg: 10,         // angle offset from main trajectory
+    splitDamage: 20,            // damage per flanking arrow
     label: 'Ranger',
   },
   MAGE: {
@@ -100,7 +104,9 @@ export const HERO_STATS = {
     combatSpeed: 700,
     walkSpeed: 0.9,
     color: 0x8e44ad,
-    radius: 13,
+    radius: 20,
+    clusterCount: 5,            // bomblets spawned on impact
+    clusterDamage: 18,          // damage per bomblet hit
     label: 'Mage',
   },
   PRIEST: {
@@ -114,7 +120,7 @@ export const HERO_STATS = {
     combatSpeed: 800,
     walkSpeed: 0.6,
     color: 0xf39c12,
-    radius: 13,
+    radius: 20,
     label: 'Priest',
   },
   BARD: {
@@ -130,7 +136,7 @@ export const HERO_STATS = {
     combatSpeed: 700,
     walkSpeed: 0.8,
     color: 0x1abc9c,
-    radius: 13,
+    radius: 19,
     label: 'Bard',
   },
   ROGUE: {
@@ -143,7 +149,7 @@ export const HERO_STATS = {
     walkSpeed: 1.8,
     impactMultiplier: 0.8,
     color: 0x2c3e50,
-    radius: 12,
+    radius: 18,
     label: 'Rogue',
   },
   PALADIN: {
@@ -157,7 +163,7 @@ export const HERO_STATS = {
     impactMultiplier: 1.2,
     damageReduction: 0.25,         // takes 25% less combat damage
     color: 0xf1c40f,
-    radius: 16,
+    radius: 23,
     label: 'Paladin',
   },
   DRUID: {
@@ -172,7 +178,7 @@ export const HERO_STATS = {
     walkSpeed: 0.7,
     impactMultiplier: 1.0,
     color: 0x16a085,
-    radius: 14,
+    radius: 22,
     label: 'Druid',
   },
 } as const;

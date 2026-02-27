@@ -223,7 +223,7 @@ export class OverworldScene extends Phaser.Scene {
     titleBg.lineBetween(0, 52, GAME_WIDTH, 52);
 
     this.add.text(GAME_WIDTH / 2, 26, title.toUpperCase(), {
-      fontSize: '20px', fontFamily: 'Georgia, serif',
+      fontSize: '20px', fontFamily: 'Nunito, sans-serif',
       color: '#c0a060', stroke: '#000', strokeThickness: 3, letterSpacing: 6,
     }).setOrigin(0.5).setDepth(10);
   }
@@ -394,20 +394,20 @@ export class OverworldScene extends Phaser.Scene {
 
       // Icon
       container.add(this.add.text(0, -1, NODE_ICONS[node.type] ?? '?', {
-        fontSize: '17px', color: '#ffffff', fontFamily: 'Georgia, serif',
+        fontSize: '17px', color: '#ffffff', fontFamily: 'Nunito, sans-serif',
       }).setOrigin(0.5));
 
       // Name label
       container.add(this.add.text(0, NODE_RADIUS + 11, node.name, {
-        fontSize: '13px', color: '#b8a870',
-        fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+        fontSize: '16px', color: '#b8a870',
+        fontFamily: 'Nunito, sans-serif', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5));
 
       // Type badge above
       const typeHex = '#' + baseColor.toString(16).padStart(6, '0');
       container.add(this.add.text(0, -NODE_RADIUS - 14, node.type, {
-        fontSize: '11px', color: typeHex,
-        fontFamily: 'monospace', stroke: '#000', strokeThickness: 2,
+        fontSize: '14px', color: typeHex,
+        fontFamily: 'Nunito, sans-serif', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5));
 
       // Difficulty pips
@@ -435,12 +435,12 @@ export class OverworldScene extends Phaser.Scene {
       container.add(circle);
 
       container.add(this.add.text(0, -1, '✓', {
-        fontSize: '18px', color: '#55667a', fontFamily: 'Georgia, serif',
+        fontSize: '18px', color: '#55667a', fontFamily: 'Nunito, sans-serif',
       }).setOrigin(0.5));
 
       container.add(this.add.text(0, NODE_RADIUS + 11, node.name, {
-        fontSize: '13px', color: '#556070',
-        fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+        fontSize: '16px', color: '#556070',
+        fontFamily: 'Nunito, sans-serif', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5));
       return;
     }
@@ -461,20 +461,20 @@ export class OverworldScene extends Phaser.Scene {
 
       // Dim type icon (shows what you missed)
       container.add(this.add.text(0, -1, NODE_ICONS[node.type] ?? '?', {
-        fontSize: '14px', color: '#4a3030', fontFamily: 'Georgia, serif',
+        fontSize: '14px', color: '#4a3030', fontFamily: 'Nunito, sans-serif',
       }).setOrigin(0.5));
 
       // Name
       container.add(this.add.text(0, NODE_RADIUS + 11, node.name, {
-        fontSize: '12px', color: '#4a3030',
-        fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+        fontSize: '14px', color: '#4a3030',
+        fontFamily: 'Nunito, sans-serif', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setAlpha(0.7));
 
       // Dim type badge so you can still see what it was
       const typeHex = '#' + (baseColor & 0x555555).toString(16).padStart(6, '0');
       container.add(this.add.text(0, -NODE_RADIUS - 13, node.type, {
-        fontSize: '11px', color: typeHex,
-        fontFamily: 'monospace', stroke: '#000', strokeThickness: 1,
+        fontSize: '14px', color: typeHex,
+        fontFamily: 'Nunito, sans-serif', stroke: '#000', strokeThickness: 1,
       }).setOrigin(0.5).setAlpha(0.5));
 
       container.setAlpha(0.7);
@@ -493,20 +493,20 @@ export class OverworldScene extends Phaser.Scene {
     // Icon — visible but muted
     container.add(this.add.text(0, -1, NODE_ICONS[node.type] ?? '?', {
       fontSize: '16px', color: '#' + baseColor.toString(16).padStart(6, '0'),
-      fontFamily: 'Georgia, serif',
+      fontFamily: 'Nunito, sans-serif',
     }).setOrigin(0.5).setAlpha(0.55));
 
     // Name
     container.add(this.add.text(0, NODE_RADIUS + 11, node.name, {
-      fontSize: '13px', color: '#7a6840',
-      fontFamily: 'Georgia, serif', stroke: '#000', strokeThickness: 2,
+      fontSize: '16px', color: '#7a6840',
+      fontFamily: 'Nunito, sans-serif', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setAlpha(0.75));
 
     // Type badge — clearly labeled so you can plan
     const typeHex = '#' + baseColor.toString(16).padStart(6, '0');
     container.add(this.add.text(0, -NODE_RADIUS - 13, node.type, {
-      fontSize: '11px', color: typeHex,
-      fontFamily: 'monospace', stroke: '#000', strokeThickness: 2,
+      fontSize: '14px', color: typeHex,
+      fontFamily: 'Nunito, sans-serif', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setAlpha(0.6));
 
     // Difficulty pips (dimmed)
@@ -569,7 +569,7 @@ export class OverworldScene extends Phaser.Scene {
     const typeHex = '#' + (NODE_COLORS[node.type] ?? 0x8a9aaa).toString(16).padStart(6, '0');
     this.tooltip.add(
       this.add.text(padX, padY, `${NODE_ICONS[node.type] ?? '?'}  ${node.name}`, {
-        fontSize: '15px', fontFamily: 'Georgia, serif', color: typeHex,
+        fontSize: '17px', fontFamily: 'Nunito, sans-serif', color: typeHex,
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0, 0),
     );
@@ -577,7 +577,7 @@ export class OverworldScene extends Phaser.Scene {
     lines.forEach((line, i) => {
       this.tooltip.add(
         this.add.text(padX, padY + lineH + 4 + i * lineH, line, {
-          fontSize: '13px', fontFamily: 'monospace', color: '#7a9ab8',
+          fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
         }).setOrigin(0, 0),
       );
     });
@@ -591,7 +591,7 @@ export class OverworldScene extends Phaser.Scene {
       this.tooltip.add(sep);
       this.tooltip.add(
         this.add.text(ttW / 2, sepY + confirmH / 2 + 2, 'Tap again to enter  \u2192', {
-          fontSize: '13px', fontFamily: 'Georgia, serif', color: typeHex,
+          fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: typeHex,
         }).setOrigin(0.5, 0.5),
       );
     }
@@ -686,7 +686,7 @@ export class OverworldScene extends Phaser.Scene {
     goldPanel.strokeRoundedRect(12, 58, 168, 40, 7);
 
     this.goldText = this.add.text(26, 70, `◆  ${run.gold} Gold`, {
-      fontSize: '20px', fontFamily: 'Georgia, serif',
+      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
     }).setDepth(21);
 
@@ -694,7 +694,7 @@ export class OverworldScene extends Phaser.Scene {
     runPanel.fillStyle(0x060b12, 0.88);
     runPanel.fillRoundedRect(GAME_WIDTH - 120, 58, 108, 36, 6);
     this.add.text(GAME_WIDTH - 64, 76, 'RUN 1', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#5a7a9a',
+      fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
     }).setOrigin(0.5).setDepth(21);
 
     this.relicRow = this.add.container(14, GAME_HEIGHT - 96).setDepth(21);
@@ -708,7 +708,7 @@ export class OverworldScene extends Phaser.Scene {
 
     // "RELICS" label
     const label = this.add.text(0, 0, 'RELICS', {
-      fontSize: '12px', color: '#5a7a9a', fontFamily: 'monospace', letterSpacing: 2,
+      fontSize: '14px', color: '#5a7a9a', fontFamily: 'Nunito, sans-serif', letterSpacing: 2,
     }).setOrigin(0, 0.5);
     this.relicRow.add(label);
 
@@ -737,7 +737,7 @@ export class OverworldScene extends Phaser.Scene {
 
       // Icon symbol
       const iconText = this.add.text(badgeX + BADGE / 2, 0, iconChar, {
-        fontSize: '16px', fontFamily: 'Georgia, serif',
+        fontSize: '16px', fontFamily: 'Nunito, sans-serif',
         color: colHex, stroke: '#000', strokeThickness: 1,
       }).setOrigin(0.5);
       this.relicRow.add(iconText);
@@ -800,13 +800,13 @@ export class OverworldScene extends Phaser.Scene {
 
     const rarityLabel = rarity.toUpperCase();
     panel.add(this.add.text(PW / 2, 15, rarityLabel, {
-      fontSize: '13px', fontFamily: 'monospace', color: '#fff',
+      fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#fff',
       stroke: '#000', strokeThickness: 2, letterSpacing: 3,
     }).setOrigin(0.5));
 
     // Close ✕
     const closeBtn = this.add.text(PW - 18, 15, '✕', {
-      fontSize: '14px', color: '#aaa',
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#aaa',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerover', () => closeBtn.setColor('#ff6666'));
     closeBtn.on('pointerout',  () => closeBtn.setColor('#aaa'));
@@ -822,20 +822,20 @@ export class OverworldScene extends Phaser.Scene {
     panel.add(iconGfx);
 
     panel.add(this.add.text(PW / 2, 78, iconChar, {
-      fontSize: '22px', fontFamily: 'Georgia, serif',
+      fontSize: '22px', fontFamily: 'Nunito, sans-serif',
       color: colHex, stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5));
 
     // Relic name
     panel.add(this.add.text(PW / 2, 122, relic.name, {
-      fontSize: '19px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
+      fontSize: '19px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
       color: '#e8e0d0', stroke: '#000', strokeThickness: 3,
       wordWrap: { width: PW - 40 }, align: 'center',
     }).setOrigin(0.5));
 
     // Description
     panel.add(this.add.text(PW / 2, 158, relic.desc, {
-      fontSize: '15px', fontFamily: 'Georgia, serif', color: '#8a9aaa',
+      fontSize: '17px', fontFamily: 'Nunito, sans-serif', color: '#8a9aaa',
       wordWrap: { width: PW - 48 }, align: 'center',
     }).setOrigin(0.5));
 
@@ -850,7 +850,7 @@ export class OverworldScene extends Phaser.Scene {
 
       const effectColor = relic.curse ? '#e74c3c' : '#66cc88';
       panel.add(this.add.text(PW / 2, 222, effectStr, {
-        fontSize: '14px', fontFamily: 'monospace', fontStyle: 'bold',
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
         color: effectColor, stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5));
     }
@@ -903,7 +903,7 @@ export class OverworldScene extends Phaser.Scene {
     bg.strokeRoundedRect(panelX, panelY, panelW, panelH, 8);
 
     this.add.text(panelX + panelW / 2, panelY + 14, 'PARTY  \u25b6', {
-      fontSize: '12px', color: '#5a7a9a', fontFamily: 'monospace', letterSpacing: 2,
+      fontSize: '14px', color: '#5a7a9a', fontFamily: 'Nunito, sans-serif', letterSpacing: 2,
     }).setOrigin(0.5).setDepth(21);
 
     // Dynamic hero bubbles container (refreshed when order changes)
@@ -957,7 +957,7 @@ export class OverworldScene extends Phaser.Scene {
 
       this.squadPreviewCt.add(
         this.add.text(hx, hy, h.heroClass[0], {
-          fontSize: '13px', fontStyle: 'bold', color: '#fff',
+          fontSize: '13px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', color: '#fff',
           stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5),
       );
@@ -1001,12 +1001,12 @@ export class OverworldScene extends Phaser.Scene {
 
     // Header
     panel.add(this.add.text(PANEL_W / 2, HEADER_H / 2, 'PARTY', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#c0a060', letterSpacing: 5,
+      fontSize: '17px', fontFamily: 'Nunito, sans-serif', color: '#c0a060', letterSpacing: 5,
     }).setOrigin(0.5));
 
     // Close ✕
     const closeBtn = this.add.text(PANEL_W - 20, HEADER_H / 2, '✕', {
-      fontSize: '16px', color: '#556070',
+      fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#556070',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerover', () => closeBtn.setColor('#cc4444'));
     closeBtn.on('pointerout',  () => closeBtn.setColor('#556070'));
@@ -1048,13 +1048,13 @@ export class OverworldScene extends Phaser.Scene {
 
       // Name
       panel.add(this.add.text(88, cardY + 13, heroData.name, {
-        fontSize: '16px', fontFamily: 'Georgia, serif', fontStyle: 'bold',
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
         color: '#ddd0b0', stroke: '#000', strokeThickness: 2,
       }));
 
       // Class badge
       panel.add(this.add.text(88, cardY + 32, heroData.heroClass, {
-        fontSize: '11px', fontFamily: 'monospace', color: hexCol, letterSpacing: 2,
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: hexCol, letterSpacing: 2,
       }));
 
       // HP bar
@@ -1073,13 +1073,13 @@ export class OverworldScene extends Phaser.Scene {
       const hpHex = pct > 0.5 ? '#2ecc71' : pct > 0.25 ? '#f39c12' : '#e74c3c';
       panel.add(this.add.text(barX + barW + 8, barY - 1,
         `${heroData.currentHp} / ${heroData.maxHp}`, {
-          fontSize: '12px', fontFamily: 'monospace', color: hpHex,
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: hpHex,
         }));
 
       // Description
       const desc = HERO_DESCS[heroData.heroClass] ?? '';
       panel.add(this.add.text(88, cardY + 63, desc, {
-        fontSize: '12px', fontFamily: 'Georgia, serif', color: '#6a8aaa',
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#6a8aaa',
         wordWrap: { width: PANEL_W - 190 },
       }));
 
@@ -1087,7 +1087,7 @@ export class OverworldScene extends Phaser.Scene {
       const keyStat = HERO_KEY_STAT[heroData.heroClass] ?? '';
       panel.add(this.add.text(88, cardY + 83,
         `\u2694 ${stats.combatDamage} atk   \u25ce ${stats.combatRange} range   ${keyStat}`, {
-          fontSize: '11px', fontFamily: 'monospace', color: '#4a6080',
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6080',
         }));
 
       // Reorder arrows ▲ ▼ (larger touch targets)
@@ -1098,7 +1098,7 @@ export class OverworldScene extends Phaser.Scene {
         upBg.fillRoundedRect(PANEL_W - 50, cardY + 12, arrowW, arrowH, 6);
         panel.add(upBg);
         const upBtn = this.add.text(PANEL_W - 32, cardY + 28, '\u25b2', {
-          fontSize: '22px', color: '#4a6a88',
+          fontSize: '24px', fontFamily: 'Nunito, sans-serif', color: '#4a6a88',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         upBtn.on('pointerover', () => upBtn.setColor('#c0a060'));
         upBtn.on('pointerout',  () => upBtn.setColor('#4a6a88'));
@@ -1111,7 +1111,7 @@ export class OverworldScene extends Phaser.Scene {
         dnBg.fillRoundedRect(PANEL_W - 50, cardY + 52, arrowW, arrowH, 6);
         panel.add(dnBg);
         const dnBtn = this.add.text(PANEL_W - 32, cardY + 68, '\u25bc', {
-          fontSize: '22px', color: '#4a6a88',
+          fontSize: '24px', fontFamily: 'Nunito, sans-serif', color: '#4a6a88',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         dnBtn.on('pointerover', () => dnBtn.setColor('#c0a060'));
         dnBtn.on('pointerout',  () => dnBtn.setColor('#4a6a88'));
@@ -1186,7 +1186,7 @@ export class OverworldScene extends Phaser.Scene {
     };
     draw(false);
     this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '22px',
+      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
     }).setOrigin(0.5).setDepth(31);
 
     const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
@@ -1200,7 +1200,7 @@ export class OverworldScene extends Phaser.Scene {
 
   // ── Quit Run button (bottom-left) ──────────────────────────────────────────
   private buildQuitRunButton() {
-    const w = 150, h = 42, r = 7;
+    const w = 170, h = 48, r = 7;
     const bx = 16, by = GAME_HEIGHT - 56;
 
     const bg = this.add.graphics().setDepth(20);
@@ -1214,7 +1214,7 @@ export class OverworldScene extends Phaser.Scene {
     draw(false);
 
     this.add.text(bx + w / 2, by + h / 2, '\u2190 Quit Run', {
-      fontSize: '15px', fontFamily: 'Georgia, serif',
+      fontSize: '17px', fontFamily: 'Nunito, sans-serif',
       color: '#c06060', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(21);
 
@@ -1279,7 +1279,7 @@ export class OverworldScene extends Phaser.Scene {
     // Title
     const title = this.add.text(cx, cy - 120, titleText, {
       fontSize: bossDefeated ? '80px' : '72px',
-      fontFamily: 'Georgia, serif',
+      fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#f1c40f', stroke: '#5c3d00', strokeThickness: 7,
       letterSpacing: 4,
     }).setOrigin(0.5).setDepth(52).setAlpha(0);
@@ -1290,7 +1290,7 @@ export class OverworldScene extends Phaser.Scene {
 
     // Subtitle
     const sub = this.add.text(cx, cy - 22, subText, {
-      fontSize: '20px', fontFamily: 'Georgia, serif', color: '#c8a840',
+      fontSize: '20px', fontFamily: 'Nunito, sans-serif', color: '#c8a840',
       stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(52).setAlpha(0);
     this.tweens.add({ targets: sub, alpha: 1, duration: 380, delay: 860 });
@@ -1323,7 +1323,7 @@ export class OverworldScene extends Phaser.Scene {
       drawBtn(false);
       btn.add(btnBg);
       btn.add(this.add.text(0, 0, btnLabel, {
-        fontSize: '21px', fontFamily: 'Georgia, serif', color: '#f1c40f',
+        fontSize: '21px', fontFamily: 'Nunito, sans-serif', color: '#f1c40f',
       }).setOrigin(0.5));
 
       btn.setInteractive(

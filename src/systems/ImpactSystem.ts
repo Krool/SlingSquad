@@ -221,6 +221,9 @@ export class ImpactSystem {
     }
 
     this.scene.events.emit('mageExplosion', x, y, r);
+
+    // Cluster grenade: spawn bomblets that radiate outward from impact point
+    this.scene.events.emit('mageClusterSpawn', x, y, hero);
   }
 
   private spawnChainLightning(fromX: number, fromY: number, toX: number, toY: number) {

@@ -280,7 +280,7 @@ export class MainMenuScene extends Phaser.Scene {
     // ── Title text (the "projectile") ──
     const startX = postX - 30;
     const title = this.add.text(startX, finalY, 'SLING SQUAD', {
-      fontSize: '42px', fontFamily: 'Georgia, serif',
+      fontSize: '52px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#c8a840', stroke: '#000', strokeThickness: 5,
       letterSpacing: 6,
     }).setOrigin(0.5).setDepth(10).setScale(0.9, 1);
@@ -363,7 +363,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // ── Subtitle — fades in after fling completes ──
     const subtitle = this.add.text(GAME_WIDTH / 2, finalY + 34, 'Ready Your Sling', {
-      fontSize: '16px', fontFamily: 'Georgia, serif',
+      fontSize: '18px', fontFamily: 'Nunito, sans-serif',
       color: '#8a9ab0', fontStyle: 'italic',
     }).setOrigin(0.5).setDepth(10).setAlpha(0);
 
@@ -420,17 +420,17 @@ export class MainMenuScene extends Phaser.Scene {
     panel.strokeRoundedRect(px - W, py, W, H, 7);
 
     this.add.text(px - W / 2, py + 7, 'SHARDS', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     this._shardText = this.add.text(px - W / 2, py + 20, `\u25c6 ${getShards()}`, {
-      fontSize: '18px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+      fontSize: '20px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
       color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     if (earned > 0) {
       const badge = this.add.text(px - 22, py + 8, `+${earned}`, {
-        fontSize: '13px', fontFamily: 'Georgia, serif',
+        fontSize: '13px', fontFamily: 'Nunito, sans-serif',
         color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(12).setAlpha(0).setScale(1.4);
       this.tweens.add({
@@ -456,7 +456,7 @@ export class MainMenuScene extends Phaser.Scene {
     };
     draw(false);
     this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '22px',
+      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
     }).setOrigin(0.5).setDepth(21);
 
     const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
@@ -540,10 +540,10 @@ export class MainMenuScene extends Phaser.Scene {
 
     const labelColor = enabled
       ? '#' + accentColor.toString(16).padStart(6, '0')
-      : '#3a3a4a';
+      : '#6a6a7a';
     container.add(
       this.add.text(0, 0, label, {
-        fontSize: '18px', fontStyle: 'bold', fontFamily: 'Georgia, serif',
+        fontSize: '24px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
         color: labelColor, stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5),
     );
@@ -577,12 +577,12 @@ export class MainMenuScene extends Phaser.Scene {
     overlay.add(panelBg);
 
     overlay.add(this.add.text(cx, cy - 60, 'Abandon Current Run?', {
-      fontSize: '24px', fontFamily: 'Georgia, serif',
+      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
       color: '#e74c3c', stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5));
 
     overlay.add(this.add.text(cx, cy - 24, 'Your saved run will be lost.', {
-      fontSize: '16px', fontFamily: 'Georgia, serif', color: '#7a9ab8',
+      fontSize: '18px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
     }).setOrigin(0.5));
 
     this.buildDialogButton(overlay, cx - 90, cy + 46, 'Cancel', 0x3a5070, () => {
@@ -614,7 +614,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     parent.add(
       this.add.text(x, y, label, {
-        fontSize: '16px', fontFamily: 'Georgia, serif',
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif',
         color: '#' + color.toString(16).padStart(6, '0'),
       }).setOrigin(0.5),
     );
