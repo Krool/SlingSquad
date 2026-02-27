@@ -27,6 +27,7 @@ export class VFXSystem {
     phase: number;
     lifetime: number;
     elapsed: number;
+    riseSpeed: number;
   }[] = [];
   private floatSpawnTimer = 0;
   private readonly MAX_FLOAT_PARTICLES = 15;
@@ -36,6 +37,7 @@ export class VFXSystem {
     this.difficulty = difficulty;
     this.shootingStarInterval = Phaser.Math.Between(3000, 8000);
     this.initStars();
+    scene.events.once('shutdown', () => this.destroy());
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -139,7 +141,7 @@ export class VFXSystem {
         continue;
       }
       const prog = p.elapsed / p.lifetime;
-      p.y -= (120 + Math.random() * 80) * dt * 0.15;
+      p.y -= p.riseSpeed * dt * 0.15;
       p.phase += dt * 1.5;
       const sx = p.baseX + Math.sin(p.phase) * p.drift;
       p.gfx.setPosition(sx, p.y);
@@ -172,6 +174,7 @@ export class VFXSystem {
       phase: Math.random() * Math.PI * 2,
       lifetime: Phaser.Math.Between(4000, 7000),
       elapsed: 0,
+      riseSpeed: 120 + Math.random() * 80,
     });
   }
 
@@ -219,28 +222,28 @@ export class VFXSystem {
       const vy = Phaser.Math.Between(-120, -30);
       const dur = Phaser.Math.Between(350, 550);
 
+      // x drift + fade (full duration)
       this.scene.tweens.add({
         targets: g,
         x: x + vx,
-        y: y + vy + 80,  // parabolic: rises then falls
         alpha: 0,
         duration: dur,
         ease: 'Power1',
         onComplete: () => g.destroy(),
       });
-      // Separate upward then downward — simulate gravity via y keyframes
-      this.scene.tweens.add({
-        targets: g,
-        y: { value: y + vy, duration: dur * 0.4, ease: 'Power2.easeOut' },
-      });
-      this.scene.time.delayedCall(dur * 0.4, () => {
-        if (!g.active) return;
-        this.scene.tweens.add({
-          targets: g,
-          y: y + 40,
-          duration: dur * 0.6,
-          ease: 'Power2.easeIn',
-        });
+      // y parabolic arc: rise quickly, then fall with gravity
+      this.scene.tweens.addCounter({
+        from: 0,
+        to: 1,
+        duration: dur,
+        onUpdate: (tw: Phaser.Tweens.Tween) => {
+          if (!g.active || !tw) return;
+          const t = tw.progress;
+          // Parabolic: rises to peak at t≈0.4, falls back down
+          const rise = vy * t;                          // upward motion (vy is negative)
+          const gravity = 200 * t * t;                  // downward pull
+          g.setY(y + rise + gravity);
+        },
       });
     }
   }
