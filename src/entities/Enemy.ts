@@ -46,10 +46,15 @@ export class Enemy {
 
     const r = this.stats.radius;
     this.body = scene.matter.add.circle(x, y, r, {
-      isStatic: true,
+      density: 0.002,
+      restitution: 0.05,
+      friction: 0.5,
+      frictionStatic: 3.0,
+      frictionAir: 0.05,   // high air drag — enemies shouldn't fly far
+      slop: 0.01,
       label: `enemy_${enemyClass}`,
-      isSensor: false,
-    }) as MatterJS.BodyType;
+      isSleeping: true,     // start asleep on structures, wake on collision
+    } as any) as MatterJS.BodyType;
     (this.body as any).__enemy = this;
 
     const charKey = enemyClass.toLowerCase();

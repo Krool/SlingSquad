@@ -69,9 +69,8 @@ export class CombatSystem {
         if (target) {
           enemy.isRushing = true;
           enemy.rushTarget = target;
-          // Make bomber non-static so it can move
-          this.scene.matter.body.setStatic(enemy.body, false);
-          enemy.body.frictionAir = 0.05;
+          // Reduce air friction for faster rushing movement
+          enemy.body.frictionAir = 0.02;
         }
       }
       if (enemy.isRushing && enemy.rushTarget) {

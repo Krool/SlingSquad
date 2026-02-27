@@ -1547,6 +1547,31 @@ export class BattleScene extends Phaser.Scene {
       this.audio.playBlockHit(mat as 'WOOD' | 'STONE');
       this.blocksDestroyedThisBattle++;
       addBlocksDestroyed(1);
+      // Wake nearby sleeping bodies so they fall when support is removed
+      for (const b of this.blocks) {
+        if (b.destroyed) continue;
+        const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
+        if (d < 80 && (b.body as any).isSleeping) {
+          (b.body as any).isSleeping = false;
+          (b.body as any).sleepCounter = 0;
+        }
+      }
+      for (const e of this.enemies) {
+        if (e.state === 'dead') continue;
+        const d = Math.hypot(e.x - x, e.y - y);
+        if (d < 80 && (e.body as any).isSleeping) {
+          (e.body as any).isSleeping = false;
+          (e.body as any).sleepCounter = 0;
+        }
+      }
+      for (const barrel of this.barrels) {
+        if (barrel.exploded) continue;
+        const d = Math.hypot(barrel.body.position.x - x, barrel.body.position.y - y);
+        if (d < 80 && (barrel.body as any).isSleeping) {
+          (barrel.body as any).isSleeping = false;
+          (barrel.body as any).sleepCounter = 0;
+        }
+      }
       // Near-miss flinch: enemies close but not crushed visually react
       for (const e of this.enemies) {
         if (e.state === 'dead') continue;

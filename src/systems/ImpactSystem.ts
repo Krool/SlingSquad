@@ -486,6 +486,11 @@ export class ImpactSystem {
       const dy = b.body.position.y - by;
       const d = Math.hypot(dx, dy);
       if (d < radius && d > 1) {
+        // Wake sleeping bodies so they actually receive the force
+        if ((b.body as any).isSleeping) {
+          (b.body as any).isSleeping = false;
+          (b.body as any).sleepCounter = 0;
+        }
         const nx = dx / d;
         const ny = dy / d;
         const falloff = (1 - d / radius) ** 2;
@@ -499,6 +504,10 @@ export class ImpactSystem {
       const dy = e.y - by;
       const d = Math.hypot(dx, dy);
       if (d < radius && d > 1) {
+        if ((e.body as any).isSleeping) {
+          (e.body as any).isSleeping = false;
+          (e.body as any).sleepCounter = 0;
+        }
         const nx = dx / d;
         const ny = dy / d;
         const falloff = (1 - d / radius) ** 2;
