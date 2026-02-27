@@ -48,10 +48,8 @@ export class Block {
       frictionAir: mat.frictionAir,
       slop: mat.slop,
       label: `block_${material}`,
-    }) as MatterJS.BodyType;
-
-    // Start sleeping — perfectly stable until a collision wakes the body
-    MatterJS.Sleeping.set(this.body, true);
+      isSleeping: true,  // start asleep — wakes on collision (prevents jitter)
+    } as any) as MatterJS.BodyType;
 
     // Generate 5 crack lines once — randomised but stable per block
     this.cracks = [];

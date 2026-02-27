@@ -25,11 +25,9 @@ export class Barrel {
       frictionStatic: 2.0,
       slop: 0.01,
       label: 'barrel',
-    }) as MatterJS.BodyType;
+      isSleeping: true,  // start asleep — wakes on collision (prevents jitter)
+    } as any) as MatterJS.BodyType;
     (this.body as any).__barrel = this;
-
-    // Start sleeping — wakes when hit by hero/block/explosion
-    MatterJS.Sleeping.set(this.body, true);
 
     // Danger glow
     this.glowCircle = scene.add.graphics();
