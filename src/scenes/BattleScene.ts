@@ -1716,21 +1716,18 @@ export class BattleScene extends Phaser.Scene {
       }
     });
 
-    // Mage cluster grenade: spawn 5 bomblets that radiate outward from impact
+    // Mage cluster grenade: bomblets launch upward with random spread, then arc down
     this.events.on('mageClusterSpawn', (x: number, y: number, hero: Hero) => {
       const stats = HERO_STATS.MAGE;
       const count = stats.clusterCount;
       const dmg = stats.clusterDamage;
-      const speed = 8; // px/frame
       for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2;
-        // Slight upward bias so bomblets arc visibly
-        const pvx = Math.cos(angle) * speed;
-        const pvy = Math.sin(angle) * speed - 2;
-        const p = new Projectile(this, x, y, pvx, pvy, dmg, 0x8e44ad);
+        const hSpeed = Phaser.Math.FloatBetween(-6, 6);    // random horizontal spread
+        const vSpeed = Phaser.Math.FloatBetween(-10, -5);   // upward launch
+        const p = new Projectile(this, x, y, hSpeed, vSpeed, dmg, 0x8e44ad);
         p.sourceHero = hero;
-        // Higher air friction so bomblets slow down quickly
-        if (p.body) p.body.frictionAir = 0.02;
+        // Moderate air friction so bomblets slow and arc down naturally
+        if (p.body) p.body.frictionAir = 0.015;
         this.combatSystem.addProjectile(p);
       }
     });

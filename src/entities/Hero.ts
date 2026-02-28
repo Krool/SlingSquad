@@ -125,6 +125,11 @@ export class Hero {
     }) as GameBody;
     this.body.__hero = this;
 
+    // Warrior battering ram: skip engine gravity, apply reduced gravity manually in update()
+    if (this.heroClass === 'WARRIOR') {
+      (this.body as any).ignoreGravity = true;
+    }
+
     this.scene.matter.setVelocity(this.body, vx, vy);
 
     // Spin proportional to launch speed; direction based on horizontal travel
@@ -319,12 +324,11 @@ export class Hero {
       }
     }
 
-    // Warrior battering ram: counteract 85% of gravity for a nearly flat trajectory
+    // Warrior battering ram: engine gravity is disabled (ignoreGravity=true),
+    // apply only gravityScale fraction of gravity as a downward force
     if (this.state === 'flying' && this.heroClass === 'WARRIOR') {
       const gravScale = HERO_STATS.WARRIOR.gravityScale;
-      const cancelFactor = 1 - gravScale; // 0.85 for Warrior
-      const gravForce = this.body.mass * 1.08 * 0.001 * cancelFactor;
-      this.body.force.y -= gravForce;
+      this.body.force.y += this.body.mass * 1.08 * 0.001 * gravScale;
     }
 
     // Check if hero has settled (low velocity) — enter combat
