@@ -84,7 +84,7 @@ export class AudioSystem {
   }
 
   /** Crack/thud when a block is destroyed */
-  playBlockHit(material: 'WOOD' | 'STONE') {
+  playBlockHit(material: 'WOOD' | 'STONE' | 'ICE' | 'OBSIDIAN') {
     try {
       const ctx = this.getCtx(); if (!ctx) return;
       const dur  = 0.12;
@@ -97,10 +97,12 @@ export class AudioSystem {
       src.buffer   = buf;
       const filter = ctx.createBiquadFilter();
       filter.type  = 'bandpass';
-      filter.frequency.value = material === 'STONE' ? 1600 : 650;
+      const freqMap: Record<string, number> = { WOOD: 650, STONE: 1600, ICE: 2800, OBSIDIAN: 1200 };
+      filter.frequency.value = freqMap[material] ?? 650;
       filter.Q.value = 2.5;
+      const volMap: Record<string, number> = { WOOD: 0.20, STONE: 0.28, ICE: 0.24, OBSIDIAN: 0.32 };
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime((material === 'STONE' ? 0.28 : 0.20) * this.sfxVolume, ctx.currentTime);
+      gain.gain.setValueAtTime((volMap[material] ?? 0.20) * this.sfxVolume, ctx.currentTime);
       src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
       src.start(ctx.currentTime);
     } catch { /* non-critical */ }

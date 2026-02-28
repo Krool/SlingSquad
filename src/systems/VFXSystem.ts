@@ -248,6 +248,64 @@ export class VFXSystem {
     }
   }
 
+  /** Ice block break — cyan shards + frost mist */
+  iceShatter(x: number, y: number) {
+    // Frost mist cloud
+    const mist = this.scene.add.graphics().setDepth(14);
+    mist.fillStyle(0xb0d4e8, 0.3);
+    mist.fillCircle(0, 0, 8);
+    mist.setPosition(x, y);
+    this.scene.tweens.add({
+      targets: mist, scaleX: 4, scaleY: 4, alpha: 0,
+      duration: 450, ease: 'Power2', onComplete: () => mist.destroy(),
+    });
+    // Crystal shards
+    for (let i = 0; i < 6; i++) {
+      const g = this.scene.add.graphics().setDepth(16);
+      g.fillStyle(Math.random() > 0.4 ? 0x88ccff : 0xddeeFF, 1);
+      g.fillRect(-2, -4, 4, 8);
+      g.setPosition(x, y);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Phaser.Math.Between(30, 80);
+      this.scene.tweens.add({
+        targets: g,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist,
+        alpha: 0, angle: Phaser.Math.Between(-180, 180),
+        duration: Phaser.Math.Between(300, 500),
+        onComplete: () => g.destroy(),
+      });
+    }
+  }
+
+  /** Obsidian block break — dark red flash + ember sparks */
+  obsidianCrack(x: number, y: number) {
+    // Dark red flash
+    const flash = this.scene.add.graphics().setDepth(14);
+    flash.fillStyle(0xff3300, 0.35);
+    flash.fillCircle(0, 0, 12);
+    flash.setPosition(x, y);
+    this.scene.tweens.add({
+      targets: flash, scaleX: 3, scaleY: 3, alpha: 0,
+      duration: 350, ease: 'Power2', onComplete: () => flash.destroy(),
+    });
+    // Ember sparks
+    for (let i = 0; i < 4; i++) {
+      const g = this.scene.add.graphics().setDepth(16);
+      g.fillStyle(Math.random() > 0.5 ? 0xff6600 : 0xff3300, 1);
+      g.fillCircle(0, 0, Phaser.Math.Between(1, 3));
+      g.setPosition(x, y);
+      this.scene.tweens.add({
+        targets: g,
+        x: x + Phaser.Math.Between(-50, 50),
+        y: y + Phaser.Math.Between(-80, -20),
+        alpha: 0,
+        duration: Phaser.Math.Between(400, 600),
+        onComplete: () => g.destroy(),
+      });
+    }
+  }
+
   /** Multi-layered fire explosion replacing flat purple circle for mage */
   mageExplosion(x: number, y: number, radius: number) {
     // Inner white-yellow core flash
