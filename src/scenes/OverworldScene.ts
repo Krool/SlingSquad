@@ -67,6 +67,7 @@ export class OverworldScene extends Phaser.Scene {
 
   private pathLayer!: Phaser.GameObjects.Graphics;
   private nodeContainers: Map<number, Phaser.GameObjects.Container> = new Map();
+  private nodeGlows: Map<number, Phaser.GameObjects.Graphics> = new Map();
   private pulseTime = 0;
 
   private goldText!: Phaser.GameObjects.Text;
@@ -91,10 +92,11 @@ export class OverworldScene extends Phaser.Scene {
   create(data?: { fromBattle?: boolean }) {
     (this.registry.get('music') as MusicSystem | null)?.play('map');
     this.nodeContainers.clear();
+    this.nodeGlows.clear();
 
     if (!hasRunState()) {
       if (!loadRun()) {
-        const nodes = (nodesData as any).nodes as NodeDef[];
+        const nodes = nodesData.nodes as NodeDef[];
         newRun(nodes, ['WARRIOR', 'RANGER', 'MAGE', 'PRIEST'] as HeroClass[]);
       }
     }
@@ -214,7 +216,7 @@ export class OverworldScene extends Phaser.Scene {
   private buildMapTitle() {
     const run = getRunState();
     const mapDef = getMapById(run.currentMapId);
-    const title = mapDef?.name ?? (nodesData as any).name as string;
+    const title = mapDef?.name ?? nodesData.name;
 
     const titleBg = this.add.graphics().setDepth(9);
     titleBg.fillStyle(0x000000, 0.55);
@@ -234,7 +236,8 @@ export class OverworldScene extends Phaser.Scene {
 
     for (const node of this.nodeMap) {
       for (const nextId of node.next) {
-        const next = this.nodeMap.find(n => n.id === nextId)!;
+        const next = this.nodeMap.find(n => n.id === nextId);
+        if (!next) continue;
 
         const fromState = this.getNodeState(node.id);
         const toState   = this.getNodeState(nextId);
@@ -361,7 +364,7 @@ export class OverworldScene extends Phaser.Scene {
       glow.fillStyle(baseColor, 0.18);
       glow.fillCircle(0, 0, NODE_RADIUS + 14);
       container.add(glow);
-      (container as any).__glow = glow;
+      this.nodeGlows.set(node.id, glow);
 
       // Boss gets spiky border
       const circle = this.add.graphics();
@@ -646,10 +649,12 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private onNodeClick(nodeId: number) {
-    const node = this.nodeMap.find(n => n.id === nodeId)!;
+    const node = this.nodeMap.find(n => n.id === nodeId);
+    if (!node) return;
     selectNode(nodeId); // locks sibling branches
 
-    const c = this.nodeContainers.get(nodeId)!;
+    const c = this.nodeContainers.get(nodeId);
+    if (!c) return;
     this.tweens.add({
       targets: c, scaleX: 1.28, scaleY: 1.28, duration: 90, yoyo: true,
       onComplete: () => this.enterNode(node),
@@ -1030,7 +1035,7 @@ export class OverworldScene extends Phaser.Scene {
       const col    = heroColors[heroData.heroClass] ?? 0x888888;
       const hexCol = '#' + col.toString(16).padStart(6, '0');
       const pct    = Math.max(0, heroData.currentHp / heroData.maxHp);
-      const stats  = HERO_STATS[heroData.heroClass as HeroClass] as any;
+      const stats  = HERO_STATS[heroData.heroClass as HeroClass];
 
       // Card bg
       const cardBg = this.add.graphics();
@@ -1253,8 +1258,8 @@ export class OverworldScene extends Phaser.Scene {
 
     const titleText  = bossDefeated ? 'VICTORY!' : 'RUN COMPLETE';
     const subText    = bossDefeated
-      ? `${(nodesData as any).name} has been conquered!`
-      : `${(nodesData as any).name} — all paths exhausted.`;
+      ? `${nodesData.name} has been conquered!`
+      : `${nodesData.name} — all paths exhausted.`;
     const btnLabel   = 'Start New Run  →';
     const glowColor  = bossDefeated ? 0xf1c40f : 0x4a7ab8;
 
@@ -1374,9 +1379,8 @@ export class OverworldScene extends Phaser.Scene {
     const pulseMag = 0.09 * Math.sin(this.pulseTime / 380);
     for (const id of run.availableNodeIds) {
       if (run.completedNodeIds.has(id) || run.lockedNodeIds.has(id)) continue;
-      const c = this.nodeContainers.get(id);
-      if (!c || !(c as any).__glow) continue;
-      const glow = (c as any).__glow as Phaser.GameObjects.Graphics;
+      const glow = this.nodeGlows.get(id);
+      if (!glow) continue;
       glow.setAlpha(0.13 + pulseMag);
     }
   }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { HERO_STATS, HeroClass, HERO_FRICTION_AIR, GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
+import { HERO_STATS, HeroClass, HERO_FRICTION_AIR, GAME_WIDTH, GAME_HEIGHT, SLING_X, SLING_Y } from '@/config/constants';
+import type { GameBody } from '@/config/types';
 
 export type HeroState = 'queued' | 'flying' | 'combat' | 'dead';
 
@@ -7,7 +8,7 @@ export class Hero {
   readonly scene: Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
   readonly heroClass: HeroClass;
   readonly stats: typeof HERO_STATS[HeroClass];
-  body: MatterJS.BodyType | null = null;
+  body: GameBody | null = null;
   sprite: Phaser.GameObjects.Sprite | null = null;
   hpBarBg: Phaser.GameObjects.Graphics | null = null;
   hpBarFill: Phaser.GameObjects.Graphics | null = null;
@@ -39,6 +40,9 @@ export class Hero {
   // Rogue piercing — continues through first block hit
   piercing = false;
 
+  // Vanguard passive: true if this hero was the first launched in the battle
+  isFirstLaunch = false;
+
   // Per-battle performance stats (auto-reset each battle since Hero instances are recreated)
   battleDamageDealt = 0;
   battleBlockDamage = 0;
@@ -46,8 +50,8 @@ export class Hero {
   battleHealingDone = 0;
 
   // Last known position (saved before body is destroyed on death, used by revive)
-  private _lastX = 0;
-  private _lastY = 0;
+  private _lastX = SLING_X;
+  private _lastY = SLING_Y;
 
   /** Persistent tint for heroes that reuse another class's sprite folder */
   static readonly CLASS_TINT: Partial<Record<HeroClass, number>> = {
@@ -108,7 +112,7 @@ export class Hero {
 
     const restitution = this.heroClass === 'RANGER' ? 0.72 : 0.25;
     this.body = this.scene.matter.add.circle(x, y, r, {
-      density: 0.002 * ((this.stats as any).mass ?? 1),
+      density: 0.002 * this.stats.mass,
       restitution,
       friction: 0.5,
       frictionAir: HERO_FRICTION_AIR, // must match HERO_FRICTION_AIR for accurate trajectory preview
@@ -118,8 +122,8 @@ export class Hero {
       // Category 0x0002 = "hero". Mask ~0x0002 = everything except other heroes.
       // Ground (0x0001), blocks (0x0001), enemies (0x0001) all still collide normally.
       collisionFilter: { category: 0x0002, mask: ~0x0002 },
-    }) as MatterJS.BodyType;
-    (this.body as any).__hero = this;
+    }) as GameBody;
+    this.body.__hero = this;
 
     this.scene.matter.setVelocity(this.body, vx, vy);
 
@@ -254,20 +258,20 @@ export class Hero {
   revive(hp: number) {
     if (this.state !== 'dead') return;
     this._hp = Math.max(1, Math.min(hp, this.maxHp));
-    // Use last known position (saved before body was destroyed) or fallback
-    const rx = this._lastX ?? 640;
-    const ry = this._lastY ?? 500;
+    // Use last known position (saved before body was destroyed)
+    const rx = this._lastX;
+    const ry = this._lastY;
     // Re-create physics body so hero can walk and take damage
     const r = this.stats.radius;
     this.body = this.scene.matter.add.circle(rx, ry, r, {
-      density: 0.002 * ((this.stats as any).mass ?? 1),
+      density: 0.002 * this.stats.mass,
       restitution: 0.25,
       friction: 0.9,
       frictionAir: 0.07,
       label: `hero_${this.heroClass}`,
       collisionFilter: { category: 0x0002, mask: ~0x0002 },
-    }) as MatterJS.BodyType;
-    (this.body as any).__hero = this;
+    }) as GameBody;
+    this.body.__hero = this;
     // Re-create sprite
     const charKey = this.heroClass.toLowerCase();
     this.sprite = this.scene.add.sprite(rx, ry - r * 0.25, `${charKey}_idle_1`)
@@ -317,7 +321,7 @@ export class Hero {
 
     // Warrior battering ram: counteract 85% of gravity for a nearly flat trajectory
     if (this.state === 'flying' && this.heroClass === 'WARRIOR') {
-      const gravScale = (this.stats as any).gravityScale ?? 1.0;
+      const gravScale = HERO_STATS.WARRIOR.gravityScale;
       const cancelFactor = 1 - gravScale; // 0.85 for Warrior
       const gravForce = this.body.mass * 1.08 * 0.001 * cancelFactor;
       this.body.force.y -= gravForce;

@@ -5,6 +5,7 @@ import {
   STARTER_SQUAD_SIZE,
   HeroClass, EnemyClass,
   HERO_STATS,
+  ENEMY_STATS,
   HERO_FRICTION_AIR,
   LAUNCH_COOLDOWN_MS,
   HUD_BAR_HEIGHT,
@@ -16,6 +17,7 @@ import { Block } from '@/entities/Block';
 import { Barrel } from '@/entities/Barrel';
 import { Coin } from '@/entities/Coin';
 import { Projectile } from '@/entities/Projectile';
+import type { GameBody } from '@/config/types';
 
 import { LaunchSystem } from '@/systems/LaunchSystem';
 import { CombatSystem } from '@/systems/CombatSystem';
@@ -120,7 +122,7 @@ export class BattleScene extends Phaser.Scene {
     // Bootstrap run state if launched standalone (dev mode)
     if (!hasRunState()) {
       if (!loadRun()) {
-        const nodes = (nodesData as any).nodes as NodeDef[];
+        const nodes = nodesData.nodes as NodeDef[];
         newRun(nodes, ['WARRIOR', 'RANGER', 'MAGE', 'PRIEST'] as HeroClass[]);
       }
     }
@@ -1339,7 +1341,10 @@ export class BattleScene extends Phaser.Scene {
     enemyList.forEach((cls, i) => {
       const slot = slots[i % slots.length];
       const jitter = i >= slots.length ? Phaser.Math.Between(-30, 30) : 0;
-      this.enemies.push(new Enemy(this, slot.x + jitter, slot.y, cls as EnemyClass, hpMult));
+      // Slots use eR=20 for y placement; adjust for enemies with different radii
+      const actualRadius = ENEMY_STATS[cls as EnemyClass]?.radius ?? 20;
+      const yAdjust = 20 - actualRadius;
+      this.enemies.push(new Enemy(this, slot.x + jitter, slot.y + yAdjust, cls as EnemyClass, hpMult));
     });
   }
 
@@ -1471,14 +1476,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private processCollisionPair(bA: MatterJS.BodyType, bB: MatterJS.BodyType, _pair: MatterJS.IPair) {
-    const heroA = (bA as any).__hero as Hero | undefined;
-    const heroB = (bB as any).__hero as Hero | undefined;
+    const heroA = (bA as GameBody).__hero;
+    const heroB = (bB as GameBody).__hero;
     const hero = heroA ?? heroB;
     const other = hero === heroA ? bB : bA;
 
     if (hero && hero.state === 'flying') {
       // Rogue piercing: if flying through a block with piercing flag, deal damage but don't stop
-      if (hero.piercing && (other as any).label?.startsWith('block_')) {
+      if (hero.piercing && other.label?.startsWith('block_')) {
         const block = this.blocks.find(b => b.body === other);
         if (block && !block.destroyed) {
           const v = hero.body?.velocity ?? { x: 0, y: 0 };
@@ -1520,8 +1525,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     // Block crush check
-    const label = (other as any).label as string | undefined;
-    if (label?.startsWith('block_')) {
+    if (other.label?.startsWith('block_')) {
       const block = this.blocks.find(b => b.body === other || b.body === bA);
       if (block && !block.destroyed) {
         this.impactSystem.handleBlockCrush(block, this.heroes, this.enemies);
@@ -1553,26 +1557,17 @@ export class BattleScene extends Phaser.Scene {
       for (const b of this.blocks) {
         if (b.destroyed) continue;
         const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
-        if (d < 80 && (b.body as any).isSleeping) {
-          (b.body as any).isSleeping = false;
-          (b.body as any).sleepCounter = 0;
-        }
+        if (d < 80) this.wakeBody(b.body);
       }
       for (const e of this.enemies) {
         if (e.state === 'dead') continue;
         const d = Math.hypot(e.x - x, e.y - y);
-        if (d < 80 && (e.body as any).isSleeping) {
-          (e.body as any).isSleeping = false;
-          (e.body as any).sleepCounter = 0;
-        }
+        if (d < 80) this.wakeBody(e.body);
       }
       for (const barrel of this.barrels) {
         if (barrel.exploded) continue;
         const d = Math.hypot(barrel.body.position.x - x, barrel.body.position.y - y);
-        if (d < 80 && (barrel.body as any).isSleeping) {
-          (barrel.body as any).isSleeping = false;
-          (barrel.body as any).sleepCounter = 0;
-        }
+        if (d < 80) this.wakeBody(barrel.body);
       }
       // Near-miss flinch: enemies close but not crushed visually react
       for (const e of this.enemies) {
@@ -1702,10 +1697,10 @@ export class BattleScene extends Phaser.Scene {
 
     // Ranger triple split: spawn 2 flanking arrow projectiles on launch
     this.events.on('rangerSplitLaunch', (hero: Hero, vx: number, vy: number) => {
-      const stats = HERO_STATS.RANGER as any;
-      const splitCount = stats.splitCount ?? 2;
-      const spreadDeg = stats.splitSpreadDeg ?? 10;
-      const splitDmg = stats.splitDamage ?? 20;
+      const stats = HERO_STATS.RANGER;
+      const splitCount = stats.splitCount;
+      const spreadDeg = stats.splitSpreadDeg;
+      const splitDmg = stats.splitDamage;
       const launchAngle = Math.atan2(vy, vx);
       const launchSpeed = Math.hypot(vx, vy) * 0.85;
       for (let i = 0; i < splitCount; i++) {
@@ -1716,16 +1711,16 @@ export class BattleScene extends Phaser.Scene {
         const p = new Projectile(this, SLING_X, SLING_Y, pvx, pvy, splitDmg, 0x27ae60);
         p.sourceHero = hero;
         // Override frictionAir to match hero trajectory
-        if (p.body) (p.body as any).frictionAir = HERO_FRICTION_AIR;
+        if (p.body) p.body.frictionAir = HERO_FRICTION_AIR;
         this.combatSystem.addProjectile(p);
       }
     });
 
     // Mage cluster grenade: spawn 5 bomblets that radiate outward from impact
     this.events.on('mageClusterSpawn', (x: number, y: number, hero: Hero) => {
-      const stats = HERO_STATS.MAGE as any;
-      const count = stats.clusterCount ?? 5;
-      const dmg = stats.clusterDamage ?? 18;
+      const stats = HERO_STATS.MAGE;
+      const count = stats.clusterCount;
+      const dmg = stats.clusterDamage;
       const speed = 8; // px/frame
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2;
@@ -1735,7 +1730,7 @@ export class BattleScene extends Phaser.Scene {
         const p = new Projectile(this, x, y, pvx, pvy, dmg, 0x8e44ad);
         p.sourceHero = hero;
         // Higher air friction so bomblets slow down quickly
-        if (p.body) (p.body as any).frictionAir = 0.02;
+        if (p.body) p.body.frictionAir = 0.02;
         this.combatSystem.addProjectile(p);
       }
     });
@@ -1821,8 +1816,8 @@ export class BattleScene extends Phaser.Scene {
 
     // Chaos modifier: add a random relic AND a random curse after each victory
     if (victory && run.activeModifiers.includes('chaos')) {
-      const allRelics = (relicsData as any[]).filter((r: any) => !r.curse);
-      const allCurses = (cursesData as any[]).filter((r: any) => r.curse === true);
+      const allRelics = (relicsData as RelicDef[]).filter(r => !r.curse);
+      const allCurses = (cursesData as RelicDef[]).filter(r => r.curse === true);
       if (allRelics.length > 0) {
         const rr = allRelics[Math.floor(Math.random() * allRelics.length)];
         addRelic(rr as RelicDef);
@@ -1907,7 +1902,7 @@ export class BattleScene extends Phaser.Scene {
     coin.collect();
 
     // Remove body immediately (it's a static sensor, safe to do mid-collision handler)
-    this.matter.world.remove(coinBody as any);
+    this.matter.world.remove(coinBody);
 
     this.coinGoldBonus += coin.value;
 
@@ -1917,6 +1912,15 @@ export class BattleScene extends Phaser.Scene {
     });
 
     this.audio.playCoinPickup();
+  }
+
+  /** Wake a sleeping Matter.js body (isSleeping/sleepCounter are valid but not always in Phaser's type defs). */
+  private wakeBody(body: MatterJS.BodyType) {
+    const b = body as MatterJS.BodyType & { isSleeping: boolean; sleepCounter: number };
+    if (b.isSleeping) {
+      b.isSleeping = false;
+      b.sleepCounter = 0;
+    }
   }
 
   /** Class-coloured dot that fades quickly — creates a visual trail during flight. */

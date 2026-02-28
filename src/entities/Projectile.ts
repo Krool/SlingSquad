@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
+import type { GameBody } from '@/config/types';
 import type { Hero } from './Hero';
 
 /** Short-lived sub-projectile (Ranger arrows, etc.) */
 export class Projectile {
   readonly scene: Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
-  readonly body: MatterJS.BodyType;
+  readonly body: GameBody;
   readonly graphics: Phaser.GameObjects.Graphics;
   readonly damage: number;
   source: 'hero' | 'enemy' = 'hero';
@@ -29,8 +30,8 @@ export class Projectile {
       label: 'projectile',
       frictionAir: 0.001,
       restitution: 0,
-    }) as MatterJS.BodyType;
-    (this.body as any).__projectile = this;
+    }) as GameBody;
+    this.body.__projectile = this;
 
     scene.matter.setVelocity(this.body, vx, vy);
 

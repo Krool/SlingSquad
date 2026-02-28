@@ -3,7 +3,7 @@ import { Hero } from '@/entities/Hero';
 import { Enemy } from '@/entities/Enemy';
 import { Block } from '@/entities/Block';
 import { Projectile } from '@/entities/Projectile';
-import { COMBAT_TICK_MS, MELEE_BLOCK_DAMAGE_MULT } from '@/config/constants';
+import { COMBAT_TICK_MS, MELEE_BLOCK_DAMAGE_MULT, HERO_STATS, ENEMY_STATS } from '@/config/constants';
 import { getRelicModifiers, type RelicModifiers } from '@/systems/RunState';
 
 type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
@@ -74,12 +74,14 @@ export class CombatSystem {
         }
       }
       if (enemy.isRushing && enemy.rushTarget) {
-        const stats = enemy.stats as typeof enemy.stats & { rushSpeed: number };
+        const rushSpeed = enemy.enemyClass === 'BOMBER'
+          ? ENEMY_STATS.BOMBER.rushSpeed
+          : ENEMY_STATS.FIRE_IMP.rushSpeed;
         const dx = enemy.rushTarget.x - enemy.x;
         const dy = enemy.rushTarget.y - enemy.y;
         const dist = Math.hypot(dx, dy);
         if (dist > 1) {
-          const vx = (dx / dist) * stats.rushSpeed;
+          const vx = (dx / dist) * rushSpeed;
           this.scene.matter.setVelocity(enemy.body, vx, enemy.body.velocity.y);
           enemy.sprite?.setFlipX(vx > 0); // face direction of movement
         }
@@ -234,7 +236,7 @@ export class CombatSystem {
     for (const enemy of liveEnemies) {
       if (enemy.charmed && now >= enemy.charmEndTime) {
         enemy.charmed = false;
-        (enemy as any).restoreTint?.();
+        enemy.restoreTint();
       }
     }
 
@@ -252,8 +254,7 @@ export class CombatSystem {
       for (const other of liveHeroes) {
         if (other.heroClass !== 'BARD' || other === hero || other.state === 'dead') continue;
         const d = Math.hypot(hero.x - other.x, hero.y - other.y);
-        const auraR = (other.stats as any).auraRadius ?? 100;
-        if (d <= auraR) bardBoost = Math.min(bardBoost, 1 - ((other.stats as any).auraSpeedBoost ?? 0.20));
+        if (d <= HERO_STATS.BARD.auraRadius) bardBoost = Math.min(bardBoost, 1 - HERO_STATS.BARD.auraSpeedBoost);
       }
       const slowPenalty = hero.isSlowed ? 1.5 : 1.0;
       const effectiveSpeed = hero.stats.combatSpeed * this.relicCombatSpeedMult * bardBoost * slowPenalty;
@@ -351,18 +352,18 @@ export class CombatSystem {
 
   /** Healer: heal nearest injured ally */
   private processHealerTick(healer: Enemy, allEnemies: Enemy[], now: number) {
-    const stats = healer.stats as typeof healer.stats & { healAmount: number; healRange: number };
+    const { healAmount, healRange } = ENEMY_STATS.HEALER;
     let best: Enemy | null = null;
     let bestHpPct = 1;
     for (const other of allEnemies) {
       if (other === healer || other.state === 'dead') continue;
       const d = Math.hypot(other.x - healer.x, other.y - healer.y);
-      if (d > stats.healRange) continue;
+      if (d > healRange) continue;
       const pct = other.hp / other.maxHp;
       if (pct < bestHpPct) { bestHpPct = pct; best = other; }
     }
     if (best && bestHpPct < 1) {
-      best.heal(stats.healAmount);
+      best.heal(healAmount);
       this.spawnHealFlash(best.x, best.y);
       healer.lastHealTime = now;
       this.flashEnemyAttackAnim(healer);
@@ -380,14 +381,18 @@ export class CombatSystem {
   }
 
   private processRangedAttack(enemy: Enemy, heroes: Hero[], now: number) {
-    const stats = enemy.stats as typeof enemy.stats & { projectileSpeed: number };
     const target = this.nearest(enemy.x, enemy.y, heroes, enemy.stats.combatRange);
     if (!target) return;
     const dx = target.x - enemy.x;
     const dy = target.y - enemy.y;
     const dist = Math.hypot(dx, dy);
     if (dist === 0) return;
-    const speed = stats.projectileSpeed / 60;
+    const projectileSpeed = enemy.enemyClass === 'RANGED'
+      ? ENEMY_STATS.RANGED.projectileSpeed
+      : enemy.enemyClass === 'ICE_MAGE'
+        ? ENEMY_STATS.ICE_MAGE.projectileSpeed
+        : ENEMY_STATS.FROST_ARCHER.projectileSpeed;
+    const speed = projectileSpeed / 60;
     const isIce = enemy.enemyClass === 'ICE_MAGE' || enemy.enemyClass === 'FROST_ARCHER';
     const color = isIce ? 0x74b9ff : 0xe67e22;
     const p = new Projectile(
@@ -400,7 +405,7 @@ export class CombatSystem {
       color,
     );
     p.source = 'enemy';
-    if (isIce) (p as any).isIce = true;
+    if (isIce) (p as Projectile & { isIce: boolean }).isIce = true;
     this.projectiles.push(p);
     enemy.lastAttackTime = now;
     this.flashEnemyAttackAnim(enemy);
@@ -443,7 +448,7 @@ export class CombatSystem {
           if (Math.hypot(px - hero.x, py - hero.y) < hero.stats.radius + 5) {
             hero.applyDamage(p.damage);
             // ICE_MAGE / FROST_ARCHER slow effect
-            if ((p as any).isIce) hero.applySlow(2000);
+            if ((p as Projectile & { isIce?: boolean }).isIce) hero.applySlow(2000);
             this.scene.events.emit('unitDamage', hero.x, hero.y, Math.round(p.damage));
             this.onDamageEvent?.();
             p.destroy();
@@ -458,7 +463,7 @@ export class CombatSystem {
             if (srcHero) srcHero.battleDamageDealt += p.damage;
             this.scene.events.emit('unitDamage', enemy.x, enemy.y, Math.round(p.damage));
             // Ranger poison DoT: deal poison damage per second for 3 seconds
-            const poisonDmg = (p as any).poisonDamage as number | undefined;
+            const poisonDmg = (p as Projectile & { poisonDamage?: number }).poisonDamage;
             if (poisonDmg && poisonDmg > 0) {
               let ticks = 0;
               const interval = this.scene.time.addEvent({

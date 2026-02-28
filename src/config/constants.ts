@@ -72,7 +72,7 @@ export const HERO_STATS = {
     walkSpeed: 0.7,             // px/frame while in combat
     color: 0xc0392b,
     radius: 24,
-    gravityScale: 0.15,         // battering ram — nearly flat trajectory (85% gravity cancelled)
+    gravityScale: 0.55,         // battering ram — flatter trajectory (45% gravity cancelled)
     label: 'Warrior',
   },
   RANGER: {

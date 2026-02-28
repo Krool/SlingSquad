@@ -68,7 +68,8 @@ export function canPurchase(upgradeId: string): boolean {
 
 export function purchaseUpgrade(upgradeId: string): boolean {
   if (!canPurchase(upgradeId)) return false;
-  const upgrade = getAllUpgrades().find(u => u.id === upgradeId)!;
+  const upgrade = getAllUpgrades().find(u => u.id === upgradeId);
+  if (!upgrade) return false;
   const m = _ensure();
   m.shards -= upgrade.shardCost;
   m.purchases[upgradeId] = (m.purchases[upgradeId] ?? 0) + 1;
@@ -112,7 +113,7 @@ export function getMetaBonuses(): MetaBonuses {
 }
 
 export function getAllUpgrades(): UpgradeDef[] {
-  return (upgradesData as any).upgrades as UpgradeDef[];
+  return upgradesData.upgrades as UpgradeDef[];
 }
 
 /** Pick a random common relic from the pool (for STARTING_RELIC bonus) */

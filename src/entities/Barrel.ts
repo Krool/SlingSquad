@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { BARREL_HP, BARREL_EXPLOSION_RADIUS, BARREL_EXPLOSION_DAMAGE } from '@/config/constants';
+import type { GameBody } from '@/config/types';
 
 export class Barrel {
   readonly scene: Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
-  readonly body: MatterJS.BodyType;
+  readonly body: GameBody;
   readonly graphics: Phaser.GameObjects.Graphics;
   private _hp = BARREL_HP;
   exploded = false;
@@ -26,8 +27,8 @@ export class Barrel {
       slop: 0.01,
       label: 'barrel',
       isSleeping: true,  // start asleep — wakes on collision (prevents jitter)
-    } as any) as MatterJS.BodyType;
-    (this.body as any).__barrel = this;
+    } as Phaser.Types.Physics.Matter.MatterBodyConfig) as GameBody;
+    this.body.__barrel = this;
 
     // Danger glow
     this.glowCircle = scene.add.graphics();

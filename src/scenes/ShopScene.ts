@@ -229,7 +229,7 @@ export class ShopScene extends Phaser.Scene {
     cx: number, cy: number, w: number, h: number, relic: RelicDef, idx: number,
   ) {
     const run = getRunState();
-    const rarity = (relic as any).rarity ?? 'common';
+    const rarity = relic.rarity ?? 'common';
     const bgColor = RARITY_BG[rarity] ?? 0x111e2e;
     const accentColor = RARITY_COLOR[rarity] ?? 0x95a5a6;
     const cost = this.isFree ? 0 : (relic.cost ?? 30);

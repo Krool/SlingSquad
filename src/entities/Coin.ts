@@ -5,8 +5,10 @@ import Phaser from 'phaser';
  * Physics: static sensor — no interaction forces, only collision events.
  * Visual: golden circle that bobs up/down and emits idle sparkles.
  */
+type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
+
 export class Coin {
-  readonly scene: Phaser.Scene;
+  readonly scene: MatterScene;
   readonly body: MatterJS.BodyType;
   readonly graphics: Phaser.GameObjects.Graphics;
   readonly value: number;
@@ -17,14 +19,14 @@ export class Coin {
   private bobTween!: Phaser.Tweens.Tween;
   private idleTimer!: Phaser.Time.TimerEvent;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, value = 3) {
+  constructor(scene: MatterScene, x: number, y: number, value = 3) {
     this.scene = scene;
     this.x = x;
     this.y = y;
     this.value = value;
 
     // Static sensor — heroes pass through but collisions still fire
-    this.body = (scene as any).matter.add.circle(x, y, 13, {
+    this.body = scene.matter.add.circle(x, y, 13, {
       isSensor: true,
       isStatic: true,
       label: 'coin',

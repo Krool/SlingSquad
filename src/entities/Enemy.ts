@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ENEMY_STATS, EnemyClass } from '@/config/constants';
+import type { GameBody } from '@/config/types';
 import type { Hero } from './Hero';
 
 export type EnemyState = 'idle' | 'combat' | 'dead';
@@ -8,7 +9,7 @@ export class Enemy {
   readonly scene: Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
   readonly enemyClass: EnemyClass;
   readonly stats: typeof ENEMY_STATS[EnemyClass];
-  readonly body: MatterJS.BodyType;
+  readonly body: GameBody;
   sprite: Phaser.GameObjects.Sprite;
   hpBarBg: Phaser.GameObjects.Graphics;
   hpBarFill: Phaser.GameObjects.Graphics;
@@ -54,8 +55,8 @@ export class Enemy {
       slop: 0.01,
       label: `enemy_${enemyClass}`,
       isSleeping: true,     // start asleep on structures, wake on collision
-    } as any) as MatterJS.BodyType;
-    (this.body as any).__enemy = this;
+    } as Phaser.Types.Physics.Matter.MatterBodyConfig) as GameBody;
+    this.body.__enemy = this;
 
     const charKey = enemyClass.toLowerCase();
     this.sprite = scene.add.sprite(x, y - r * 0.25, `${charKey}_idle_1`)
@@ -113,8 +114,7 @@ export class Enemy {
     if (this.enemyClass === 'SHIELD' && sourceX !== undefined) {
       const fromLeft = sourceX < this.x;
       if (fromLeft) {
-        const reduction = (this.stats as any).frontDamageReduction ?? 0;
-        finalAmount = amount * (1 - reduction);
+        finalAmount = amount * (1 - ENEMY_STATS.SHIELD.frontDamageReduction);
       }
     }
 
@@ -127,10 +127,8 @@ export class Enemy {
     });
     // DEMON_KNIGHT thorns: reflect a fraction of damage taken back to attacker
     if (this.enemyClass === 'DEMON_KNIGHT' && finalAmount > 0) {
-      const thornsFraction = (this.stats as any).thornsReflect ?? 0;
-      if (thornsFraction > 0) {
-        this.scene.events.emit('thornsReflect', this.x, this.y, finalAmount * thornsFraction);
-      }
+      const thornsFraction = ENEMY_STATS.DEMON_KNIGHT.thornsReflect;
+      this.scene.events.emit('thornsReflect', this.x, this.y, finalAmount * thornsFraction);
     }
     if (this.state === 'idle') this.enterCombat();
     if (this._hp <= 0) this.die();

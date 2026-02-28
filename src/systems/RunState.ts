@@ -153,7 +153,12 @@ export function newRun(
 export function completeNode(nodeId: number) {
   const s = getRunState();
   s.completedNodeIds.add(nodeId);
-  const node = s.nodeMap.find(n => n.id === nodeId)!;
+  const node = s.nodeMap.find(n => n.id === nodeId);
+  if (!node) {
+    console.error('completeNode: node not found', nodeId);
+    saveRun();
+    return;
+  }
 
   // Award gold (meta gold gain multiplier applied)
   if (node.gold) {

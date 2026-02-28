@@ -12,6 +12,7 @@ import {
   TRAJECTORY_DOT_EVERY,
   GRAVITY_PER_FRAME,
   HERO_FRICTION_AIR,
+  HERO_STATS,
   GAME_HEIGHT,
 } from '@/config/constants';
 
@@ -208,7 +209,7 @@ export class LaunchSystem {
 
     // Track first launch for Vanguard passive (Warrior)
     if (this.isFirstLaunch) {
-      (hero as any)._isFirstLaunch = true;
+      hero.isFirstLaunch = true;
       this.isFirstLaunch = false;
     }
 
@@ -251,7 +252,7 @@ export class LaunchSystem {
 
     // ── Frame-by-frame simulation (matches actual physics exactly) ──
     // Warrior gravityScale: nearly flat trajectory
-    const gravScale = (this.currentHero?.stats as any).gravityScale ?? 1.0;
+    const gravScale = this.currentHero?.heroClass === 'WARRIOR' ? HERO_STATS.WARRIOR.gravityScale : 1.0;
 
     let px = SLING_X, py = SLING_Y;
     let pvx = vx, pvy = vy;
@@ -286,8 +287,7 @@ export class LaunchSystem {
 
     // Ranger: draw 2 flanking trajectory trails at ±splitSpreadDeg
     if (this.currentHero?.heroClass === 'RANGER') {
-      const stats = this.currentHero.stats as any;
-      const spreadDeg = stats.splitSpreadDeg ?? 10;
+      const spreadDeg = HERO_STATS.RANGER.splitSpreadDeg;
       const launchAngle = Math.atan2(vy, vx);
       const launchSpeed = Math.hypot(vx, vy) * 0.85; // flanking arrows 85% speed
       for (const sign of [-1, 1]) {
@@ -323,7 +323,7 @@ export class LaunchSystem {
       this.trajectoryGraphics.lineStyle(1, 0xb065e0, 0.22);
       this.trajectoryGraphics.strokeCircle(landX, landY, mageAoeRadius * 0.5);
       // Cluster bomblet indicator: 5 small dots in a ring around the landing point
-      const clusterCount = (this.currentHero.stats as any).clusterCount ?? 5;
+      const clusterCount = HERO_STATS.MAGE.clusterCount;
       for (let i = 0; i < clusterCount; i++) {
         const angle = (i / clusterCount) * Math.PI * 2;
         const cx = landX + Math.cos(angle) * 40;

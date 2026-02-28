@@ -780,7 +780,7 @@ export class SquadSelectScene extends Phaser.Scene {
     clearSave();
     // Load nodes from selected map
     const mapDef = getMapById(this._selectedMapId);
-    const nodes = mapDef ? (mapDef.nodes as NodeDef[]) : ((nodesData as any).nodes as NodeDef[]);
+    const nodes = mapDef ? (mapDef.nodes as NodeDef[]) : (nodesData.nodes as NodeDef[]);
     newRun(nodes, squad, this._meta, this._selectedMapId, {
       ascensionLevel: this._ascensionLevel,
       modifiers: this._activeModifiers,

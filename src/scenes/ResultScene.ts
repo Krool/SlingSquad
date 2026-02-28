@@ -41,7 +41,7 @@ export class ResultScene extends Phaser.Scene {
     try {
       const run = getRunState();
       const nodesCompleted = run.completedNodeIds.size;
-      const nodes = (nodesData as any).nodes as NodeDef[];
+      const nodes = nodesData.nodes as NodeDef[];
       const bossNode = nodes.find((n: NodeDef) => n.type === 'BOSS');
       const killedBoss = bossNode ? run.completedNodeIds.has(bossNode.id) : false;
       shardsEarned = calcShardsEarned({ nodesCompleted, killedBoss, victory });

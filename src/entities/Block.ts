@@ -49,7 +49,7 @@ export class Block {
       slop: mat.slop,
       label: `block_${material}`,
       isSleeping: true,  // start asleep — wakes on collision (prevents jitter)
-    } as any) as MatterJS.BodyType;
+    } as Phaser.Types.Physics.Matter.MatterBodyConfig) as MatterJS.BodyType;
 
     // Generate 5 crack lines once — randomised but stable per block
     this.cracks = [];

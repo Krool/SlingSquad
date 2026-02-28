@@ -30,6 +30,15 @@ export class ImpactSystem {
     this.heroes = heroes ?? [];
   }
 
+  /** Wake a sleeping Matter.js body (isSleeping/sleepCounter are valid but not always in Phaser's type defs). */
+  private wakeBody(body: MatterJS.BodyType) {
+    const b = body as MatterJS.BodyType & { isSleeping: boolean; sleepCounter: number };
+    if (b.isSleeping) {
+      b.isSleeping = false;
+      b.sleepCounter = 0;
+    }
+  }
+
   /** Floor: 20 * mult. Cap: 70 * mult. Force-scaled landing damage helper. */
   private calcImpact(multiplier: number, materialBonus = 0): number {
     const base = Math.min(70, this._impactForce * 0.4 + 20) * multiplier;
@@ -71,7 +80,7 @@ export class ImpactSystem {
     const { x, y } = hero.body!.position;
     const stats = HERO_STATS.WARRIOR;
     // Vanguard passive: +25% impact on first launch
-    const vanguardMult = (hero as any)._isFirstLaunch ? 1.25 : 1.0;
+    const vanguardMult = hero.isFirstLaunch ? 1.25 : 1.0;
     const dmg = this.calcImpact(stats.impactMultiplier) * vanguardMult;
     const knockbackBonus = this.relicMods.warriorKnockback;
 
@@ -160,7 +169,7 @@ export class ImpactSystem {
       const vy = Math.sin(angleRad) * speed;
       const p = new Projectile(this.scene, x, y, vx, vy, stats.arrowDamage, 0x27ae60);
       p.sourceHero = hero;
-      if (poisonDmg > 0) (p as any).poisonDamage = poisonDmg;
+      if (poisonDmg > 0) (p as Projectile & { poisonDamage: number }).poisonDamage = poisonDmg;
       this.combatSystem.addProjectile(p);
     }
 
@@ -284,12 +293,12 @@ export class ImpactSystem {
   // ─── BARD ────────────────────────────────────────────────────────────────
   private bardImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
     const { x, y } = hero.body!.position;
-    const stats = hero.stats as any;
-    const charmRadius = (stats.charmRadius ?? 100) + this.relicMods.bardCharmBonus;
-    const charmDuration = stats.charmDurationMs ?? 3000;
+    const bardStats = HERO_STATS.BARD;
+    const charmRadius = bardStats.charmRadius + this.relicMods.bardCharmBonus;
+    const charmDuration = bardStats.charmDurationMs;
 
     // Small landing damage (0.8x base, 80px radius)
-    const crashDmg = this.calcImpact(stats.impactMultiplier ?? 0.8);
+    const crashDmg = this.calcImpact(bardStats.impactMultiplier);
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < 80) {
@@ -329,16 +338,17 @@ export class ImpactSystem {
 
   private spawnCharmWave(x: number, y: number, radius: number) {
     const g = this.scene.add.graphics().setDepth(19);
+    const target = { r: 0 };
     this.scene.tweens.add({
-      targets: { r: 0 },
+      targets: target,
       r: radius,
       duration: 400,
-      onUpdate: (t, obj) => {
+      onUpdate: (t) => {
         g.clear();
         g.fillStyle(0xcc66ff, 0.15 * (1 - t.progress));
-        g.fillCircle(x, y, (obj as any).r);
+        g.fillCircle(x, y, target.r);
         g.lineStyle(2, 0xcc66ff, 0.6 * (1 - t.progress));
-        g.strokeCircle(x, y, (obj as any).r);
+        g.strokeCircle(x, y, target.r);
       },
       onComplete: () => g.destroy(),
     });
@@ -490,10 +500,7 @@ export class ImpactSystem {
       const d = Math.hypot(dx, dy);
       if (d < radius && d > 1) {
         // Wake sleeping bodies so they actually receive the force
-        if ((b.body as any).isSleeping) {
-          (b.body as any).isSleeping = false;
-          (b.body as any).sleepCounter = 0;
-        }
+        this.wakeBody(b.body);
         const nx = dx / d;
         const ny = dy / d;
         const falloff = (1 - d / radius) ** 2;
@@ -507,10 +514,7 @@ export class ImpactSystem {
       const dy = e.y - by;
       const d = Math.hypot(dx, dy);
       if (d < radius && d > 1) {
-        if ((e.body as any).isSleeping) {
-          (e.body as any).isSleeping = false;
-          (e.body as any).sleepCounter = 0;
-        }
+        this.wakeBody(e.body);
         const nx = dx / d;
         const ny = dy / d;
         const falloff = (1 - d / radius) ** 2;
@@ -577,14 +581,15 @@ export class ImpactSystem {
 
   private spawnShockwave(x: number, y: number, radius: number, color: number) {
     const g = this.scene.add.graphics().setDepth(19);
+    const target = { r: 0 };
     this.scene.tweens.add({
-      targets: { r: 0 },
+      targets: target,
       r: radius,
       duration: 300,
-      onUpdate: (t, obj) => {
+      onUpdate: (t) => {
         g.clear();
         g.lineStyle(3, color, 1 - t.progress);
-        g.strokeCircle(x, y, (obj as any).r);
+        g.strokeCircle(x, y, target.r);
       },
       onComplete: () => g.destroy(),
     });
