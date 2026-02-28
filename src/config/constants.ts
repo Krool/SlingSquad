@@ -22,6 +22,9 @@ export const TRAJECTORY_DOT_EVERY = 6;  // draw a dot every N simulated frames
 export const GRAVITY_PER_FRAME = 0.3;
 export const HERO_FRICTION_AIR = 0.003; // low air drag = projectile travels far (matches Hero body)
 
+// ─── Sling Interaction ───────────────────────────────────────────────────────
+export const SLING_ACTIVATION_RADIUS = 130;
+
 // ─── Anti-Stall Timer ─────────────────────────────────────────────────────────
 export const STALL_TIMEOUT_MS = 10000;
 export const STALL_WARN_MS = 5000;
@@ -55,6 +58,26 @@ export const MATERIAL = {
     slop: 0.01,
     hp: 130,
     label: 'STONE',
+  },
+  ICE: {
+    density: 0.0012,    // between wood and stone
+    restitution: 0.12,  // slightly bouncy — slippery surface
+    friction: 0.05,     // very slippery!
+    frictionStatic: 0.2,
+    frictionAir: 0.008,
+    slop: 0.01,
+    hp: 40,             // fragile — shatters easily for cascade collapses
+    label: 'ICE',
+  },
+  OBSIDIAN: {
+    density: 0.004,     // heaviest — extremely tough
+    restitution: 0.06,
+    friction: 0.8,
+    frictionStatic: 4.0, // very high — doesn't budge
+    frictionAir: 0.006,
+    slop: 0.01,
+    hp: 180,            // toughest material — requires barrel combos or Mage AoE
+    label: 'OBSIDIAN',
   },
 } as const;
 export type MaterialType = keyof typeof MATERIAL;
@@ -343,10 +366,85 @@ export const BARREL_EXPLOSION_DAMAGE = 70;
 export const BARREL_HP = 30;
 export const BARREL_EXPLOSION_FORCE = 0.12;
 
+// ─── Hazards ─────────────────────────────────────────────────────────────────
+export const HAZARD = {
+  SPIKE_TRAP: {
+    damage: 20,         // contact damage to heroes
+    width: 50,
+    height: 20,
+    destroyable: true,  // can be broken by impact
+    hp: 40,
+  },
+  ICE_PATCH: {
+    width: 80,
+    height: 10,
+    frictionOverride: 0.02,  // near-zero friction on overlap
+  },
+  LAVA_PIT: {
+    damage: 8,          // DoT per tick
+    tickMs: 500,        // damage tick interval
+    width: 70,
+    height: 16,
+    radius: 40,         // damage area extends beyond visual
+  },
+  FIRE_GEYSER: {
+    damage: 35,
+    radius: 60,
+    eruptIntervalMin: 3000,
+    eruptIntervalMax: 4000,
+    eruptDuration: 400,
+    ventWidth: 24,
+    ventHeight: 12,
+  },
+} as const;
+
 // ─── Combat System ────────────────────────────────────────────────────────────
 export const COMBAT_TICK_MS = 500;
+
+// ── Combat Walking AI ────────────────────────────────────────────────────────
+export const HERO_WALK_BLOCK_LOOKAHEAD = 55;
+export const HERO_WALK_VERT_TOLERANCE = 45;
+export const HERO_WALK_STUCK_BLOCK_MS = 3000;
+export const HERO_WALK_STUCK_MOVE_THRESHOLD = 0.5;
+export const HERO_WALK_STUCK_FLIP_MS = 1500;
+export const NON_WARRIOR_BLOCK_RANGE_CAP = 140;
+
+// ── Combat Modifiers ─────────────────────────────────────────────────────────
+export const SLOW_SPEED_PENALTY = 1.5;
+export const LOW_HP_THRESHOLD = 0.30;
+export const POISON_TICK_MS = 1000;
+export const POISON_TICK_COUNT = 2;  // repeat param = 2 means 3 ticks total
+
+// ─── Impact System ───────────────────────────────────────────────────────────
+export const IMPACT_FORCE_CAP = 70;
+export const IMPACT_FORCE_FLOOR = 20;
+export const IMPACT_FORCE_MULT = 0.4;
+export const IMPACT_RADIUS_WARRIOR = 80;
+export const IMPACT_RADIUS_RANGER = 70;
+export const IMPACT_RADIUS_PRIEST = 90;
+export const IMPACT_RADIUS_ROGUE = 60;
+export const IMPACT_RADIUS_PALADIN = 80;
+export const IMPACT_RADIUS_DRUID = 70;
+export const CHAIN_LIGHTNING_DAMAGE_MULT = 0.5;
+export const BLOCK_CRUSH_SPEED_THRESHOLD = 0.8;
+export const BLOCK_CRUSH_RADIUS = 55;
+export const BLOCK_CRUSH_DAMAGE = 40;
+
+// ─── Hero Physics ────────────────────────────────────────────────────────────
+export const HERO_RESTITUTION_RANGER = 0.72;
+export const HERO_RESTITUTION_DEFAULT = 0.25;
+export const HERO_COMBAT_FRICTION_AIR = 0.07;
+export const HERO_COMBAT_FRICTION = 0.9;
 
 // ─── UI ───────────────────────────────────────────────────────────────────────
 export const PORTRAIT_SIZE = 64;
 export const PORTRAIT_PADDING = 8;
 export const HUD_BAR_HEIGHT = 80;
+
+// ─── Camp / Main Menu ────────────────────────────────────────────────────────
+export const CAMP_SHOOTING_STAR_MIN_INTERVAL = 4000;
+export const CAMP_SHOOTING_STAR_MAX_INTERVAL = 10000;
+export const CAMP_SHOOTING_STAR_COLOR = 0xccddff;
+
+// ─── Multi-Floor Runs ────────────────────────────────────────────────────────
+export const TOTAL_FLOORS_PER_RUN = 3;

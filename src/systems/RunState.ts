@@ -1,6 +1,7 @@
-import { HERO_STATS, MAX_SQUAD_SIZE, type HeroClass } from '@/config/constants';
+import { HERO_STATS, MAX_SQUAD_SIZE, TOTAL_FLOORS_PER_RUN, type HeroClass } from '@/config/constants';
 import type { MetaBonuses } from '@/systems/MetaState';
 import { getAscensionModifiers } from '@/systems/AscensionSystem';
+import { getMapById } from '@/data/maps/index';
 
 // ─── Node types ───────────────────────────────────────────────────────────────
 export type NodeType = 'BATTLE' | 'ELITE' | 'REWARD' | 'SHOP' | 'BOSS' | 'EVENT' | 'FORGE';
@@ -50,6 +51,11 @@ export interface RunState {
   ascensionLevel: number;        // 0 = off, 1-10 = active
   activeModifiers: string[];     // modifier IDs active for this run
   isDailyChallenge: boolean;     // true if started from daily challenge
+  // Multi-floor run fields
+  currentFloor: number;          // 0-indexed current floor
+  totalFloors: number;           // total floors in this run
+  floorMapIds: string[];         // ordered map IDs for each floor
+  completedFloors: number[];     // floor indices already cleared
   // Meta bonuses carried through the run for systems that need them
   metaGoldGainPct: number;
   metaDamagePct: number;
@@ -73,7 +79,7 @@ export function newRun(
   heroClasses: HeroClass[],
   meta?: MetaBonuses,
   mapId = 'goblin_wastes',
-  opts?: { ascensionLevel?: number; modifiers?: string[]; isDaily?: boolean },
+  opts?: { ascensionLevel?: number; modifiers?: string[]; isDaily?: boolean; floorMapIds?: string[] },
 ): RunState {
   const heroNames: Record<HeroClass, string> = {
     WARRIOR: 'Sir Brom',
@@ -104,6 +110,9 @@ export function newRun(
     startingGold = 0;
   }
 
+  const floorMapIds = opts?.floorMapIds ?? [mapId];
+  const totalFloors = floorMapIds.length;
+
   _state = {
     squad: heroClasses.map(cls => {
       const baseHp = HERO_STATS[cls]?.hp ?? 80;
@@ -126,6 +135,10 @@ export function newRun(
     ascensionLevel: ascLevel,
     activeModifiers: modifiers,
     isDailyChallenge: opts?.isDaily ?? false,
+    currentFloor: 0,
+    totalFloors,
+    floorMapIds,
+    completedFloors: [],
     metaGoldGainPct: meta?.goldGainPct ?? 0,
     metaDamagePct: damageMult,
     metaLaunchPowerPct: meta?.launchPowerPct ?? 0,
@@ -205,6 +218,54 @@ function _lockSubtree(nodeId: number, s: RunState) {
     );
     if (!hasActivePath) _lockSubtree(childId, s);
   }
+}
+
+// ─── Multi-Floor ──────────────────────────────────────────────────────────────
+
+/** Advance to the next floor. Keeps squad, gold, relics. Loads new map nodes. */
+export function advanceFloor(): boolean {
+  const s = getRunState();
+  if (s.currentFloor >= s.totalFloors - 1) return false; // already on last floor
+
+  s.completedFloors.push(s.currentFloor);
+  s.currentFloor++;
+
+  const nextMapId = s.floorMapIds[s.currentFloor];
+  s.currentMapId = nextMapId;
+
+  // Load the new map's nodes
+  const mapDef = getMapById(nextMapId);
+  if (mapDef) {
+    s.nodeMap = mapDef.nodes;
+  }
+
+  // Reset node progress for the new floor
+  s.currentNodeId = s.nodeMap[0].id;
+  s.completedNodeIds = new Set();
+  s.availableNodeIds = new Set([s.nodeMap[0].id]);
+  s.lockedNodeIds = new Set();
+
+  saveRun();
+  return true;
+}
+
+/** True when ALL floors are done (current floor complete + no more floors). */
+export function isRunFullyComplete(): boolean {
+  const s = getRunState();
+  // Current floor must be complete
+  const hasActive = [...s.availableNodeIds].some(
+    id => !s.completedNodeIds.has(id) && !s.lockedNodeIds.has(id),
+  );
+  const floorDone = !hasActive && s.completedNodeIds.size > 0;
+  if (!floorDone) return false;
+  // Must be on the last floor
+  return s.currentFloor >= s.totalFloors - 1;
+}
+
+/** Returns "Floor 1/3" style display string. */
+export function getCurrentFloorDisplay(): string {
+  const s = getRunState();
+  return `Floor ${s.currentFloor + 1}/${s.totalFloors}`;
 }
 
 export function addRelic(relic: RelicDef) {
@@ -326,6 +387,10 @@ export function loadRun(): boolean {
       ascensionLevel:    data.ascensionLevel     ?? 0,
       activeModifiers:   data.activeModifiers    ?? [],
       isDailyChallenge:  data.isDailyChallenge   ?? false,
+      currentFloor:      data.currentFloor       ?? 0,
+      totalFloors:       data.totalFloors        ?? 1,
+      floorMapIds:       data.floorMapIds        ?? [data.currentMapId ?? 'goblin_wastes'],
+      completedFloors:   data.completedFloors    ?? [],
       metaGoldGainPct:   data.metaGoldGainPct   ?? 0,
       metaDamagePct:     data.metaDamagePct      ?? 0,
       metaLaunchPowerPct: data.metaLaunchPowerPct ?? 0,

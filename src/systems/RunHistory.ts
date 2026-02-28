@@ -8,6 +8,7 @@ export interface RunSummary {
   gold: number;
   victory: boolean;
   timestamp: number;
+  floorsCompleted?: number; // multi-floor: how many floors cleared
 }
 
 export interface GlobalStats {

@@ -16,12 +16,16 @@ export class Block {
   private readonly cracks: Array<[number, number, number, number]>;
 
   private static FILL: Record<MaterialType, number> = {
-    WOOD:  0x8B5E3C,
-    STONE: 0x7f8c8d,
+    WOOD:     0x8B5E3C,
+    STONE:    0x7f8c8d,
+    ICE:      0xb0d4e8,   // pale blue
+    OBSIDIAN: 0x1a0808,   // dark reddish-black
   };
   private static STROKE: Record<MaterialType, number> = {
-    WOOD:  0x5D3A1A,
-    STONE: 0x4a5568,
+    WOOD:     0x5D3A1A,
+    STONE:    0x4a5568,
+    ICE:      0x88b8d0,   // blue-gray outline
+    OBSIDIAN: 0x440a0a,   // dark red outline
   };
 
   constructor(
@@ -75,13 +79,13 @@ export class Block {
     if (lost > 0.6) {
       const r = Math.round(((fill >> 16) & 0xff) * 0.62);
       const g = Math.round(((fill >> 8)  & 0xff) * 0.62);
-      const b = Math.round(( fill        & 0xff) * 0.62);
-      fill = (r << 16) | (g << 8) | b;
+      const bv = Math.round(( fill        & 0xff) * 0.62);
+      fill = (r << 16) | (g << 8) | bv;
     } else if (lost > 0.3) {
       const r = Math.round(((fill >> 16) & 0xff) * 0.80);
       const g = Math.round(((fill >> 8)  & 0xff) * 0.80);
-      const b = Math.round(( fill        & 0xff) * 0.80);
-      fill = (r << 16) | (g << 8) | b;
+      const bv = Math.round(( fill        & 0xff) * 0.80);
+      fill = (r << 16) | (g << 8) | bv;
     }
 
     this.graphics.fillStyle(fill, 1);
@@ -89,16 +93,47 @@ export class Block {
     this.graphics.lineStyle(2, Block.STROKE[this.material], 1);
     this.graphics.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h);
 
-    // ── 4 damage-state crack overlays ──────────────────────────────────────
+    // ── Material-specific overlays ───────────────────────────────────────────
+    if (this.material === 'ICE') {
+      // White sheen highlight line across top
+      this.graphics.lineStyle(1, 0xffffff, 0.35);
+      this.graphics.lineBetween(
+        -this.w / 2 + 3, -this.h / 2 + 3,
+        this.w / 2 - 3, -this.h / 2 + 3,
+      );
+      // Diagonal glint
+      if (pct > 0.5) {
+        this.graphics.lineStyle(1, 0xffffff, 0.2);
+        this.graphics.lineBetween(
+          -this.w / 4, -this.h / 4,
+          this.w / 4, this.h / 4,
+        );
+      }
+    } else if (this.material === 'OBSIDIAN') {
+      // Orange vein/crack lines — always visible (part of obsidian look)
+      this.graphics.lineStyle(1, 0xff6600, 0.15 + lost * 0.25);
+      const [vsx, vsy, vex, vey] = this.cracks[0];
+      this.graphics.lineBetween(vsx, vsy, vex, vey);
+      if (pct < 0.7) {
+        const [v2sx, v2sy, v2ex, v2ey] = this.cracks[1];
+        this.graphics.lineBetween(v2sx, v2sy, v2ex, v2ey);
+      }
+    }
+
+    // ── 4 damage-state crack overlays ────────────────────────────────────────
+    const crackColor = this.material === 'ICE' ? 0x4488aa
+                     : this.material === 'OBSIDIAN' ? 0xff4400
+                     : 0x000000;
+
     // State 1 — light crack (above 85% HP remaining)
     if (pct < 0.85) {
-      this.graphics.lineStyle(1, 0x000000, 0.35);
+      this.graphics.lineStyle(1, crackColor, 0.35);
       const [sx, sy, ex, ey] = this.cracks[0];
       this.graphics.lineBetween(sx, sy, ex, ey);
     }
     // State 2 — heavy fractures (HP 40-60% remaining)
     if (pct < 0.6) {
-      this.graphics.lineStyle(1, 0x000000, 0.50);
+      this.graphics.lineStyle(1, crackColor, 0.50);
       const [sx1, sy1, ex1, ey1] = this.cracks[1];
       this.graphics.lineBetween(sx1, sy1, ex1, ey1);
       const [sx2, sy2, ex2, ey2] = this.cracks[2];
@@ -106,7 +141,7 @@ export class Block {
     }
     // State 3 — barely holding (below 30% HP)
     if (pct < 0.3) {
-      this.graphics.lineStyle(1.5, 0x111111, 0.70);
+      this.graphics.lineStyle(1.5, crackColor, 0.70);
       const [sx3, sy3, ex3, ey3] = this.cracks[3];
       this.graphics.lineBetween(sx3, sy3, ex3, ey3);
       const [sx4, sy4, ex4, ey4] = this.cracks[4];

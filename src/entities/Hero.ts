@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { HERO_STATS, HeroClass, HERO_FRICTION_AIR, GAME_WIDTH, GAME_HEIGHT, SLING_X, SLING_Y } from '@/config/constants';
+import {
+  HERO_STATS, HeroClass, HERO_FRICTION_AIR, GAME_WIDTH, GAME_HEIGHT, SLING_X, SLING_Y,
+  HERO_RESTITUTION_RANGER, HERO_RESTITUTION_DEFAULT,
+  HERO_COMBAT_FRICTION_AIR, HERO_COMBAT_FRICTION,
+} from '@/config/constants';
 import type { GameBody } from '@/config/types';
 
 export type HeroState = 'queued' | 'flying' | 'combat' | 'dead';
@@ -110,7 +114,7 @@ export class Hero {
     this.state = 'flying';
     const r = this.stats.radius;
 
-    const restitution = this.heroClass === 'RANGER' ? 0.72 : 0.25;
+    const restitution = this.heroClass === 'RANGER' ? HERO_RESTITUTION_RANGER : HERO_RESTITUTION_DEFAULT;
     this.body = this.scene.matter.add.circle(x, y, r, {
       density: 0.002 * this.stats.mass,
       restitution,
@@ -170,8 +174,8 @@ export class Hero {
     this.scene.events.emit('heroLanded', this.body.position.x, this.body.position.y);
     // Increase friction so hero slows on rubble but stays dynamic — allows terrain traversal
     if (this.body) {
-      this.body.frictionAir = 0.07;
-      this.body.friction = 0.9;
+      this.body.frictionAir = HERO_COMBAT_FRICTION_AIR;
+      this.body.friction = HERO_COMBAT_FRICTION;
     }
     const charKey = this.heroClass.toLowerCase();
     if (this.sprite) {

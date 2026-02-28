@@ -23,3 +23,14 @@ export function getAllMaps(): MapDef[] {
 export function getMapById(id: string): MapDef | undefined {
   return maps.find(m => m.id === id);
 }
+
+/** Build a 3-floor sequence starting with the given map, then the other maps. */
+export function getFloorSequence(startMapId: string): string[] {
+  const others = maps.filter(m => m.id !== startMapId).map(m => m.id);
+  // Shuffle others for variety
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [others[i], others[j]] = [others[j], others[i]];
+  }
+  return [startMapId, ...others];
+}

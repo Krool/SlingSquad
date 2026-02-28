@@ -10,8 +10,10 @@ import {
 } from '@/systems/DiscoveryLog';
 import { getMasteryLevel, getXPForNextLevel } from '@/systems/MasterySystem';
 import { ScrollablePanel } from '@/ui/ScrollablePanel';
+import { getGlobalStats } from '@/systems/RunHistory';
+import { getMapById } from '@/data/maps/index';
 
-type TabId = 'heroes' | 'bestiary' | 'relics';
+type TabId = 'heroes' | 'bestiary' | 'relics' | 'history';
 
 const ACCENT = 0xc0a060;
 const ACCENT_HEX = '#c0a060';
@@ -22,6 +24,13 @@ const TAB_ICONS: Record<TabId, string> = {
   heroes:   'icon_tab_heroes',
   bestiary: 'icon_tab_bestiary',
   relics:   'icon_tab_relics',
+  history:  'icon_tab_history',
+};
+
+// Hero class colors for run history dots
+const CLASS_DOT_COLORS: Record<string, number> = {
+  WARRIOR: 0xc0392b, RANGER: 0x27ae60, MAGE: 0x8e44ad, PRIEST: 0xf39c12,
+  BARD: 0x1abc9c, ROGUE: 0x2c3e50, PALADIN: 0xf1c40f, DRUID: 0x16a085,
 };
 
 export class CodexScene extends Phaser.Scene {
@@ -81,8 +90,9 @@ export class CodexScene extends Phaser.Scene {
       { id: 'heroes', label: 'Heroes' },
       { id: 'bestiary', label: 'Bestiary' },
       { id: 'relics', label: 'Relics' },
+      { id: 'history', label: 'History' },
     ];
-    const tabW = 160, tabH = 34, gap = 12;
+    const tabW = 140, tabH = 34, gap = 12;
     const totalW = tabs.length * tabW + (tabs.length - 1) * gap;
     const startX = (GAME_WIDTH - totalW) / 2;
 
@@ -131,14 +141,15 @@ export class CodexScene extends Phaser.Scene {
     this.activeTab = tabId;
     this.destroyScrollPanel();
 
+    const halfTabW = 70;
     // Update tab visuals
     for (const [id, btn] of this.tabButtons) {
       const active = id === tabId;
       btn.bg.clear();
       btn.bg.fillStyle(active ? 0x1e1a10 : 0x0c0e16, 1);
-      btn.bg.fillRoundedRect(-80, -17, 160, 34, 6);
+      btn.bg.fillRoundedRect(-halfTabW, -17, halfTabW * 2, 34, 6);
       btn.bg.lineStyle(1, ACCENT, active ? 0.8 : 0.25);
-      btn.bg.strokeRoundedRect(-80, -17, 160, 34, 6);
+      btn.bg.strokeRoundedRect(-halfTabW, -17, halfTabW * 2, 34, 6);
       btn.txt.setColor(active ? ACCENT_HEX : '#556070');
       if (btn.icon) btn.icon.setAlpha(active ? 1 : 0.35);
     }
@@ -154,6 +165,7 @@ export class CodexScene extends Phaser.Scene {
       case 'heroes': this.buildHeroesTab(scrollW); break;
       case 'bestiary': this.buildBestiaryTab(scrollW); break;
       case 'relics': this.buildRelicsTab(scrollW); break;
+      case 'history': this.buildHistoryTab(scrollW); break;
     }
   }
 
@@ -439,6 +451,164 @@ export class CodexScene extends Phaser.Scene {
 
     const totalH = rows * (cardH + gapY) + startY + 10;
     this._scrollPanel!.setContentHeight(totalH);
+  }
+
+  // ── History Tab ─────────────────────────────────────────────────────────────
+  private buildHistoryTab(scrollW: number) {
+    const container = this._scrollPanel!.getContainer();
+    const stats = getGlobalStats();
+    let cy = 10;
+
+    // ── Banner: LIFETIME STATISTICS ──
+    container.add(this.add.text(scrollW / 2, cy, 'LIFETIME STATISTICS', {
+      fontSize: '20px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      color: ACCENT_HEX, stroke: '#000', strokeThickness: 2,
+      letterSpacing: 4,
+    }).setOrigin(0.5, 0));
+    cy += 36;
+
+    // Stats grid (2x4)
+    const statItems: [string, string][] = [
+      ['Total Runs',      `${stats.totalRuns}`],
+      ['Victories',       `${stats.totalWins}`],
+      ['Defeats',         `${stats.totalLosses}`],
+      ['Win Rate',        stats.totalRuns > 0 ? `${Math.round(stats.totalWins / stats.totalRuns * 100)}%` : '--'],
+      ['Enemies Slain',   `${stats.totalEnemiesKilled}`],
+      ['Blocks Destroyed',`${stats.totalBlocksDestroyed}`],
+      ['Gold Earned',     `${stats.totalGoldEarned}`],
+      ['Best Launch DMG', `${stats.bestDamageInOneLaunch}`],
+    ];
+
+    const gridCols = 4, gridGapX = 14, gridGapY = 8;
+    const cellW = (scrollW - gridGapX * (gridCols - 1)) / gridCols;
+    const cellH = 58;
+
+    statItems.forEach((item, i) => {
+      const col = i % gridCols;
+      const row = Math.floor(i / gridCols);
+      const cx = col * (cellW + gridGapX) + cellW / 2;
+      const cellY = cy + row * (cellH + gridGapY);
+
+      const cellBg = this.add.graphics();
+      cellBg.fillStyle(0x0e1220, 1);
+      cellBg.fillRoundedRect(cx - cellW / 2, cellY, cellW, cellH, 6);
+      cellBg.lineStyle(1, ACCENT, 0.2);
+      cellBg.strokeRoundedRect(cx - cellW / 2, cellY, cellW, cellH, 6);
+      container.add(cellBg);
+
+      container.add(this.add.text(cx, cellY + 12, item[0], {
+        fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
+      }).setOrigin(0.5, 0));
+
+      container.add(this.add.text(cx, cellY + 30, item[1], {
+        fontSize: '20px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+        color: ACCENT_HEX, stroke: '#000', strokeThickness: 1,
+      }).setOrigin(0.5, 0));
+    });
+
+    cy += 2 * (cellH + gridGapY) + 16;
+
+    // ── Divider ──
+    const divG = this.add.graphics();
+    divG.lineStyle(1, ACCENT, 0.2);
+    divG.lineBetween(40, cy, scrollW - 40, cy);
+    container.add(divG);
+    cy += 16;
+
+    // ── Recent Runs ──
+    container.add(this.add.text(scrollW / 2, cy, 'RECENT RUNS', {
+      fontSize: '18px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      color: ACCENT_HEX, stroke: '#000', strokeThickness: 2,
+      letterSpacing: 3,
+    }).setOrigin(0.5, 0));
+    cy += 32;
+
+    if (stats.recentRuns.length === 0) {
+      container.add(this.add.text(scrollW / 2, cy, 'No runs recorded yet.', {
+        fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#4a5a6a',
+      }).setOrigin(0.5, 0));
+      cy += 30;
+    } else {
+      const cardW2 = scrollW - 20, cardH2 = 64, cardGap = 8;
+
+      for (const run of stats.recentRuns) {
+        const rcx = scrollW / 2;
+
+        const runBg = this.add.graphics();
+        const bgCol = run.victory ? 0x0e1a12 : 0x1a0e0e;
+        const borderCol = run.victory ? 0x2ecc71 : 0xe74c3c;
+        runBg.fillStyle(bgCol, 1);
+        runBg.fillRoundedRect(rcx - cardW2 / 2, cy, cardW2, cardH2, 6);
+        runBg.lineStyle(1, borderCol, 0.4);
+        runBg.strokeRoundedRect(rcx - cardW2 / 2, cy, cardW2, cardH2, 6);
+        container.add(runBg);
+
+        // Victory/Defeat badge
+        const badge = run.victory ? 'VICTORY' : 'DEFEAT';
+        const badgeCol = run.victory ? '#2ecc71' : '#e74c3c';
+        container.add(this.add.text(rcx - cardW2 / 2 + 14, cy + 12, badge, {
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+          color: badgeCol, stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0, 0));
+
+        // Map name
+        const mapDef = getMapById(run.mapId);
+        const mapName = mapDef?.name ?? run.mapId;
+        container.add(this.add.text(rcx - cardW2 / 2 + 14, cy + 32, mapName, {
+          fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#6a7a8a',
+        }).setOrigin(0, 0));
+
+        // Date
+        const dateStr = new Date(run.timestamp).toLocaleDateString();
+        container.add(this.add.text(rcx + cardW2 / 2 - 14, cy + 12, dateStr, {
+          fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#4a5a6a',
+        }).setOrigin(1, 0));
+
+        // Squad dots (colored by class)
+        const dotStartX = rcx - 30;
+        run.squad.forEach((cls, si) => {
+          const dotColor = CLASS_DOT_COLORS[cls] ?? 0x5a5a6a;
+          const dotG = this.add.graphics();
+          dotG.fillStyle(dotColor, 0.9);
+          dotG.fillCircle(dotStartX + si * 18, cy + 18, 6);
+          container.add(dotG);
+        });
+
+        // Stats summary
+        const summary = `${run.nodesCleared} nodes  |  ${run.gold}g  |  ${run.relicCount} relics`;
+        container.add(this.add.text(rcx + cardW2 / 2 - 14, cy + 38, summary, {
+          fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
+        }).setOrigin(1, 0));
+
+        // Floors completed (if present)
+        if ((run as { floorsCompleted?: number }).floorsCompleted !== undefined) {
+          const floors = (run as { floorsCompleted?: number }).floorsCompleted!;
+          container.add(this.add.text(rcx, cy + 50, `Floors: ${floors}/3`, {
+            fontSize: '11px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
+          }).setOrigin(0.5, 0));
+        }
+
+        cy += cardH2 + cardGap;
+      }
+    }
+
+    // ── Fastest Battle ──
+    if (stats.fastestBattleMs < Infinity) {
+      cy += 8;
+      const divG2 = this.add.graphics();
+      divG2.lineStyle(1, ACCENT, 0.15);
+      divG2.lineBetween(40, cy, scrollW - 40, cy);
+      container.add(divG2);
+      cy += 12;
+
+      const secs = (stats.fastestBattleMs / 1000).toFixed(1);
+      container.add(this.add.text(scrollW / 2, cy, `Fastest Battle: ${secs}s`, {
+        fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
+      }).setOrigin(0.5, 0));
+      cy += 28;
+    }
+
+    this._scrollPanel!.setContentHeight(cy + 10);
   }
 
   // ── Back Button ────────────────────────────────────────────────────────────

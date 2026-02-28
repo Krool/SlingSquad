@@ -76,7 +76,7 @@ export function getTutorialText(step: keyof TutorialState): string {
   }
 }
 
-export function resetTutorial(): void {
+function resetTutorial(): void {
   _state = defaultState();
   _save();
 }

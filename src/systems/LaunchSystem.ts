@@ -14,6 +14,7 @@ import {
   HERO_FRICTION_AIR,
   HERO_STATS,
   GAME_HEIGHT,
+  SLING_ACTIVATION_RADIUS,
 } from '@/config/constants';
 
 type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
@@ -160,7 +161,7 @@ export class LaunchSystem {
       // Use worldX/worldY so coordinates match game-space regardless of canvas scale
       const dx = ptr.worldX - SLING_X;
       const dy = ptr.worldY - SLING_Y;
-      if (Math.hypot(dx, dy) > 130) return; // only near the sling
+      if (Math.hypot(dx, dy) > SLING_ACTIVATION_RADIUS) return; // only near the sling
       this.isDragging = true;
       this.dragCurrent.set(ptr.worldX, ptr.worldY);
     });

@@ -3,7 +3,13 @@ import { Hero } from '@/entities/Hero';
 import { Enemy } from '@/entities/Enemy';
 import { Block } from '@/entities/Block';
 import { Projectile } from '@/entities/Projectile';
-import { COMBAT_TICK_MS, MELEE_BLOCK_DAMAGE_MULT, HERO_STATS, ENEMY_STATS } from '@/config/constants';
+import {
+  COMBAT_TICK_MS, MELEE_BLOCK_DAMAGE_MULT, HERO_STATS, ENEMY_STATS,
+  HERO_WALK_BLOCK_LOOKAHEAD, HERO_WALK_VERT_TOLERANCE,
+  HERO_WALK_STUCK_BLOCK_MS, HERO_WALK_STUCK_MOVE_THRESHOLD, HERO_WALK_STUCK_FLIP_MS,
+  NON_WARRIOR_BLOCK_RANGE_CAP, SLOW_SPEED_PENALTY, LOW_HP_THRESHOLD,
+  POISON_TICK_MS, POISON_TICK_COUNT,
+} from '@/config/constants';
 import { getRelicModifiers, type RelicModifiers } from '@/systems/RunState';
 
 type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
@@ -120,7 +126,7 @@ export class CombatSystem {
         this.ensureNotWalking(hero);
         hero.walkStuckMs += delta;
         // Give up on indestructible / very tanky block after 3 s — turn around
-        if (hero.walkStuckMs > 3000) {
+        if (hero.walkStuckMs > HERO_WALK_STUCK_BLOCK_MS) {
           hero.walkDir    *= -1;
           hero.walkStuckMs = 0;
         }
@@ -141,9 +147,9 @@ export class CombatSystem {
 
       // Stuck detection — no meaningful x movement for 1.5 s → flip
       const dxMoved = Math.abs(hx - hero.lastWalkX);
-      if (dxMoved < 0.5) {
+      if (dxMoved < HERO_WALK_STUCK_MOVE_THRESHOLD) {
         hero.walkStuckMs += delta;
-        if (hero.walkStuckMs > 1500) {
+        if (hero.walkStuckMs > HERO_WALK_STUCK_FLIP_MS) {
           hero.walkDir    *= -1;
           hero.walkStuckMs = 0;
         }
@@ -205,8 +211,8 @@ export class CombatSystem {
    * within a short look-ahead distance and at roughly the same height.
    */
   private findBlockAhead(hx: number, hy: number, dir: number, heroR: number): Block | null {
-    const lookAheadX    = heroR + 55;
-    const vertTolerance = 45;
+    const lookAheadX    = heroR + HERO_WALK_BLOCK_LOOKAHEAD;
+    const vertTolerance = HERO_WALK_VERT_TOLERANCE;
     let best: Block | null = null;
     let bestDist = Infinity;
     for (const b of this.blocks) {
@@ -256,14 +262,14 @@ export class CombatSystem {
         const d = Math.hypot(hero.x - other.x, hero.y - other.y);
         if (d <= HERO_STATS.BARD.auraRadius) bardBoost = Math.min(bardBoost, 1 - HERO_STATS.BARD.auraSpeedBoost);
       }
-      const slowPenalty = hero.isSlowed ? 1.5 : 1.0;
+      const slowPenalty = hero.isSlowed ? SLOW_SPEED_PENALTY : 1.0;
       const effectiveSpeed = hero.stats.combatSpeed * this.relicCombatSpeedMult * bardBoost * slowPenalty;
       if (now - hero.lastAttackTime < effectiveSpeed) continue;
       let heroDmg = (hero.stats.combatDamage + this.relicFlatDmg) * this.metaDamageMult;
       // Crit chance
       if (this.relicMods.critChance > 0 && Math.random() < this.relicMods.critChance) heroDmg *= 2;
       // Low HP berserker bonus
-      if (this.relicMods.lowHpDamageMult > 0 && hero.hp / hero.maxHp < 0.30) heroDmg *= this.relicMods.lowHpDamageMult;
+      if (this.relicMods.lowHpDamageMult > 0 && hero.hp / hero.maxHp < LOW_HP_THRESHOLD) heroDmg *= this.relicMods.lowHpDamageMult;
       const targets = liveEnemies.filter(e =>
         Math.hypot(e.x - hero.x, e.y - hero.y) <= hero.stats.combatRange
       );
@@ -281,7 +287,7 @@ export class CombatSystem {
         // Cap block-attack range at 140px for non-warriors so they don't reach across the map
         const blockRange = hero.heroClass === 'WARRIOR'
           ? hero.stats.combatRange * 1.5
-          : Math.min(hero.stats.combatRange, 140);
+          : Math.min(hero.stats.combatRange, NON_WARRIOR_BLOCK_RANGE_CAP);
         const nearestBlock = this.nearestBlock(hero.x, hero.y, blockRange);
         if (nearestBlock) {
           const blockDmg = heroDmg * MELEE_BLOCK_DAMAGE_MULT;
@@ -467,8 +473,8 @@ export class CombatSystem {
             if (poisonDmg && poisonDmg > 0) {
               let ticks = 0;
               const interval = this.scene.time.addEvent({
-                delay: 1000,
-                repeat: 2,
+                delay: POISON_TICK_MS,
+                repeat: POISON_TICK_COUNT,
                 callback: () => {
                   if (enemy.state !== 'dead') {
                     enemy.applyDamage(poisonDmg, undefined, srcHero ?? undefined);

@@ -63,6 +63,7 @@ export class ResultScene extends Phaser.Scene {
         gold: run.gold,
         victory,
         timestamp: Date.now(),
+        floorsCompleted: (run.completedFloors?.length ?? 0) + (victory ? 1 : 0),
       });
 
       // Post-run achievement checks
@@ -154,7 +155,7 @@ export class ResultScene extends Phaser.Scene {
     // Gold reward — pops in with scale
     if (gold > 0) {
       const goldY = reason ? cy - 6 : cy - 28;
-      const gt = this.add.text(cx, goldY, `✦  +${gold} Gold  ✦`, {
+      const gt = this.add.text(cx, goldY, `✦  +◆${gold}  ✦`, {
         fontSize: '32px', fontFamily: 'Nunito, sans-serif', color: '#ffe070',
         stroke: '#000', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(15).setAlpha(0).setScale(1.4);
@@ -166,7 +167,7 @@ export class ResultScene extends Phaser.Scene {
 
     // Shard earn display
     if (shards > 0) {
-      const st = this.add.text(cx, cy + 74, `◆  +${shards} Shards`, {
+      const st = this.add.text(cx, cy + 74, `◆ +${shards}`, {
         fontSize: '18px', fontFamily: 'Nunito, sans-serif',
         color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);
@@ -212,7 +213,7 @@ export class ResultScene extends Phaser.Scene {
 
     // Shard earn display
     if (shards > 0) {
-      const st = this.add.text(cx, cy - 15, `◆  +${shards} Shards earned`, {
+      const st = this.add.text(cx, cy - 15, `◆ +${shards}`, {
         fontSize: '18px', fontFamily: 'Nunito, sans-serif',
         color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);

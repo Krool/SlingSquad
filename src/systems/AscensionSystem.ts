@@ -29,12 +29,12 @@ export function getUnlockedAscension(): number {
   return _ensure().unlockedLevel;
 }
 
-export function getHighestCleared(mapId: string): number {
+function getHighestCleared(mapId: string): number {
   return _ensure().highestCleared[mapId] ?? 0;
 }
 
 /** Called when a map is cleared. Unlocks next ascension if this was the highest. */
-export function recordClear(mapId: string, ascensionLevel: number): void {
+function recordClear(mapId: string, ascensionLevel: number): void {
   const d = _ensure();
   const prev = d.highestCleared[mapId] ?? 0;
   if (ascensionLevel > prev) {

@@ -5,7 +5,14 @@ import { Block } from '@/entities/Block';
 import { Barrel } from '@/entities/Barrel';
 import { Projectile } from '@/entities/Projectile';
 import { CombatSystem } from './CombatSystem';
-import { HERO_STATS, BARREL_EXPLOSION_FORCE } from '@/config/constants';
+import {
+  HERO_STATS, BARREL_EXPLOSION_FORCE,
+  IMPACT_FORCE_CAP, IMPACT_FORCE_FLOOR, IMPACT_FORCE_MULT,
+  IMPACT_RADIUS_WARRIOR, IMPACT_RADIUS_RANGER, IMPACT_RADIUS_PRIEST,
+  IMPACT_RADIUS_ROGUE, IMPACT_RADIUS_PALADIN, IMPACT_RADIUS_DRUID,
+  CHAIN_LIGHTNING_DAMAGE_MULT,
+  BLOCK_CRUSH_SPEED_THRESHOLD, BLOCK_CRUSH_RADIUS, BLOCK_CRUSH_DAMAGE,
+} from '@/config/constants';
 import { getRelicModifiers } from '@/systems/RunState';
 
 type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
@@ -41,7 +48,7 @@ export class ImpactSystem {
 
   /** Floor: 20 * mult. Cap: 70 * mult. Force-scaled landing damage helper. */
   private calcImpact(multiplier: number, materialBonus = 0): number {
-    const base = Math.min(70, this._impactForce * 0.4 + 20) * multiplier;
+    const base = Math.min(IMPACT_FORCE_CAP, this._impactForce * IMPACT_FORCE_MULT + IMPACT_FORCE_FLOOR) * multiplier;
     return base * (1 + this.relicMods.impactDamageBonus) * (1 + materialBonus);
   }
 
@@ -88,11 +95,11 @@ export class ImpactSystem {
     for (const b of blocks) {
       const bx = b.body.position.x, by = b.body.position.y;
       const d = Math.hypot(bx - x, by - y);
-      if (d > 80) continue;
+      if (d > IMPACT_RADIUS_WARRIOR) continue;
       // Stone damage bonus relic
       const matBonus = b.material === 'STONE' ? this.relicMods.stoneDamageBonus : 0;
       const mult = stats.impactDamageBonus * this.relicMods.warriorImpactMult;
-      const dealt = dmg * mult * (1 - d / 80) * (1 + matBonus);
+      const dealt = dmg * mult * (1 - d / IMPACT_RADIUS_WARRIOR) * (1 + matBonus);
       b.applyDamage(dealt);
       hero.battleBlockDamage += dealt;
       this.emitDamage(bx, by, dealt);
@@ -108,8 +115,8 @@ export class ImpactSystem {
     for (const e of enemies) {
       if (e.state === 'dead') continue;
       const d = Math.hypot(e.x - x, e.y - y);
-      if (d < 80) {
-        const dealt = dmg * (1 - d / 80);
+      if (d < IMPACT_RADIUS_WARRIOR) {
+        const dealt = dmg * (1 - d / IMPACT_RADIUS_WARRIOR);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
@@ -117,7 +124,7 @@ export class ImpactSystem {
     }
 
     this.spawnImpactParticles(x, y, 0xc0392b, 12);
-    this.spawnShockwave(x, y, 80, 0xc0392b);
+    this.spawnShockwave(x, y, IMPACT_RADIUS_WARRIOR, 0xc0392b);
   }
 
   // ─── RANGER ───────────────────────────────────────────────────────────────
@@ -125,12 +132,12 @@ export class ImpactSystem {
     const { x, y } = hero.body!.position;
     const stats = HERO_STATS.RANGER;
 
-    // Body-crash landing damage (1x warrior baseline, 70px radius)
+    // Body-crash landing damage
     const crashDmg = this.calcImpact(stats.impactMultiplier);
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
-      if (d < 70) {
-        const dealt = crashDmg * (1 - d / 70);
+      if (d < IMPACT_RADIUS_RANGER) {
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_RANGER);
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -139,8 +146,8 @@ export class ImpactSystem {
     for (const e of enemies) {
       if (e.state === 'dead') continue;
       const d = Math.hypot(e.x - x, e.y - y);
-      if (d < 70) {
-        const dealt = crashDmg * (1 - d / 70);
+      if (d < IMPACT_RADIUS_RANGER) {
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_RANGER);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
@@ -217,7 +224,7 @@ export class ImpactSystem {
     // Chain Lightning relic: chain to additional enemies outside the AoE
     if (this.relicMods.mageChainTargets > 0) {
       let chains = this.relicMods.mageChainTargets;
-      const chainDmg = mageDmg * 0.5;
+      const chainDmg = mageDmg * CHAIN_LIGHTNING_DAMAGE_MULT;
       for (const e of enemies) {
         if (chains <= 0) break;
         if (e.state === 'dead' || hitEnemies.includes(e)) continue;
@@ -247,12 +254,12 @@ export class ImpactSystem {
     const { x, y } = hero.body!.position;
     const stats = HERO_STATS.PRIEST;
 
-    // Small landing impact (0.5x warrior baseline, 90px radius)
+    // Small landing impact
     const crashDmg = this.calcImpact(stats.impactMultiplier);
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
-      if (d < 90) {
-        const dealt = crashDmg * (1 - d / 90);
+      if (d < IMPACT_RADIUS_PRIEST) {
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PRIEST);
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -261,8 +268,8 @@ export class ImpactSystem {
     for (const e of enemies) {
       if (e.state === 'dead') continue;
       const d = Math.hypot(e.x - x, e.y - y);
-      if (d < 90) {
-        const dealt = crashDmg * (1 - d / 90);
+      if (d < IMPACT_RADIUS_PRIEST) {
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PRIEST);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
@@ -367,8 +374,8 @@ export class ImpactSystem {
     // Landing damage in small radius
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
-      if (d < 60) {
-        const dealt = crashDmg * (1 - d / 60);
+      if (d < IMPACT_RADIUS_ROGUE) {
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_ROGUE);
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -377,19 +384,19 @@ export class ImpactSystem {
     for (const e of enemies) {
       if (e.state === 'dead') continue;
       const d = Math.hypot(e.x - x, e.y - y);
-      if (d < 60) {
+      if (d < IMPACT_RADIUS_ROGUE) {
         // Backstab passive: 2x damage if Rogue lands behind the enemy.
         // Enemies face left (flipX=true) by default. "Behind" = Rogue is to the enemy's right.
         const isBehind = x > e.x;
         const backstab = isBehind ? 2.0 : 1.0;
-        const dealt = crashDmg * (1 - d / 60) * backstab;
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_ROGUE) * backstab;
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
     this.spawnImpactParticles(x, y, 0x2c3e50, 8);
-    this.spawnShockwave(x, y, 60, 0x2c3e50);
+    this.spawnShockwave(x, y, IMPACT_RADIUS_ROGUE, 0x2c3e50);
   }
 
   // ─── PALADIN ─────────────────────────────────────────────────────────────
@@ -398,11 +405,11 @@ export class ImpactSystem {
     const stats = HERO_STATS.PALADIN;
     const crashDmg = this.calcImpact(stats.impactMultiplier);
 
-    // Heavy impact in 80px radius
+    // Heavy impact
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
-      if (d < 80) {
-        const dealt = crashDmg * (1 - d / 80);
+      if (d < IMPACT_RADIUS_PALADIN) {
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PALADIN);
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -411,8 +418,8 @@ export class ImpactSystem {
     for (const e of enemies) {
       if (e.state === 'dead') continue;
       const d = Math.hypot(e.x - x, e.y - y);
-      if (d < 80) {
-        const dealt = crashDmg * (1 - d / 80);
+      if (d < IMPACT_RADIUS_PALADIN) {
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PALADIN);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
@@ -429,7 +436,7 @@ export class ImpactSystem {
     }
 
     this.spawnImpactParticles(x, y, 0xf1c40f, 12);
-    this.spawnShockwave(x, y, 80, 0xf1c40f);
+    this.spawnShockwave(x, y, IMPACT_RADIUS_PALADIN, 0xf1c40f);
   }
 
   // ─── DRUID ──────────────────────────────────────────────────────────────
@@ -441,9 +448,9 @@ export class ImpactSystem {
     // Landing damage — Nature's Wrath passive: +30% to wood blocks
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
-      if (d < 70) {
+      if (d < IMPACT_RADIUS_DRUID) {
         const woodBonus = b.material === 'WOOD' ? 1.3 : 1.0;
-        const dealt = crashDmg * (1 - d / 70) * woodBonus;
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_DRUID) * woodBonus;
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -452,8 +459,8 @@ export class ImpactSystem {
     for (const e of enemies) {
       if (e.state === 'dead') continue;
       const d = Math.hypot(e.x - x, e.y - y);
-      if (d < 70) {
-        const dealt = crashDmg * (1 - d / 70);
+      if (d < IMPACT_RADIUS_DRUID) {
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_DRUID);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
@@ -539,11 +546,11 @@ export class ImpactSystem {
   handleBlockCrush(block: Block, heroes: Hero[], enemies: Enemy[]) {
     // Ignore spawn-time overlaps — only crush when the block is actually moving
     const blockSpeed = Math.hypot(block.body.velocity.x, block.body.velocity.y);
-    if (blockSpeed < 0.8) return;
+    if (blockSpeed < BLOCK_CRUSH_SPEED_THRESHOLD) return;
 
     const { x, y } = block.body.position;
-    const crushRadius = 55;
-    const crushDmg = 40;
+    const crushRadius = BLOCK_CRUSH_RADIUS;
+    const crushDmg = BLOCK_CRUSH_DAMAGE;
     for (const h of heroes) {
       if (h.state === 'dead') continue;
       const d = Math.hypot(h.x - x, h.y - y);

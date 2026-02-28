@@ -38,9 +38,10 @@ src/
   config/constants.ts     — ALL tuning values (physics, hero stats, enemy stats, materials)
   scenes/                 — 12 scenes (Boot, MainMenu, SquadSelect, Overworld, Battle, Shop, Result, CampUpgrades, Settings, Event, Forge, Codex)
   entities/               — Game objects (Hero, Enemy, Block, Barrel, Projectile, Coin)
-  systems/                — 15 systems (Launch, Combat, Impact, Timeout, RunState, MetaState, Audio, Music, Achievement, Mastery, Ascension, RunHistory, DiscoveryLog, Tutorial, DailyChallenge)
-  ui/                     — HUD components (SquadUI, DamageNumber)
-  data/                   — JSON data files (heroes, enemies, relics, nodes, upgrades, curses, events, achievements, modifiers)
+  config/types.ts         — Shared type definitions (GameBody interface for MatterJS bodies)
+  systems/                — 17 systems (Launch, Combat, Impact, Timeout, VFX, RunState, MetaState, Audio, Music, Achievement, Mastery, Ascension, RunHistory, DiscoveryLog, Tutorial, DailyChallenge, GameplaySettings)
+  ui/                     — HUD components (SquadUI, DamageNumber, ScrollablePanel)
+  data/                   — JSON data files (heroes, enemies, relics, nodes, upgrades, curses, events, achievements, modifiers) + campBuildings.ts
   data/maps/              — Alternate map definitions (frozen_peaks, infernal_keep) + index.ts registry
 assets/
   sprites/medievalrpgpack/ — Character sprite frames (gitignored)
@@ -61,7 +62,7 @@ public/                    — Static files: favicon.svg, .nojekyll, robots.txt,
 - **Sprite keys**: `{charKey}_{animName}_{frameN}` (e.g., `warrior_idle_1`)
 - **Animation keys**: `{charKey}_{animName}` (e.g., `warrior_idle`)
 - **Character mapping** (charKey→folder): warrior→WARRIOR, ranger→ASSASIN (sic), mage→SORCERESS, priest→NECROMANCER, bard→SORCERESS, grunt→BARBARIAN, ranged→CENTAUR, shield→WARRIOR, bomber→BARBARIAN, healer→NECROMANCER, boss_grunt→BARBARIAN
-- **localStorage keys**: `slingsquad_run_v1`, `slingsquad_meta_v1`, `slingsquad_audio_v1`, `slingsquad_music_v1`
+- **localStorage keys**: `slingsquad_run_v1`, `slingsquad_meta_v1`, `slingsquad_audio_v1`, `slingsquad_music_v1`, `slingsquad_gameplay_v1`, `slingsquad_achievements_v1`, `slingsquad_achievement_stats_v1`, `slingsquad_mastery_v1`, `slingsquad_ascension_v1`, `slingsquad_discovery_v1`, `slingsquad_stats_v1`, `slingsquad_tutorial_v1`, `slingsquad_daily_v1`, `slingsquad_squad_v1`
 
 ## Important Constraints
 
@@ -80,7 +81,7 @@ public/                    — Static files: favicon.svg, .nojekyll, robots.txt,
 ### Code Conventions
 - All balance/tuning values go in `src/config/constants.ts` — never hardcode magic numbers in systems or entities
 - **8 hero classes** (WARRIOR, RANGER, MAGE, PRIEST, BARD, ROGUE, PALADIN, DRUID) — BARD/ROGUE/PALADIN/DRUID unlocked=false by default
-- **6 enemy types** (GRUNT, RANGED, SHIELD, BOMBER, HEALER, BOSS_GRUNT) — new types reuse existing sprite folders
+- **6 base enemy types** (GRUNT, RANGED, SHIELD, BOMBER, HEALER, BOSS_GRUNT) + 6 map-specific variants (ICE_MAGE, YETI, FROST_ARCHER, FIRE_IMP, DEMON_KNIGHT, INFERNAL_BOSS) — all reuse existing sprite folders
 - **25 relics + 10 curses** — curses are negative relics (same system, `curse: true` flag, negative values)
 - Relic management: `addRelic()`, `removeRelic()`, `upgradeRelic()`, `getCurses()`, `getNonCurseRelics()`
 - Hero and Enemy classes use a state machine: `queued → flying → combat → dead` (heroes), `idle → combat → dead` (enemies)

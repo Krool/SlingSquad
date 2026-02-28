@@ -39,7 +39,7 @@ export function getTodayString(): string {
 }
 
 /** Generate a deterministic seed from a date string */
-export function getDailySeed(dateStr?: string): number {
+function getDailySeed(dateStr?: string): number {
   const s = dateStr ?? getTodayString();
   let hash = 0;
   for (let i = 0; i < s.length; i++) {
@@ -51,7 +51,7 @@ export function getDailySeed(dateStr?: string): number {
 }
 
 /** Simple seeded PRNG (mulberry32) */
-export function seededRandom(seed: number): () => number {
+function seededRandom(seed: number): () => number {
   let s = seed;
   return () => {
     s |= 0;
@@ -63,7 +63,7 @@ export function seededRandom(seed: number): () => number {
 }
 
 /** Get the daily challenge squad (fixed for the day) */
-export function getDailySquad(seed: number): string[] {
+function getDailySquad(seed: number): string[] {
   const rng = seededRandom(seed);
   const allClasses = ['WARRIOR', 'RANGER', 'MAGE', 'PRIEST'];
   // Always use the 4 base classes for daily, shuffled
@@ -76,7 +76,7 @@ export function getDailySquad(seed: number): string[] {
 }
 
 /** Get the daily map (rotates between the 3 maps) */
-export function getDailyMapId(seed: number): string {
+function getDailyMapId(seed: number): string {
   const maps = ['goblin_wastes', 'frozen_peaks', 'infernal_keep'];
   return maps[seed % maps.length];
 }
@@ -96,11 +96,11 @@ export function recordDailyScore(score: DailyScore): void {
   _save();
 }
 
-export function getTodaysBestScore(): DailyScore | null {
+function getTodaysBestScore(): DailyScore | null {
   const today = getTodayString();
   return _ensure().bestScores.find(s => s.date === today) ?? null;
 }
 
-export function getRecentScores(): DailyScore[] {
+function getRecentScores(): DailyScore[] {
   return [..._ensure().bestScores];
 }

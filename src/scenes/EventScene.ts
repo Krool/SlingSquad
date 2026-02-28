@@ -74,11 +74,11 @@ export class EventScene extends Phaser.Scene {
     const run = getRunState();
     this.goldPanel = this.add.graphics().setDepth(10);
     this.goldPanel.fillStyle(0x0d1117, 0.9);
-    this.goldPanel.fillRoundedRect(18, 18, 180, 44, 7);
+    this.goldPanel.fillRoundedRect(18, 18, 120, 44, 7);
     this.goldPanel.lineStyle(1, 0xf1c40f, 0.4);
-    this.goldPanel.strokeRoundedRect(18, 18, 180, 44, 7);
+    this.goldPanel.strokeRoundedRect(18, 18, 120, 44, 7);
 
-    this.goldLabel = this.add.text(32, 32, `◆  ${run.gold} Gold`, {
+    this.goldLabel = this.add.text(32, 32, `◆ ${run.gold}`, {
       fontSize: '24px', fontFamily: 'Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
     }).setDepth(11);
@@ -86,7 +86,7 @@ export class EventScene extends Phaser.Scene {
 
   private refreshGoldHUD() {
     const run = getRunState();
-    this.goldLabel.setText(`◆  ${run.gold} Gold`);
+    this.goldLabel.setText(`◆ ${run.gold}`);
   }
 
   // ── Background ─────────────────────────────────────────────────────────────
@@ -170,13 +170,13 @@ export class EventScene extends Phaser.Scene {
       case 'RELIC_AND_CURSE':
         return { text: 'Relic + Curse', color: 0xe67e22 };
       case 'BUY_RELIC':
-        return { text: `-${outcome.cost ?? 0}g \u2192 Relic`, color: 0x3498db };
+        return { text: `◆${outcome.cost ?? 0} \u2192 Relic`, color: 0x3498db };
       case 'FREE_RELIC':
         return { text: '\u2726 Free Relic', color: 0x2ecc71 };
       case 'GOLD_AND_CURSE':
-        return { text: `+${outcome.gold ?? 0}g + Curse`, color: 0xe67e22 };
+        return { text: `+◆${outcome.gold ?? 0} + Curse`, color: 0xe67e22 };
       case 'GOLD':
-        return { text: `+${outcome.gold ?? 0}g`, color: 0x2ecc71 };
+        return { text: `+◆${outcome.gold ?? 0}`, color: 0x2ecc71 };
       case 'REMOVE_CURSE':
         return { text: '\u2726 Cleanse', color: 0x9b59b6 };
       case 'UPGRADE_RELIC':
@@ -195,7 +195,7 @@ export class EventScene extends Phaser.Scene {
       case 'HEAL_ALL':
         return { text: '\u2665 Full Heal', color: 0x2ecc71 };
       case 'BUY_UPGRADE':
-        return { text: `-${outcome.cost ?? 0}g \u2192 Upgrade`, color: 0x3498db };
+        return { text: `◆${outcome.cost ?? 0} \u2192 Upgrade`, color: 0x3498db };
       default:
         return { text: '...', color: 0x555555 };
     }
@@ -336,7 +336,7 @@ export class EventScene extends Phaser.Scene {
 
       case 'BUY_RELIC': {
         if (outcome.cost && outcome.cost > 0) {
-          if (!spendGold(outcome.cost)) { resultText = 'Not enough gold!'; break; }
+          if (!spendGold(outcome.cost)) { resultText = 'Not enough ◆!'; break; }
         }
         const rarity = (outcome.rarity as 'common' | 'uncommon' | 'rare') ?? 'common';
         const relic = this.getRandomRelic(rarity);
@@ -357,7 +357,7 @@ export class EventScene extends Phaser.Scene {
         const gold = outcome.gold ?? 0;
         run.gold += gold;
         const curse = this.getRandomCurse();
-        resultText = `+${gold} Gold`;
+        resultText = `+◆${gold}`;
         if (curse) { this.addRelicTracked(curse); resultText += `\nCursed: ${curse.name}`; }
         break;
       }
@@ -365,7 +365,7 @@ export class EventScene extends Phaser.Scene {
       case 'GOLD': {
         const gold = outcome.gold ?? 0;
         run.gold += gold;
-        resultText = `+${gold} Gold`;
+        resultText = `+◆${gold}`;
         break;
       }
 
@@ -416,12 +416,12 @@ export class EventScene extends Phaser.Scene {
       case 'GAMBLE': {
         const cost = outcome.cost ?? 0;
         const reward = outcome.reward ?? 0;
-        if (!spendGold(cost)) { resultText = 'Not enough gold!'; break; }
+        if (!spendGold(cost)) { resultText = 'Not enough ◆!'; break; }
         if (Math.random() < 0.5) {
           run.gold += reward;
-          resultText = `Won +${reward} Gold!`;
+          resultText = `Won +◆${reward}!`;
         } else {
-          resultText = `Lost ${cost} Gold...`;
+          resultText = `Lost ◆${cost}...`;
         }
         break;
       }
@@ -450,7 +450,7 @@ export class EventScene extends Phaser.Scene {
 
       case 'BUY_UPGRADE': {
         if (outcome.cost && outcome.cost > 0) {
-          if (!spendGold(outcome.cost)) { resultText = 'Not enough gold!'; break; }
+          if (!spendGold(outcome.cost)) { resultText = 'Not enough ◆!'; break; }
         }
         const relics = getNonCurseRelics();
         if (relics.length > 0) {
@@ -509,7 +509,7 @@ export class EventScene extends Phaser.Scene {
     if (t.includes('upgraded')) return { icon: '\u25b2', color: '#3498db' };
     if (t.includes('removed')) return { icon: '\u2726', color: '#9b59b6' };
     if (t.includes('heal')) return { icon: '\u2665', color: '#2ecc71' };
-    if (t.includes('gold') || /\+\d+g/.test(t)) return { icon: '\u25c6', color: '#f1c40f' };
+    if (t.includes('◆') && !t.includes('not enough')) return { icon: '\u25c6', color: '#f1c40f' };
     if (t.includes('gained') || t.includes('relic')) return { icon: '\u2726', color: '#2ecc71' };
     return { icon: '\u25cf', color: '#ffffff' };
   }

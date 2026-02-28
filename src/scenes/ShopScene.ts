@@ -189,11 +189,11 @@ export class ShopScene extends Phaser.Scene {
     const run = getRunState();
     this.goldPanel = this.add.graphics().setDepth(10);
     this.goldPanel.fillStyle(0x0d1117, 0.9);
-    this.goldPanel.fillRoundedRect(18, 18, 180, 44, 7);
+    this.goldPanel.fillRoundedRect(18, 18, 120, 44, 7);
     this.goldPanel.lineStyle(1, 0xf1c40f, 0.4);
-    this.goldPanel.strokeRoundedRect(18, 18, 180, 44, 7);
+    this.goldPanel.strokeRoundedRect(18, 18, 120, 44, 7);
 
-    this.goldLabel = this.add.text(32, 32, `◆  ${run.gold} Gold`, {
+    this.goldLabel = this.add.text(32, 32, `◆ ${run.gold}`, {
       fontSize: '24px', fontFamily: 'Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
     }).setDepth(11);
@@ -201,7 +201,7 @@ export class ShopScene extends Phaser.Scene {
 
   private refreshGoldHUD() {
     const run = getRunState();
-    this.goldLabel.setText(`◆  ${run.gold} Gold`);
+    this.goldLabel.setText(`◆ ${run.gold}`);
   }
 
   // ── Pick 3 random relics the player doesn't have ───────────────────────────
@@ -315,9 +315,7 @@ export class ShopScene extends Phaser.Scene {
     // ── Buy / Take button ────────────────────────────────────────────────────
     const btnY = h / 2 - 36;
     const btnLabel = this.isFree ? 'TAKE' : `BUY  ◆${cost}`;
-    const btnCol = canAfford
-      ? (this.isFree ? 0xf1c40f : 0x27ae60)
-      : 0x2a2a2a;
+    const btnCol = canAfford ? 0xf1c40f : 0x2a2a2a;
 
     const btnGfx = this.add.graphics();
     btnGfx.fillStyle(btnCol, canAfford ? 0.9 : 0.4);

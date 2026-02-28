@@ -9,7 +9,7 @@ import { newRun, addRelic, clearSave, type NodeDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import type { MetaBonuses } from '@/systems/MetaState';
 import nodesData from '@/data/nodes.json';
-import { getAllMaps, getMapById } from '@/data/maps/index';
+import { getAllMaps, getMapById, getFloorSequence } from '@/data/maps/index';
 import { getUnlockedAscension } from '@/systems/AscensionSystem';
 
 const SAVE_KEY = 'slingsquad_squad_v1';
@@ -783,12 +783,14 @@ export class SquadSelectScene extends Phaser.Scene {
     } catch { /* ignore */ }
 
     clearSave();
-    // Load nodes from selected map
+    // Build 3-floor sequence and load first floor's nodes
+    const floorMapIds = getFloorSequence(this._selectedMapId);
     const mapDef = getMapById(this._selectedMapId);
     const nodes = mapDef ? (mapDef.nodes as NodeDef[]) : (nodesData.nodes as NodeDef[]);
     newRun(nodes, squad, this._meta, this._selectedMapId, {
       ascensionLevel: this._ascensionLevel,
       modifiers: this._activeModifiers,
+      floorMapIds,
     });
 
     // Inject starting relic if purchased

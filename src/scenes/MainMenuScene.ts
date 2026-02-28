@@ -1,11 +1,16 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
+import {
+  GAME_WIDTH, GAME_HEIGHT,
+  CAMP_SHOOTING_STAR_MIN_INTERVAL, CAMP_SHOOTING_STAR_MAX_INTERVAL,
+  CAMP_SHOOTING_STAR_COLOR, HERO_STATS, HERO_PASSIVES,
+} from '@/config/constants';
+import type { HeroClass } from '@/config/constants';
 import {
   getShards, earnShards, getMetaBonuses, getPurchaseCount,
 } from '@/systems/MetaState';
 import { hasSavedRun } from '@/systems/RunState';
 import { Hero } from '@/entities/Hero';
-import { CAMP_STRUCTURES, LAYER_CFG } from '@/data/campBuildings';
+import { CAMP_STRUCTURES, CAMP_ALWAYS_VISIBLE, LAYER_CFG } from '@/data/campBuildings';
 import type { ParallaxLayer } from '@/data/campBuildings';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
@@ -13,6 +18,13 @@ import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
 interface MainMenuData {
   shardsEarned?: number;
   fromDefeat?: boolean;
+}
+
+interface BuildingHitZone {
+  x: number; y: number; w: number; h: number;
+  name: string; desc: string;
+  level?: number; maxLevel?: number;
+  depth: number;
 }
 
 const CAMP_SLING_X = 140;
@@ -42,6 +54,9 @@ export class MainMenuScene extends Phaser.Scene {
   private _dragStartX = 0;
   private _dragStartY = 0;
   private _slingWaitStart = 0;
+  private _buildingHitZones: BuildingHitZone[] = [];
+  private _tooltipContainer: Phaser.GameObjects.Container | null = null;
+  private _tooltipTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor() {
     super({ key: 'MainMenuScene' });
@@ -61,7 +76,9 @@ export class MainMenuScene extends Phaser.Scene {
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
     this.buildBackground();
+    this.scheduleShootingStar();
     this.buildCampStructures();
+    this.buildBuildingHitZones();
     this.buildCampSling();
     this.buildHeroSprites();
     this.setupSlingInput();
@@ -150,7 +167,9 @@ export class MainMenuScene extends Phaser.Scene {
     for (const g of this._layerGfx) { this.tweens.killTweensOf(g); g.destroy(); }
     this._layerGfx = [];
     if (this._fireGfx) { this.tweens.killTweensOf(this._fireGfx); this._fireGfx.destroy(); this._fireGfx = null; }
+    this.dismissTooltip();
     this.buildCampStructures();
+    this.buildBuildingHitZones();
     this.buildCampSling();
     // Rebuild heroes (new unlocks)
     this.destroyHeroes();
@@ -223,49 +242,173 @@ export class MainMenuScene extends Phaser.Scene {
     bg.fillCircle(GAME_WIDTH - 130, 74, 20);
   }
 
+  // ── Shooting Stars ──────────────────────────────────────────────────────
+  private scheduleShootingStar() {
+    const delay = Phaser.Math.Between(CAMP_SHOOTING_STAR_MIN_INTERVAL, CAMP_SHOOTING_STAR_MAX_INTERVAL);
+    this.time.delayedCall(delay, () => {
+      this.spawnShootingStar();
+      this.scheduleShootingStar();
+    });
+  }
+
+  private spawnShootingStar() {
+    const startX = Phaser.Math.Between(50, GAME_WIDTH - 200);
+    const startY = Phaser.Math.Between(20, GAME_HEIGHT * 0.3);
+    const endX = startX + Phaser.Math.Between(200, 400);
+    const endY = startY + Phaser.Math.Between(80, 200);
+    const color = CAMP_SHOOTING_STAR_COLOR;
+    const duration = Phaser.Math.Between(400, 700);
+    const tailLen = 10;
+
+    const g = this.add.graphics().setDepth(0.5);
+    this.tweens.add({
+      targets: { t: 0 },
+      t: 1,
+      duration,
+      onUpdate: (_tw: Phaser.Tweens.Tween, obj: { t: number }) => {
+        const t = obj.t;
+        const cx = startX + (endX - startX) * t;
+        const cy = startY + (endY - startY) * t;
+        g.clear();
+        for (let i = 0; i < tailLen; i++) {
+          const tt = Math.max(0, t - i * 0.015);
+          const tx = startX + (endX - startX) * tt;
+          const ty = startY + (endY - startY) * tt;
+          const r = Math.max(0.5, 3 - i * 0.3);
+          const a = Math.max(0, 1 - i / tailLen) * (1 - t * 0.3);
+          g.fillStyle(color, a);
+          g.fillCircle(tx, ty, r);
+        }
+        g.fillStyle(0xffffff, 1 - t * 0.4);
+        g.fillCircle(cx, cy, 2.5);
+      },
+      onComplete: () => g.destroy(),
+    });
+  }
+
   // ── Camp structures (parallax layers) ─────────────────────────────────
   private buildCampStructures() {
     this._layerGfx = [];
+    this._buildingHitZones = [];
     const midY = LAYER_CFG.mid.y;
 
     // ── Middle layer (always: hut + log) ──
     const midGfx = this.add.graphics().setDepth(LAYER_CFG.mid.depth);
     this._layerGfx.push(midGfx);
 
-    // Hut
+    // Hut — enhanced with window, chimney, wood grain
+    // Shadow
+    midGfx.fillStyle(0x000000, 0.15);
+    midGfx.fillEllipse(200, midY, 70, 10);
+    // Walls
     midGfx.fillStyle(0x6b5030, 1);
     midGfx.fillRect(170, midY - 50, 60, 50);
     midGfx.lineStyle(1, 0x4a3820, 1);
     midGfx.strokeRect(170, midY - 50, 60, 50);
+    // Wood grain lines
+    midGfx.lineStyle(1, 0x5a4020, 0.3);
+    midGfx.lineBetween(172, midY - 30, 228, midY - 30);
+    midGfx.lineBetween(172, midY - 18, 228, midY - 18);
+    // Roof
     midGfx.fillStyle(0x8b6914, 1);
     midGfx.fillTriangle(165, midY - 50, 200, midY - 72, 235, midY - 50);
+    // Roof edge highlight
+    midGfx.lineStyle(1, 0xa07a20, 0.4);
+    midGfx.lineBetween(165, midY - 50, 200, midY - 72);
+    // Door
     midGfx.fillStyle(0x3a2810, 1);
     midGfx.fillRect(190, midY - 22, 14, 22);
+    // Window (warm glow)
+    midGfx.fillStyle(0xd4a030, 0.6);
+    midGfx.fillRect(175, midY - 42, 10, 10);
+    midGfx.lineStyle(1, 0x5a4020, 0.8);
+    midGfx.strokeRect(175, midY - 42, 10, 10);
+    midGfx.lineBetween(180, midY - 42, 180, midY - 32);
+    midGfx.lineBetween(175, midY - 37, 185, midY - 37);
+    // Chimney
+    midGfx.fillStyle(0x5a5a6a, 1);
+    midGfx.fillRect(215, midY - 68, 8, 18);
+    midGfx.fillStyle(0x6a6a7a, 1);
+    midGfx.fillRect(213, midY - 70, 12, 4);
+
+    // Hut tooltip hitzone
+    this._buildingHitZones.push({
+      x: 200, y: midY - 35, w: 70, h: 72,
+      name: 'Camp Hut', desc: 'Home sweet home. Your base of operations.',
+      depth: LAYER_CFG.mid.depth,
+    });
 
     // Log beside fire
     midGfx.fillStyle(0x5a4020, 1);
     midGfx.fillRect(264, midY - 6, 32, 6);
+    midGfx.lineStyle(1, 0x4a3018, 0.4);
+    midGfx.lineBetween(266, midY - 4, 294, midY - 4);
 
-    // Campfire (separate gfx for pulse tween)
+    // Campfire — enhanced with more flame layers + stone ring
     this._fireGfx = this.add.graphics().setDepth(LAYER_CFG.mid.depth);
-    this._fireGfx.fillStyle(0xff6600, 0.3);
-    this._fireGfx.fillCircle(280, midY - 6, 18);
-    this._fireGfx.fillStyle(0xff4400, 0.5);
-    this._fireGfx.fillCircle(280, midY - 8, 8);
-    this._fireGfx.fillStyle(0xffaa00, 0.7);
-    this._fireGfx.fillCircle(280, midY - 10, 4);
+    // Stone ring
+    this._fireGfx.fillStyle(0x4a4a5a, 0.6);
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      this._fireGfx.fillCircle(280 + Math.cos(angle) * 12, midY - 4 + Math.sin(angle) * 5, 3);
+    }
+    // Glow base
+    this._fireGfx.fillStyle(0xff6600, 0.25);
+    this._fireGfx.fillCircle(280, midY - 6, 20);
+    // Outer flame
+    this._fireGfx.fillStyle(0xff4400, 0.4);
+    this._fireGfx.fillCircle(280, midY - 8, 10);
+    // Mid flame
+    this._fireGfx.fillStyle(0xff6600, 0.6);
+    this._fireGfx.fillCircle(280, midY - 10, 6);
+    // Core
+    this._fireGfx.fillStyle(0xffaa00, 0.8);
+    this._fireGfx.fillCircle(280, midY - 12, 3);
+    // Hot white center
+    this._fireGfx.fillStyle(0xfff0a0, 0.5);
+    this._fireGfx.fillCircle(280, midY - 13, 1.5);
     this.tweens.add({
       targets: this._fireGfx, alpha: 0.7, duration: 800,
       yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
+    // Campfire tooltip hitzone
+    this._buildingHitZones.push({
+      x: 280, y: midY - 10, w: 40, h: 30,
+      name: 'Campfire', desc: 'Gather round. Keeps the night at bay.',
+      depth: LAYER_CFG.mid.depth,
+    });
+
+    // ── Always-visible buildings ──
+    const alwaysByLayer = new Map<ParallaxLayer, typeof CAMP_ALWAYS_VISIBLE>();
+    for (const bldg of CAMP_ALWAYS_VISIBLE) {
+      if (!alwaysByLayer.has(bldg.layer)) alwaysByLayer.set(bldg.layer, []);
+      alwaysByLayer.get(bldg.layer)!.push(bldg);
+    }
+
+    for (const [layerKey, items] of alwaysByLayer.entries()) {
+      const lcfg = LAYER_CFG[layerKey];
+      // Mid-layer always-visible buildings go on the existing midGfx
+      const g = layerKey === 'mid' ? midGfx : this.add.graphics().setDepth(lcfg.depth).setAlpha(lcfg.alpha);
+      if (layerKey !== 'mid') this._layerGfx.push(g);
+      for (const bldg of items) {
+        bldg.buildFn(g, bldg.x, lcfg.y);
+        this._buildingHitZones.push({
+          x: bldg.x, y: lcfg.y - bldg.hitH / 2,
+          w: bldg.hitW, h: bldg.hitH,
+          name: bldg.name, desc: bldg.desc,
+          depth: lcfg.depth,
+        });
+      }
+    }
+
     // ── Per-upgrade structures on their assigned layers ──
-    const byLayer = new Map<ParallaxLayer, Array<{ x: number; buildFn: (typeof CAMP_STRUCTURES)[string]['buildFn']; count: number }>>();
+    const byLayer = new Map<ParallaxLayer, Array<{ x: number; buildFn: (typeof CAMP_STRUCTURES)[string]['buildFn']; count: number; def: (typeof CAMP_STRUCTURES)[string] }>>();
     for (const [id, cfg] of Object.entries(CAMP_STRUCTURES)) {
       const count = getPurchaseCount(id);
       if (count === 0) continue;
       if (!byLayer.has(cfg.layer)) byLayer.set(cfg.layer, []);
-      byLayer.get(cfg.layer)!.push({ x: cfg.x, buildFn: cfg.buildFn, count });
+      byLayer.get(cfg.layer)!.push({ x: cfg.x, buildFn: cfg.buildFn, count, def: cfg });
     }
 
     for (const [layerKey, items] of byLayer.entries()) {
@@ -274,6 +417,13 @@ export class MainMenuScene extends Phaser.Scene {
       this._layerGfx.push(g);
       for (const item of items) {
         item.buildFn(g, item.x, lcfg.y, item.count);
+        this._buildingHitZones.push({
+          x: item.x, y: lcfg.y - item.def.hitH / 2,
+          w: item.def.hitW, h: item.def.hitH,
+          name: item.def.name, desc: item.def.desc,
+          level: item.count, maxLevel: item.def.maxLevel,
+          depth: lcfg.depth,
+        });
       }
     }
   }
@@ -445,12 +595,18 @@ export class MainMenuScene extends Phaser.Scene {
 
       const sprite = this.add.sprite(hx, hy, `${key}_idle_1`)
         .setDisplaySize(50, 50)
-        .setDepth(4); // between mid (3) and fg (5)
+        .setDepth(4) // between mid (3) and fg (5)
+        .setInteractive({ useHandCursor: true });
 
       const animKey = `${key}_idle`;
       if (this.anims.exists(animKey)) sprite.play(animKey);
       const classTint = Hero.CLASS_TINT[key.toUpperCase() as import('@/config/constants').HeroClass];
       if (classTint) sprite.setTint(classTint);
+
+      sprite.on('pointerdown', () => {
+        if (this._dragging) return;
+        this.showHeroTooltip(key, sprite.x, sprite.y);
+      });
 
       this._heroStates.push({
         sprite,
@@ -460,6 +616,118 @@ export class MainMenuScene extends Phaser.Scene {
         walking: false,
         slingState: 'none',
       });
+    }
+  }
+
+  // ── Building hit zones (click for tooltip) ──────────────────────────────
+  private buildBuildingHitZones() {
+    for (const zone of this._buildingHitZones) {
+      const hit = this.add.rectangle(zone.x, zone.y + zone.h / 2, zone.w, zone.h, 0x000000, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(zone.depth + 0.5);
+      this._layerGfx.push(hit as unknown as Phaser.GameObjects.Graphics); // cleaned up on resume
+      hit.on('pointerdown', () => {
+        if (this._dragging) return;
+        this.showBuildingTooltip(zone.x, zone.y, zone.name, zone.desc, zone.level, zone.maxLevel);
+      });
+    }
+  }
+
+  private showBuildingTooltip(x: number, y: number, name: string, desc: string, level?: number, maxLevel?: number) {
+    this.dismissTooltip();
+    const pw = 220, ph = level !== undefined ? 80 : 64, pr = 8;
+    const tx = Phaser.Math.Clamp(x, pw / 2 + 10, GAME_WIDTH - pw / 2 - 10);
+    const ty = Math.max(y - 10, ph + 10);
+
+    const container = this.add.container(tx, ty - ph).setDepth(30).setAlpha(0);
+    this._tooltipContainer = container;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a1220, 0.94);
+    bg.fillRoundedRect(-pw / 2, 0, pw, ph, pr);
+    bg.lineStyle(1, 0xc0a060, 0.6);
+    bg.strokeRoundedRect(-pw / 2, 0, pw, ph, pr);
+    container.add(bg);
+
+    container.add(this.add.text(0, 10, name, {
+      fontSize: '16px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+      color: '#c0a060', stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 0));
+
+    container.add(this.add.text(0, 30, desc, {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
+      wordWrap: { width: pw - 24 }, align: 'center',
+    }).setOrigin(0.5, 0));
+
+    if (level !== undefined && maxLevel !== undefined) {
+      const dots: string[] = [];
+      for (let i = 0; i < maxLevel; i++) dots.push(i < level ? '\u25c6' : '\u25c7');
+      container.add(this.add.text(0, ph - 18, dots.join(' '), {
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#c0a060',
+      }).setOrigin(0.5, 0));
+    }
+
+    this.tweens.add({ targets: container, alpha: 1, y: ty - ph - 6, duration: 150 });
+    this._tooltipTimer = this.time.delayedCall(3000, () => this.dismissTooltip());
+  }
+
+  private showHeroTooltip(heroKey: string, x: number, y: number) {
+    this.dismissTooltip();
+    const cls = heroKey.toUpperCase() as HeroClass;
+    const stats = HERO_STATS[cls];
+    const passive = HERO_PASSIVES[cls];
+    if (!stats) return;
+
+    const pw = 230, pr = 8;
+    const lines: string[] = [
+      `HP: ${stats.hp}   DMG: ${stats.combatDamage}   Range: ${stats.combatRange}`,
+    ];
+    if (passive) lines.push(`${passive.name}: ${passive.desc}`);
+    const ph = 50 + lines.length * 18;
+
+    const tx = Phaser.Math.Clamp(x, pw / 2 + 10, GAME_WIDTH - pw / 2 - 10);
+    const ty = Math.max(y - 20, ph + 10);
+
+    const container = this.add.container(tx, ty - ph).setDepth(30).setAlpha(0);
+    this._tooltipContainer = container;
+
+    const borderColor = stats.color ?? 0xc0a060;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a1220, 0.94);
+    bg.fillRoundedRect(-pw / 2, 0, pw, ph, pr);
+    bg.lineStyle(1.5, borderColor, 0.7);
+    bg.strokeRoundedRect(-pw / 2, 0, pw, ph, pr);
+    container.add(bg);
+
+    container.add(this.add.text(0, 10, stats.label, {
+      fontSize: '17px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+      color: '#' + borderColor.toString(16).padStart(6, '0'),
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 0));
+
+    container.add(this.add.text(0, 32, lines[0], {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
+    }).setOrigin(0.5, 0));
+
+    if (lines[1]) {
+      container.add(this.add.text(0, 50, lines[1], {
+        fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
+        wordWrap: { width: pw - 20 }, align: 'center',
+      }).setOrigin(0.5, 0));
+    }
+
+    this.tweens.add({ targets: container, alpha: 1, y: ty - ph - 6, duration: 150 });
+    this._tooltipTimer = this.time.delayedCall(4000, () => this.dismissTooltip());
+  }
+
+  private dismissTooltip() {
+    if (this._tooltipTimer) {
+      this._tooltipTimer.destroy();
+      this._tooltipTimer = null;
+    }
+    if (this._tooltipContainer) {
+      this._tooltipContainer.destroy();
+      this._tooltipContainer = null;
     }
   }
 
@@ -573,19 +841,6 @@ export class MainMenuScene extends Phaser.Scene {
       },
     });
 
-    // ── Subtitle — fades in after fling completes ──
-    const subtitle = this.add.text(GAME_WIDTH / 2, finalY + 34, 'Ready Your Sling', {
-      fontSize: '18px', fontFamily: 'Nunito, sans-serif',
-      color: '#8a9ab0', fontStyle: 'italic',
-    }).setOrigin(0.5).setDepth(10).setAlpha(0);
-
-    this.tweens.add({
-      targets: subtitle,
-      alpha: 0.8,
-      duration: 600,
-      delay: 1800, // after pull (350) + fling (1200) + settle
-      ease: 'Sine.easeIn',
-    });
   }
 
   // ── Shimmer sweep across title ────────────────────────────────────────

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import nodesData from '@/data/nodes.json';
 import type { MusicSystem } from '@/systems/MusicSystem';
-import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, type NodeDef, type RelicDef } from '@/systems/RunState';
+import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, advanceFloor, isRunFullyComplete, getCurrentFloorDisplay, type NodeDef, type RelicDef } from '@/systems/RunState';
 import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
 import { getMapById } from '@/data/maps/index';
@@ -124,10 +124,16 @@ export class OverworldScene extends Phaser.Scene {
       if (hit.length === 0) this.clearTouchSelection();
     });
 
-    // Run complete: no active (non-locked) nodes remain unfinished
-    const isComplete = this.isRunComplete();
-    if (isComplete) {
-      this.time.delayedCall(400, () => this.buildRunCompleteOverlay());
+    // Floor/Run complete detection
+    const floorDone = this.isRunComplete();
+    if (floorDone) {
+      if (isRunFullyComplete()) {
+        // All floors done — final run complete overlay
+        this.time.delayedCall(400, () => this.buildRunCompleteOverlay());
+      } else {
+        // Current floor done but more floors remain
+        this.time.delayedCall(400, () => this.buildFloorCompleteOverlay());
+      }
     } else if (data?.fromBattle) {
       this.showAvailableGlow();
     }
@@ -544,7 +550,7 @@ export class OverworldScene extends Phaser.Scene {
     const lines: string[] = [];
 
     if (node.enemies && node.enemies.length > 0) lines.push(this.formatEnemies(node.enemies));
-    if (node.gold && node.gold > 0)              lines.push(`◆  ${node.gold} Gold reward`);
+    if (node.gold && node.gold > 0)              lines.push(`◆ ${node.gold} reward`);
     if (node.type === 'REWARD')                  lines.push('Free relic pick');
     if (node.type === 'SHOP')                    lines.push('Spend gold on relics');
     if (node.type === 'EVENT')                   lines.push('Random encounter — choose wisely');
@@ -686,19 +692,23 @@ export class OverworldScene extends Phaser.Scene {
 
     const goldPanel = this.add.graphics().setDepth(20);
     goldPanel.fillStyle(0x060b12, 0.92);
-    goldPanel.fillRoundedRect(12, 58, 168, 40, 7);
+    goldPanel.fillRoundedRect(12, 58, 120, 40, 7);
     goldPanel.lineStyle(1, 0xf1c40f, 0.35);
-    goldPanel.strokeRoundedRect(12, 58, 168, 40, 7);
+    goldPanel.strokeRoundedRect(12, 58, 120, 40, 7);
 
-    this.goldText = this.add.text(26, 70, `◆  ${run.gold} Gold`, {
+    this.goldText = this.add.text(26, 70, `◆ ${run.gold}`, {
       fontSize: '24px', fontFamily: 'Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
     }).setDepth(21);
 
-    const runPanel = this.add.graphics().setDepth(20);
-    runPanel.fillStyle(0x060b12, 0.88);
-    runPanel.fillRoundedRect(GAME_WIDTH - 120, 58, 108, 36, 6);
-    this.add.text(GAME_WIDTH - 64, 76, 'RUN 1', {
+    // Floor indicator (right side)
+    const floorLabel = run.totalFloors > 1 ? getCurrentFloorDisplay() : 'RUN 1';
+    const floorPanel = this.add.graphics().setDepth(20);
+    floorPanel.fillStyle(0x060b12, 0.88);
+    floorPanel.fillRoundedRect(GAME_WIDTH - 132, 58, 120, 40, 7);
+    floorPanel.lineStyle(1, 0x5a7a9a, 0.35);
+    floorPanel.strokeRoundedRect(GAME_WIDTH - 132, 58, 120, 40, 7);
+    this.add.text(GAME_WIDTH - 72, 78, floorLabel, {
       fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
     }).setOrigin(0.5).setDepth(21);
 
@@ -1197,7 +1207,7 @@ export class OverworldScene extends Phaser.Scene {
 
   // ── Settings button (top-left) ─────────────────────────────────────────────
   private buildSettingsButton() {
-    const size = 44, r = 8;
+    const size = 72, r = 12;
     const bg = this.add.graphics().setDepth(30);
     const draw = (hovered: boolean) => {
       bg.clear();
@@ -1208,7 +1218,7 @@ export class OverworldScene extends Phaser.Scene {
     };
     draw(false);
     this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
+      fontSize: '34px', fontFamily: 'Nunito, sans-serif',
     }).setOrigin(0.5).setDepth(31);
 
     const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
@@ -1264,6 +1274,103 @@ export class OverworldScene extends Phaser.Scene {
     }
   }
 
+  // ── Floor complete overlay (more floors remain) ──────────────────────────
+  private buildFloorCompleteOverlay() {
+    const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
+    const run = getRunState();
+    const nextFloor = run.currentFloor + 1;
+    const nextMapId = run.floorMapIds[nextFloor];
+    const nextMap = getMapById(nextMapId);
+    const nextMapName = nextMap?.name ?? nextMapId;
+
+    // Dark veil
+    const veil = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000)
+      .setDepth(50).setAlpha(0);
+    this.tweens.add({ targets: veil, alpha: 0.8, duration: 500 });
+
+    // Top glow
+    const glow = this.add.graphics().setDepth(51).setAlpha(0);
+    glow.fillGradientStyle(0x3498db, 0x3498db, 0x000000, 0x000000, 0.15, 0.15, 0, 0);
+    glow.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT * 0.55);
+    this.tweens.add({ targets: glow, alpha: 1, duration: 700, delay: 200 });
+
+    // Title
+    const title = this.add.text(cx, cy - 100, `FLOOR ${run.currentFloor + 1} COMPLETE`, {
+      fontSize: '56px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      color: '#3498db', stroke: '#0a1a30', strokeThickness: 6,
+      letterSpacing: 4,
+    }).setOrigin(0.5).setDepth(52).setAlpha(0);
+    this.tweens.add({
+      targets: title, y: cy - 130, alpha: 1,
+      duration: 650, ease: 'Back.easeOut', delay: 280,
+    });
+
+    // Floor progress dots
+    const dotY = cy - 60;
+    for (let i = 0; i < run.totalFloors; i++) {
+      const dotX = cx - ((run.totalFloors - 1) * 30) / 2 + i * 30;
+      const done = i <= run.currentFloor;
+      const dot = this.add.graphics().setDepth(52).setAlpha(0);
+      dot.fillStyle(done ? 0x3498db : 0x2a3a4a, 1);
+      dot.fillCircle(dotX, dotY, done ? 8 : 6);
+      if (done) {
+        dot.lineStyle(2, 0x5ab8e8, 0.8);
+        dot.strokeCircle(dotX, dotY, 8);
+      }
+      this.tweens.add({ targets: dot, alpha: 1, duration: 300, delay: 600 + i * 100 });
+
+      // Floor number label
+      const numText = this.add.text(dotX, dotY + 18, `${i + 1}`, {
+        fontSize: '12px', fontFamily: 'Nunito, sans-serif',
+        color: done ? '#5ab8e8' : '#3a4a5a',
+      }).setOrigin(0.5).setDepth(52).setAlpha(0);
+      this.tweens.add({ targets: numText, alpha: 1, duration: 300, delay: 600 + i * 100 });
+    }
+
+    // Next map name
+    const sub = this.add.text(cx, cy - 16, `Next: ${nextMapName}`, {
+      fontSize: '20px', fontFamily: 'Nunito, sans-serif', color: '#c8a840',
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(52).setAlpha(0);
+    this.tweens.add({ targets: sub, alpha: 1, duration: 380, delay: 860 });
+
+    // Button
+    this.time.delayedCall(1100, () => {
+      const w = 280, h = 52;
+      const btnLabel = `Onward to Floor ${nextFloor + 1}  \u2192`;
+      const btn = this.add.container(cx, cy + 60).setDepth(52).setAlpha(0);
+
+      const btnBg = this.add.graphics();
+      const drawBtn = (hovered: boolean) => {
+        btnBg.clear();
+        btnBg.fillStyle(hovered ? 0x1a4a7a : 0x0a2a4a, 1);
+        btnBg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
+        btnBg.lineStyle(hovered ? 2 : 1, 0x3498db, hovered ? 1 : 0.65);
+        btnBg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
+      };
+      drawBtn(false);
+      btn.add(btnBg);
+      btn.add(this.add.text(0, 0, btnLabel, {
+        fontSize: '21px', fontFamily: 'Nunito, sans-serif', color: '#3498db',
+      }).setOrigin(0.5));
+
+      btn.setInteractive(
+        new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
+        Phaser.Geom.Rectangle.Contains,
+      );
+      btn.on('pointerover', () => { drawBtn(true); this.tweens.add({ targets: btn, scaleX: 1.05, scaleY: 1.05, duration: 80 }); });
+      btn.on('pointerout',  () => { drawBtn(false); this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 80 }); });
+      btn.on('pointerdown', () => {
+        advanceFloor();
+        this.cameras.main.fadeOut(400, 0, 0, 0, (_: unknown, p: number) => {
+          if (p === 1) this.scene.start('OverworldScene');
+        });
+      });
+
+      this.tweens.add({ targets: btn, alpha: 1, y: cy + 42, duration: 360, ease: 'Back.easeOut' });
+    });
+  }
+
   // ── Run complete overlay ──────────────────────────────────────────────────
   private buildRunCompleteOverlay() {
     const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
@@ -1273,10 +1380,11 @@ export class OverworldScene extends Phaser.Scene {
     const bossNode = run.nodeMap.find(n => n.type === 'BOSS');
     const bossDefeated = bossNode ? run.completedNodeIds.has(bossNode.id) : false;
 
+    const mapName = getMapById(run.currentMapId)?.name ?? nodesData.name;
     const titleText  = bossDefeated ? 'VICTORY!' : 'RUN COMPLETE';
     const subText    = bossDefeated
-      ? `${nodesData.name} has been conquered!`
-      : `${nodesData.name} — all paths exhausted.`;
+      ? `${mapName} has been conquered!`
+      : `${mapName} — all paths exhausted.`;
     const btnLabel   = 'Start New Run  →';
     const glowColor  = bossDefeated ? 0xf1c40f : 0x4a7ab8;
 
@@ -1391,7 +1499,7 @@ export class OverworldScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     this.pulseTime += delta;
     const run = getRunState();
-    this.goldText.setText(`◆  ${run.gold} Gold`);
+    this.goldText.setText(`◆ ${run.gold}`);
 
     const pulseMag = 0.09 * Math.sin(this.pulseTime / 380);
     for (const id of run.availableNodeIds) {
