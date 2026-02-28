@@ -4,6 +4,7 @@ import {
   type HeroClass,
 } from '@/config/constants';
 import { getMetaBonuses, getShards, pickRandomCommonRelic } from '@/systems/MetaState';
+import { Hero } from '@/entities/Hero';
 import { newRun, addRelic, clearSave, type NodeDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import type { MetaBonuses } from '@/systems/MetaState';
@@ -260,6 +261,8 @@ export class SquadSelectScene extends Phaser.Scene {
         .setDisplaySize(64, 64);
       const animKey = `${key}_idle`;
       if (this.anims.exists(animKey)) sprite.play(animKey);
+      const classTint = Hero.CLASS_TINT[heroClass];
+      if (classTint) sprite.setTint(classTint);
       container.add(sprite);
       container.setData('heroSprite', sprite);
 
@@ -402,6 +405,8 @@ export class SquadSelectScene extends Phaser.Scene {
         .setAlpha(isSlotted ? 0.35 : 1);
       const animKey = `${key}_idle`;
       if (this.anims.exists(animKey)) sprite.play(animKey);
+      const rosterTint = Hero.CLASS_TINT[cls];
+      if (rosterTint) sprite.setTint(rosterTint);
       container.add(sprite);
 
       // Label

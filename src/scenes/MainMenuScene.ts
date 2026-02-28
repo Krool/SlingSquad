@@ -4,9 +4,11 @@ import {
   getShards, earnShards, getMetaBonuses, getPurchaseCount,
 } from '@/systems/MetaState';
 import { hasSavedRun } from '@/systems/RunState';
+import { Hero } from '@/entities/Hero';
 import { CAMP_STRUCTURES, LAYER_CFG } from '@/data/campBuildings';
 import type { ParallaxLayer } from '@/data/campBuildings';
 import type { MusicSystem } from '@/systems/MusicSystem';
+import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
 
 interface MainMenuData {
   shardsEarned?: number;
@@ -447,6 +449,8 @@ export class MainMenuScene extends Phaser.Scene {
 
       const animKey = `${key}_idle`;
       if (this.anims.exists(animKey)) sprite.play(animKey);
+      const classTint = Hero.CLASS_TINT[key.toUpperCase() as import('@/config/constants').HeroClass];
+      if (classTint) sprite.setTint(classTint);
 
       this._heroStates.push({
         sprite,
@@ -552,7 +556,7 @@ export class MainMenuScene extends Phaser.Scene {
             });
 
             // Micro-shake for impact
-            this.cameras.main.shake(120, 0.003);
+            if (isScreenShakeEnabled()) this.cameras.main.shake(120, 0.003);
 
             // Ambient scale pulse
             this.tweens.add({
@@ -653,7 +657,7 @@ export class MainMenuScene extends Phaser.Scene {
 
   // ── Settings gear icon (top-left) ─────────────────────────────────────
   private buildSettingsButton() {
-    const size = 44, r = 8;
+    const size = 72, r = 12;
     const bg = this.add.graphics().setDepth(20);
     const draw = (hovered: boolean) => {
       bg.clear();
@@ -664,7 +668,7 @@ export class MainMenuScene extends Phaser.Scene {
     };
     draw(false);
     this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
+      fontSize: '34px', fontFamily: 'Nunito, sans-serif',
     }).setOrigin(0.5).setDepth(21);
 
     const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
@@ -676,46 +680,76 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
-  // ── Buttons ───────────────────────────────────────────────────────────
+  // ── Buttons (single row: utility left, primary right) ─────────────────
   private buildButtons() {
     const cx = GAME_WIDTH / 2;
-    const baseY = GAME_HEIGHT * 0.75 + 32;
-    const colSpacing = 230;
-    const rowSpacing = 50;
+    const baseY = GAME_HEIGHT - 72;
     const savedRunExists = hasSavedRun();
 
-    // Row 1: Continue Run | New Run
-    this.buildMenuButton(cx - colSpacing / 2, baseY, 'Continue Run', 0x2ecc71, savedRunExists, () => {
-      if (this._transitioning) return;
-      this._transitioning = true;
-      this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
-        if (p === 1) this.scene.start('OverworldScene');
-      });
-    });
-    this.buildMenuButton(cx + colSpacing / 2, baseY, 'New Run', 0xf1c40f, true, () => {
-      if (this._transitioning) return;
-      if (savedRunExists) {
-        this.showConfirmDialog();
-      } else {
-        this.goToSquadSelect();
-      }
-    });
+    // Right group — primary actions, right-aligned from cx + 280
+    const newGameX = cx + 280 - 170 / 2;
+    const continueX = newGameX - 170 / 2 - 20 - 150 / 2;
 
-    // Row 2: Camp Upgrades | Codex
-    this.buildMenuButton(cx - colSpacing / 2, baseY + rowSpacing, 'Camp Upgrades', 0x7ec8e3, true, () => {
-      this.scene.launch('CampUpgradesScene', { callerKey: 'MainMenuScene' });
-    });
-    this.buildMenuButton(cx + colSpacing / 2, baseY + rowSpacing, 'Codex', 0xc0a060, true, () => {
-      this.scene.start('CodexScene', { callerKey: 'MainMenuScene' });
+    // Left group — utility, smaller squarish
+    const codexX = cx - 140;
+    const campX = cx - 240;
+
+    // New Game (gold, slightly taller, glow pulse)
+    this.buildNewGameGlow(newGameX, baseY);
+    this.buildSquareButton(newGameX, baseY, 170, 86, 12, null, '\u2605 New Game', 0, 26,
+      0xf1c40f, true, () => {
+        if (this._transitioning) return;
+        if (savedRunExists) {
+          this.showConfirmDialog();
+        } else {
+          this.goToSquadSelect();
+        }
+      });
+
+    // Continue (green)
+    this.buildSquareButton(continueX, baseY, 150, 76, 10, null, 'Continue \u25b8', 0, 24,
+      0x2ecc71, savedRunExists, () => {
+        if (this._transitioning) return;
+        this._transitioning = true;
+        this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
+          if (p === 1) this.scene.start('OverworldScene');
+        });
+      });
+
+    // Camp (amber, icon-forward)
+    this.buildSquareButton(campX, baseY, 86, 76, 10, '\u2692', 'Camp', 22, 16,
+      0xc8a840, true, () => {
+        this.scene.launch('CampUpgradesScene', { callerKey: 'MainMenuScene' });
+      });
+
+    // Codex (tan, icon-forward)
+    this.buildSquareButton(codexX, baseY, 86, 76, 10, '\ud83d\udcdc', 'Codex', 22, 16,
+      0xc0a060, true, () => {
+        this.scene.start('CodexScene', { callerKey: 'MainMenuScene' });
+      });
+  }
+
+  private buildNewGameGlow(x: number, y: number) {
+    const glow = this.add.graphics().setDepth(14);
+    glow.fillStyle(0xf1c40f, 0.08);
+    glow.fillRoundedRect(x - 170 / 2 - 6, y - 86 / 2 - 6, 170 + 12, 86 + 12, 16);
+    this.tweens.add({
+      targets: glow,
+      alpha: { from: 0.6, to: 1 },
+      yoyo: true,
+      repeat: -1,
+      duration: 1200,
+      ease: 'Sine.easeInOut',
     });
   }
 
-  private buildMenuButton(
-    x: number, y: number, label: string,
+  private buildSquareButton(
+    x: number, y: number, w: number, h: number, r: number,
+    icon: string | null, label: string,
+    iconSize: number, labelSize: number,
     accentColor: number, enabled: boolean,
     onClick: () => void,
   ) {
-    const w = 200, h = 46, r = 9;
     const container = this.add.container(x, y).setDepth(15);
 
     const bg = this.add.graphics();
@@ -724,43 +758,68 @@ export class MainMenuScene extends Phaser.Scene {
       if (!enabled) {
         bg.fillStyle(0x1a1a2a, 0.6);
         bg.fillRoundedRect(-w / 2, -h / 2, w, h, r);
-        bg.lineStyle(1, 0x2a2a3a, 0.4);
+        bg.lineStyle(2, 0x2a2a3a, 0.4);
         bg.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
         return;
       }
       const dark = Phaser.Display.Color.IntegerToColor(accentColor);
+      const mult = hovered ? 0.40 : 0.20;
       const bgColor = Phaser.Display.Color.GetColor(
-        Math.floor(dark.red * 0.15),
-        Math.floor(dark.green * 0.15),
-        Math.floor(dark.blue * 0.15),
+        Math.floor(dark.red * mult),
+        Math.floor(dark.green * mult),
+        Math.floor(dark.blue * mult),
       );
-      bg.fillStyle(hovered ? Phaser.Display.Color.GetColor(
-        Math.floor(dark.red * 0.35),
-        Math.floor(dark.green * 0.35),
-        Math.floor(dark.blue * 0.35),
-      ) : bgColor, 1);
+      bg.fillStyle(bgColor, 1);
       bg.fillRoundedRect(-w / 2, -h / 2, w, h, r);
-      bg.lineStyle(hovered ? 2 : 1, accentColor, hovered ? 1 : 0.65);
+
+      // Inner highlight (1px white line near top)
+      bg.lineStyle(1, 0xffffff, 0.06);
+      bg.lineBetween(-w / 2 + r, -h / 2 + 2, w / 2 - r, -h / 2 + 2);
+
+      // Border
+      bg.lineStyle(2, accentColor, hovered ? 1.0 : 0.65);
       bg.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
     };
     drawBg(false);
     container.add(bg);
 
-    const labelColor = enabled
-      ? '#' + accentColor.toString(16).padStart(6, '0')
-      : '#6a6a7a';
-    container.add(
-      this.add.text(0, 0, label, {
-        fontSize: '24px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
-        color: labelColor, stroke: '#000', strokeThickness: 2,
-      }).setOrigin(0.5),
-    );
+    const accentHex = '#' + accentColor.toString(16).padStart(6, '0');
+    const labelColor = enabled ? accentHex : '#6a6a7a';
+
+    if (icon) {
+      // Icon above label layout
+      container.add(
+        this.add.text(0, -10, icon, {
+          fontSize: `${iconSize}px`, fontFamily: 'Nunito, sans-serif',
+        }).setOrigin(0.5),
+      );
+      container.add(
+        this.add.text(0, 14, label, {
+          fontSize: `${labelSize}px`, fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+          color: labelColor, stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5),
+      );
+    } else {
+      // Text-only layout
+      container.add(
+        this.add.text(0, 0, label, {
+          fontSize: `${labelSize}px`, fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+          color: labelColor, stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5),
+      );
+    }
 
     if (enabled) {
       const hit = this.add.rectangle(0, 0, w, h, 0, 0).setInteractive({ useHandCursor: true });
       container.add(hit);
-      hit.on('pointerover', () => { drawBg(true); this.tweens.add({ targets: container, scaleX: 1.05, scaleY: 1.05, duration: 70 }); });
-      hit.on('pointerout', () => { drawBg(false); this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 70 }); });
+      hit.on('pointerover', () => {
+        drawBg(true);
+        this.tweens.add({ targets: container, scaleX: 1.05, scaleY: 1.05, duration: 70 });
+      });
+      hit.on('pointerout', () => {
+        drawBg(false);
+        this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 70 });
+      });
       hit.on('pointerdown', onClick);
     }
   }
