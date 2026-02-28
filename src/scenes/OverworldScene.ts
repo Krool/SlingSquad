@@ -874,24 +874,41 @@ export class OverworldScene extends Phaser.Scene {
 
   private formatRelicEffect(relic: RelicDef): string {
     const effect = relic.effect;
-    const value = relic.value;
+    const v = relic.value;
     if (!effect) return '';
 
-    const sign = relic.curse ? '' : '+';
+    const sign = v >= 0 ? '+' : '';
 
     switch (effect) {
-      case 'maxHp':        return `${sign}${value} Max HP`;
-      case 'combatDamage': return `${sign}${value} Combat Damage`;
-      case 'combatRange':  return `${sign}${value} Combat Range`;
-      case 'launchCooldown': return `${value > 0 ? '+' : ''}${value}s Launch Cooldown`;
-      case 'moveSpeed':    return `${sign}${value}% Move Speed`;
-      case 'critChance':   return `${sign}${value}% Crit Chance`;
-      case 'healOnBounce': return `${sign}${value} HP per Bounce`;
-      case 'goldBonus':    return `${sign}${value}% Gold Bonus`;
-      case 'arrowCount':   return `${sign}${value} Arrow${Math.abs(value) !== 1 ? 's' : ''}`;
-      case 'blastRadius':  return `${sign}${value}px Blast Radius`;
-      case 'healAura':     return `${sign}${value} Heal Aura`;
-      default:             return `${sign}${value} ${effect}`;
+      case 'FLAT_HP':              return `${sign}${v} Max HP`;
+      case 'COOLDOWN_REDUCE':      return `${v > 0 ? '-' : '+'}${Math.abs(v) / 1000}s cooldown`;
+      case 'MAGE_AOE_RADIUS':      return `${sign}${v}px AoE radius`;
+      case 'WARRIOR_IMPACT_BONUS': return `${sign}${Math.round(v * 100)}% impact`;
+      case 'RANGER_ARROW_COUNT':   return `${sign}${v} arrow${Math.abs(v) !== 1 ? 's' : ''}`;
+      case 'PRIEST_HEAL_BONUS':    return `${sign}${v}px heal range`;
+      case 'FLAT_COMBAT_DAMAGE':   return `${sign}${v} combat damage`;
+      case 'COMBAT_SPEED_MULT':    return `${Math.round((1 - v) * 100)}% faster attacks`;
+      case 'MAX_DRAG_BONUS':       return `${sign}${v}px sling range`;
+      case 'GOLD_ON_WIN':          return `${sign}${v}g per win`;
+      case 'GOLD_ON_KILL':         return `${sign}${v}g per kill`;
+      case 'AIR_FRICTION_REDUCE':  return `${sign}${Math.round(v * 100)}% less air drag`;
+      case 'DAMAGE_REDUCTION':     return `${v > 0 ? sign : ''}${Math.round(v * 100)}% damage taken`;
+      case 'THORNS':               return `${v} thorns damage`;
+      case 'CRIT_CHANCE':          return `${Math.round(v * 100)}% crit chance`;
+      case 'IMPACT_DAMAGE_BONUS':  return `${sign}${Math.round(v * 100)}% impact damage`;
+      case 'DEATH_SAVE':           return `Cheat death ${v}x`;
+      case 'EXTRA_LAUNCH':         return `${sign}${v} extra launch`;
+      case 'WARRIOR_KNOCKBACK':    return `${sign}${v}px knockback`;
+      case 'MAGE_CHAIN':           return `Chain to ${v} targets`;
+      case 'RANGER_POISON':        return `${v} poison/sec`;
+      case 'PRIEST_RESURRECT':     return `Revive at ${Math.round(v * 100)}% HP`;
+      case 'BARD_CHARM_BONUS':     return `${sign}${v / 1000}s charm duration`;
+      case 'STONE_DAMAGE_BONUS':   return `${sign}${Math.round(v * 100)}% vs stone`;
+      case 'LOW_HP_DAMAGE':        return `${Math.round(v)}x damage below 30% HP`;
+      case 'GOLD_TAX_PCT':         return `-${Math.round(v * 100)}% gold on win`;
+      case 'TRAJECTORY_REDUCE':    return `-${v} trajectory dots`;
+      case 'LAUNCH_POWER_CURSE':   return `${Math.round(v * 100)}% launch power`;
+      default:                     return '';
     }
   }
 

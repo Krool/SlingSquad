@@ -79,6 +79,9 @@ function getEffectPreview(effect: string, value: number): string {
     case 'BARD_CHARM_BONUS': return `+${value / 1000}s charm`;
     case 'STONE_DAMAGE_BONUS': return `+${Math.round(value * 100)}% vs stone`;
     case 'LOW_HP_DAMAGE': return `${Math.round(value)}x low-HP dmg`;
+    case 'GOLD_TAX_PCT': return `-${Math.round(value * 100)}% gold on win`;
+    case 'TRAJECTORY_REDUCE': return `-${value} trajectory dots`;
+    case 'LAUNCH_POWER_CURSE': return `${Math.round(value * 100)}% launch power`;
     default: return '';
   }
 }
