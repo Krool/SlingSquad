@@ -153,7 +153,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.zoneTheme = getZoneTheme(run.currentMapId);
     this.buildBackground();
-    this.vfxSystem = new VFXSystem(this, this.activeNode.difficulty ?? 1);
+    this.vfxSystem = new VFXSystem(this, this.activeNode.difficulty ?? 1, this.zoneTheme);
     this.buildGround();
     this.buildStructure();
     this.spawnCoins();
@@ -761,6 +761,11 @@ export class BattleScene extends Phaser.Scene {
 
   // ─── Events ──────────────────────────────────────────────────────────────
   private buildEventHandlers() {
+    // Geyser eruption damage
+    this.events.on('geyserErupted', (gx: number, gy: number, radius: number, damage: number) => {
+      this.handleGeyserEruption(gx, gy, radius, damage);
+    });
+
     this.events.on('barrelExploded', (x: number, y: number, r: number, dmg: number) => {
       this.impactSystem.handleBarrelExplosion(x, y, r, dmg, this.blocks, this.enemies, this.heroes, this.barrels);
       if (isScreenShakeEnabled()) this.cameras.main.shake(350, 0.015);
@@ -771,11 +776,13 @@ export class BattleScene extends Phaser.Scene {
     });
 
     this.events.on('blockDestroyed', (x: number, y: number, mat: string) => {
-      this.spawnDebris(x, y, mat as 'WOOD' | 'STONE');
+      this.spawnDebris(x, y, mat as MaterialType);
       if (mat === 'WOOD') this.vfxSystem.dustCloud(x, y);
       else if (mat === 'STONE') this.vfxSystem.stoneSparkShower(x, y);
-      if (isScreenShakeEnabled()) this.cameras.main.shake(80, 0.003);
-      this.audio.playBlockHit(mat as 'WOOD' | 'STONE');
+      else if (mat === 'ICE') this.vfxSystem.iceShatter(x, y);
+      else if (mat === 'OBSIDIAN') this.vfxSystem.obsidianCrack(x, y);
+      if (isScreenShakeEnabled()) this.cameras.main.shake(80, mat === 'OBSIDIAN' ? 0.006 : 0.003);
+      this.audio.playBlockHit(mat as MaterialType);
       this.blocksDestroyedThisBattle++;
       addBlocksDestroyed(1);
       // Wake nearby sleeping bodies so they fall when support is removed
@@ -1169,25 +1176,31 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ─── Debris ────────────────────────────────────────────────────────────────
-  private spawnDebris(x: number, y: number, material: 'WOOD' | 'STONE') {
-    const isWood = material === 'WOOD';
-    const woodColors  = [0x8B5E3C, 0x6B4020, 0xA07040, 0x7B4E2C];
-    const stoneColors = [0x7f8c8d, 0x606060, 0x9f9f9f, 0x5a6a6b];
+  private spawnDebris(x: number, y: number, material: MaterialType) {
+    const colorMap: Record<MaterialType, number[]> = {
+      WOOD:     [0x8B5E3C, 0x6B4020, 0xA07040, 0x7B4E2C],
+      STONE:    [0x7f8c8d, 0x606060, 0x9f9f9f, 0x5a6a6b],
+      ICE:      [0xb0d4e8, 0x88ccff, 0xddeeFF, 0xaaccee],
+      OBSIDIAN: [0x1a0808, 0x330808, 0x440a0a, 0xff6600],
+    };
+    const colors = colorMap[material];
 
     for (let i = 0; i < 9; i++) {
       const g = this.add.graphics().setDepth(15);
-      const col = isWood
-        ? woodColors[Phaser.Math.Between(0, 3)]
-        : stoneColors[Phaser.Math.Between(0, 3)];
+      const col = colors[Phaser.Math.Between(0, colors.length - 1)];
       g.fillStyle(col, 1);
 
-      if (isWood) {
-        // Rectangular splinters
+      if (material === 'WOOD') {
         const sw = Phaser.Math.Between(5, 14);
         const sh = Phaser.Math.Between(2, 5);
         g.fillRect(-sw / 2, -sh / 2, sw, sh);
+      } else if (material === 'ICE') {
+        // Crystal-like angular shards
+        const sw = Phaser.Math.Between(3, 8);
+        const sh = Phaser.Math.Between(4, 10);
+        g.fillRect(-sw / 2, -sh / 2, sw, sh);
       } else {
-        // Rounded stone chunks
+        // Rounded chunks (stone + obsidian)
         g.fillCircle(0, 0, Phaser.Math.Between(3, 7));
       }
 
@@ -1307,6 +1320,56 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  // ─── Hazard helpers ────────────────────────────────────────────────────────
+  private updateLavaDots() {
+    for (const hz of this.hazards) {
+      if (hz.type !== 'LAVA_PIT' || !hz.shouldApplyLavaDot()) continue;
+      const cfg = HAZARD.LAVA_PIT;
+      // Damage heroes in range
+      for (const h of this.heroes) {
+        if (h.state === 'dead') continue;
+        const d = Math.hypot(h.x - hz.x, h.y - hz.y);
+        if (d < cfg.radius) {
+          h.applyDamage(cfg.damage);
+          DamageNumber.damage(this, h.x, h.y, cfg.damage);
+        }
+      }
+      // Damage enemies in range (lava hurts everyone)
+      for (const e of this.enemies) {
+        if (e.state === 'dead') continue;
+        const d = Math.hypot(e.x - hz.x, e.y - hz.y);
+        if (d < cfg.radius) {
+          e.applyDamage(cfg.damage);
+          DamageNumber.damage(this, e.x, e.y, cfg.damage);
+        }
+      }
+    }
+  }
+
+  private handleGeyserEruption(gx: number, gy: number, radius: number, damage: number) {
+    // Damage heroes in eruption column
+    for (const h of this.heroes) {
+      if (h.state === 'dead') continue;
+      const dx = Math.abs(h.x - gx);
+      const dy = gy - h.y; // geyser damages upward
+      if (dx < radius * 0.5 && dy > 0 && dy < radius * 2) {
+        h.applyDamage(damage);
+        DamageNumber.damage(this, h.x, h.y, damage);
+      }
+    }
+    // Damage enemies in eruption column
+    for (const e of this.enemies) {
+      if (e.state === 'dead') continue;
+      const dx = Math.abs(e.x - gx);
+      const dy = gy - e.y;
+      if (dx < radius * 0.5 && dy > 0 && dy < radius * 2) {
+        e.applyDamage(damage);
+        DamageNumber.damage(this, e.x, e.y, damage);
+      }
+    }
+    if (isScreenShakeEnabled()) this.cameras.main.shake(200, 0.008);
+  }
+
   // ─── Update ────────────────────────────────────────────────────────────────
   update(_time: number, delta: number) {
     if (this.battleEnded) return;
@@ -1315,9 +1378,14 @@ export class BattleScene extends Phaser.Scene {
     for (const e of this.enemies)  e.update();
     for (const h of this.heroes)   h.update();
     for (const b of this.barrels)  b.update();
+    for (const hz of this.hazards) hz.update(delta);
 
     this.blocks = this.blocks.filter(b => !b.destroyed);
+    this.hazards = this.hazards.filter(h => !h.destroyed);
     this.coins  = this.coins.filter(c => !c.collected);
+
+    // Lava pit DoT — damage heroes and enemies standing in lava
+    this.updateLavaDots();
 
     // Hero flight trail particles
     this.trailTimer += delta;
