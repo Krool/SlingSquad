@@ -265,8 +265,9 @@ export class LaunchSystem {
     if (this.currentHero?.heroClass === 'RANGER') effectiveDots = Math.round(effectiveDots * 1.3);
 
     for (let frame = 0; frame < TRAJECTORY_SIM_FRAMES && dotsDrawn < effectiveDots; frame++) {
-      // Apply same physics as Matter.js body (frictionAir + gravity)
+      // Match Matter.js Body.update: frictionAir on both axes, then gravity
       pvx *= (1 - HERO_FRICTION_AIR);
+      pvy *= (1 - HERO_FRICTION_AIR);
       pvy += GRAVITY_PER_FRAME * gravScale;
       px += pvx;
       py += pvy;
@@ -298,6 +299,7 @@ export class LaunchSystem {
         let fDots = 0;
         for (let frame = 0; frame < TRAJECTORY_SIM_FRAMES && fDots < effectiveDots; frame++) {
           fvx *= (1 - HERO_FRICTION_AIR);
+          fvy *= (1 - HERO_FRICTION_AIR);
           fvy += GRAVITY_PER_FRAME;
           fx += fvx;
           fy += fvy;
