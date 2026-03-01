@@ -9,6 +9,7 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { discoverRelic } from '@/systems/DiscoveryLog';
 import { incrementStat } from '@/systems/AchievementSystem';
+import { buildSettingsGear } from '@/ui/TopBar';
 
 const ACCENT = 0xe67e22;
 const ACCENT_HEX = '#e67e22';
@@ -40,6 +41,7 @@ export class ForgeScene extends Phaser.Scene {
     completeNode(this.node.id);
 
     this.buildBackground();
+    buildSettingsGear(this, 'ForgeScene');
     this.buildTitle();
     this.buildOptions();
 

@@ -1,7 +1,8 @@
-import { HERO_STATS, MAX_SQUAD_SIZE, TOTAL_FLOORS_PER_RUN, type HeroClass } from '@/config/constants';
+import { HERO_STATS, MAX_SQUAD_SIZE, TOTAL_FLOORS_PER_RUN, REVIVE_COOLDOWN_NODES, REVIVE_HP_PERCENT, type HeroClass } from '@/config/constants';
 import type { MetaBonuses } from '@/systems/MetaState';
 import { getAscensionModifiers } from '@/systems/AscensionSystem';
 import { getMapById } from '@/data/maps/index';
+import { resetRunFinalized } from '@/systems/RunHistory';
 
 // ─── Node types ───────────────────────────────────────────────────────────────
 export type NodeType = 'BATTLE' | 'ELITE' | 'REWARD' | 'SHOP' | 'BOSS' | 'EVENT' | 'FORGE';
@@ -35,6 +36,7 @@ export interface HeroRunData {
   name: string;
   currentHp: number;  // persists between battles
   maxHp: number;
+  reviveCooldown?: number; // 0/undefined = alive, >0 = nodes until auto-revive
 }
 
 // ─── The run ─────────────────────────────────────────────────────────────────
@@ -81,6 +83,7 @@ export function newRun(
   mapId = 'goblin_wastes',
   opts?: { ascensionLevel?: number; modifiers?: string[]; isDaily?: boolean; floorMapIds?: string[] },
 ): RunState {
+  resetRunFinalized();
   const heroNames: Record<HeroClass, string> = {
     WARRIOR: 'Sir Brom',
     RANGER: 'Sylva',
@@ -122,6 +125,7 @@ export function newRun(
         name: heroNames[cls as keyof typeof heroNames] ?? cls,
         currentHp: maxHp,
         maxHp,
+        reviveCooldown: 0,
       };
     }),
     gold: startingGold,
@@ -165,6 +169,7 @@ export function newRun(
 // Called after winning a node's battle
 export function completeNode(nodeId: number) {
   const s = getRunState();
+  tickReviveCooldowns(); // tick down before marking complete — existing cooldowns advance
   s.completedNodeIds.add(nodeId);
   const node = s.nodeMap.find(n => n.id === nodeId);
   if (!node) {
@@ -324,6 +329,7 @@ export function recruitHero(heroClass: HeroClass): boolean {
     name: heroNames[heroClass] ?? heroClass,
     currentHp: baseHp,
     maxHp: baseHp,
+    reviveCooldown: 0,
   });
   saveRun();
   return true;
@@ -339,16 +345,90 @@ export function reorderSquad(fromIndex: number, toIndex: number) {
   saveRun();
 }
 
+// ─── Revive Cooldown API ─────────────────────────────────────────────────────
+
+/** Decrement all revive cooldowns by 1. Heroes reaching 0 revive at 50% HP. */
+export function tickReviveCooldowns() {
+  const s = getRunState();
+  for (const h of s.squad) {
+    if ((h.reviveCooldown ?? 0) > 0) {
+      h.reviveCooldown = h.reviveCooldown! - 1;
+      if (h.reviveCooldown === 0) {
+        h.currentHp = Math.round(h.maxHp * REVIVE_HP_PERCENT);
+      }
+    }
+  }
+}
+
+/** True if this hero is currently on revive cooldown. */
+export function isHeroOnCooldown(heroClass: HeroClass): boolean {
+  const s = getRunState();
+  const h = s.squad.find(e => e.heroClass === heroClass);
+  return (h?.reviveCooldown ?? 0) > 0;
+}
+
+/** Returns remaining cooldown nodes (0 = alive/ready). */
+export function getHeroCooldown(heroClass: HeroClass): number {
+  const s = getRunState();
+  const h = s.squad.find(e => e.heroClass === heroClass);
+  return h?.reviveCooldown ?? 0;
+}
+
+/** Reduce a hero's cooldown by `amount` (for relics/events). Revives if reaching 0. */
+export function reduceCooldown(heroClass: HeroClass, amount: number) {
+  const s = getRunState();
+  const h = s.squad.find(e => e.heroClass === heroClass);
+  if (!h || (h.reviveCooldown ?? 0) <= 0) return;
+  h.reviveCooldown = Math.max(0, h.reviveCooldown! - amount);
+  if (h.reviveCooldown === 0) {
+    h.currentHp = Math.round(h.maxHp * REVIVE_HP_PERCENT);
+  }
+  saveRun();
+}
+
+/** Immediately revive a hero at the given HP fraction. */
+export function instantRevive(heroClass: HeroClass, hpPercent = REVIVE_HP_PERCENT) {
+  const s = getRunState();
+  const h = s.squad.find(e => e.heroClass === heroClass);
+  if (!h) return;
+  h.reviveCooldown = 0;
+  h.currentHp = Math.round(h.maxHp * hpPercent);
+  saveRun();
+}
+
+/** Returns all heroes currently on cooldown. */
+export function getHeroesOnCooldown(): HeroRunData[] {
+  return getRunState().squad.filter(h => (h.reviveCooldown ?? 0) > 0);
+}
+
+/** Failsafe: if ALL heroes are on cooldown, force-revive the one with the lowest remaining cooldown. */
+export function ensureActiveHero() {
+  const s = getRunState();
+  const alive = s.squad.filter(h => (h.reviveCooldown ?? 0) <= 0);
+  if (alive.length > 0) return; // at least one hero is available
+  // Force-revive the hero closest to reviving
+  const sorted = [...s.squad].sort((a, b) => (a.reviveCooldown ?? 0) - (b.reviveCooldown ?? 0));
+  const best = sorted[0];
+  best.reviveCooldown = 0;
+  best.currentHp = Math.round(best.maxHp * REVIVE_HP_PERCENT);
+  saveRun();
+}
+
 /** Persist hero HP after a victory.
- *  All heroes fully heal between battles. Also syncs maxHp so relic bonuses
- *  are reflected in the overworld party panel. */
+ *  Living heroes fully heal. Dead heroes go on revive cooldown.
+ *  Heroes already on cooldown (not in this battle) are left untouched. */
 export function syncSquadHp(heroes: Array<{ heroClass: HeroClass; hp: number; maxHp: number; state: string }>) {
   const s = getRunState();
   for (const h of heroes) {
     const entry = s.squad.find(e => e.heroClass === h.heroClass);
     if (!entry) continue;
     entry.maxHp = h.maxHp;
-    entry.currentHp = h.maxHp; // full heal after every battle
+    if (h.state === 'dead') {
+      entry.currentHp = 0;
+      entry.reviveCooldown = REVIVE_COOLDOWN_NODES;
+    } else {
+      entry.currentHp = h.maxHp; // full heal after every battle
+    }
   }
   saveRun();
 }
@@ -395,6 +475,10 @@ export function loadRun(): boolean {
       metaDamagePct:     data.metaDamagePct      ?? 0,
       metaLaunchPowerPct: data.metaLaunchPowerPct ?? 0,
     };
+    // Patch old saves: ensure every squad member has reviveCooldown
+    for (const h of _state!.squad) {
+      if (h.reviveCooldown === undefined) h.reviveCooldown = 0;
+    }
     return true;
   } catch {
     return false;

@@ -14,6 +14,7 @@ import { CAMP_STRUCTURES, CAMP_ALWAYS_VISIBLE, LAYER_CFG } from '@/data/campBuil
 import type { ParallaxLayer } from '@/data/campBuildings';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
+import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
 
 interface MainMenuData {
   shardsEarned?: number;
@@ -40,7 +41,7 @@ interface HeroWalkState {
 }
 
 export class MainMenuScene extends Phaser.Scene {
-  private _shardText: Phaser.GameObjects.Text | null = null;
+  private _shardBar: CurrencyBarResult | null = null;
   private _layerGfx: Phaser.GameObjects.Graphics[] = [];
   private _fireGfx: Phaser.GameObjects.Graphics | null = null;
   private _heroStates: HeroWalkState[] = [];
@@ -83,8 +84,9 @@ export class MainMenuScene extends Phaser.Scene {
     this.buildHeroSprites();
     this.setupSlingInput();
     this.buildTitle();
-    this.buildShardDisplay(shardsEarned);
-    this.buildSettingsButton();
+    this._shardBar = buildCurrencyBar(this, 'shard', () => getShards(), 10);
+    this.buildShardEarnedBadge(shardsEarned);
+    buildSettingsGear(this, 'MainMenuScene', 20);
     this.buildButtons();
 
     this.events.on('resume', this.onResume, this);
@@ -174,7 +176,7 @@ export class MainMenuScene extends Phaser.Scene {
     // Rebuild heroes (new unlocks)
     this.destroyHeroes();
     this.buildHeroSprites();
-    this._shardText?.setText(`\u25c6 ${getShards()}`);
+    this._shardBar?.updateValue();
   }
 
   private destroyHeroes() {
@@ -875,83 +877,65 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
-  // ── Shard display (top-right) ─────────────────────────────────────────
-  private buildShardDisplay(earned: number) {
-    const px = GAME_WIDTH - 20, py = 14;
-    const W = 180, H = 44;
-
-    const panel = this.add.graphics().setDepth(10);
-    panel.fillStyle(0x0d1526, 0.92);
-    panel.fillRoundedRect(px - W, py, W, H, 7);
-    panel.lineStyle(1, 0x3a5570, 0.7);
-    panel.strokeRoundedRect(px - W, py, W, H, 7);
-
-    this.add.text(px - W / 2, py + 7, 'SHARDS', {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
-    }).setOrigin(0.5, 0).setDepth(11);
-
-    this._shardText = this.add.text(px - W / 2, py + 20, `\u25c6 ${getShards()}`, {
-      fontSize: '20px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+  // ── Shard earned badge (animated +N popup) ──────────────────────────
+  private buildShardEarnedBadge(earned: number) {
+    if (earned <= 0) return;
+    const px = GAME_WIDTH - 126 + 55; // center of currency bar
+    const py = 12;
+    const badge = this.add.text(px, py + 8, `+${earned}`, {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif',
       color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5, 0).setDepth(11);
-
-    if (earned > 0) {
-      const badge = this.add.text(px - 22, py + 8, `+${earned}`, {
-        fontSize: '13px', fontFamily: 'Nunito, sans-serif',
-        color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
-      }).setOrigin(0.5).setDepth(12).setAlpha(0).setScale(1.4);
-      this.tweens.add({
-        targets: badge, alpha: 1, scaleX: 1, scaleY: 1, y: py - 4,
-        duration: 500, ease: 'Back.easeOut', delay: 300,
-        onComplete: () => this.time.delayedCall(1000, () =>
-          this.tweens.add({ targets: badge, alpha: 0, duration: 400, onComplete: () => badge.destroy() }),
-        ),
-      });
-    }
-  }
-
-  // ── Settings gear icon (top-left) ─────────────────────────────────────
-  private buildSettingsButton() {
-    const size = 72, r = 12;
-    const bg = this.add.graphics().setDepth(20);
-    const draw = (hovered: boolean) => {
-      bg.clear();
-      bg.fillStyle(0x060b12, hovered ? 1 : 0.75);
-      bg.fillRoundedRect(10, 10, size, size, r);
-      bg.lineStyle(1, 0x3a5070, hovered ? 1 : 0.5);
-      bg.strokeRoundedRect(10, 10, size, size, r);
-    };
-    draw(false);
-    this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '34px', fontFamily: 'Nunito, sans-serif',
-    }).setOrigin(0.5).setDepth(21);
-
-    const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(22);
-    hit.on('pointerover', () => draw(true));
-    hit.on('pointerout', () => draw(false));
-    hit.on('pointerdown', () => {
-      this.scene.launch('SettingsScene', { callerKey: 'MainMenuScene' });
+    }).setOrigin(0.5).setDepth(12).setAlpha(0).setScale(1.4);
+    this.tweens.add({
+      targets: badge, alpha: 1, scaleX: 1, scaleY: 1, y: py - 4,
+      duration: 500, ease: 'Back.easeOut', delay: 300,
+      onComplete: () => this.time.delayedCall(1000, () =>
+        this.tweens.add({ targets: badge, alpha: 0, duration: 400, onComplete: () => badge.destroy() }),
+      ),
     });
   }
 
-  // ── Buttons (single row: utility left, primary right) ─────────────────
+  // ── Buttons (single row: Camp, Codex, Continue, Fresh) ──────────────
   private buildButtons() {
-    const cx = GAME_WIDTH / 2;
-    const baseY = GAME_HEIGHT - 72;
+    const baseY = GAME_HEIGHT - 80;
     const savedRunExists = hasSavedRun();
 
-    // Right group — primary actions, right-aligned from cx + 280
-    const newGameX = cx + 280 - 170 / 2;
-    const continueX = newGameX - 170 / 2 - 20 - 150 / 2;
+    // Layout: 4 buttons, 16px gaps, centered
+    const sizes = [100, 100, 120, 120]; // Camp, Codex, Continue, Fresh
+    const gap = 16;
+    const totalW = sizes.reduce((a, b) => a + b, 0) + (sizes.length - 1) * gap;
+    const startX = GAME_WIDTH / 2 - totalW / 2;
+    let cx = startX;
 
-    // Left group — utility, smaller squarish
-    const codexX = cx - 140;
-    const campX = cx - 240;
+    // Camp (100x100, amber)
+    this.buildSquareButton(cx + 50, baseY, 100, 100, 14, '\u2692', 'Camp', 28, 18,
+      0xc8a840, true, () => {
+        this.scene.launch('CampUpgradesScene', { callerKey: 'MainMenuScene' });
+      });
+    cx += 100 + gap;
 
-    // New Game (gold, slightly taller, glow pulse)
-    this.buildNewGameGlow(newGameX, baseY);
-    this.buildSquareButton(newGameX, baseY, 170, 86, 12, null, '\u2605 New Game', 0, 26,
+    // Codex (100x100, tan)
+    this.buildSquareButton(cx + 50, baseY, 100, 100, 14, '\ud83d\udcdc', 'Codex', 28, 18,
+      0xc0a060, true, () => {
+        this.scene.start('CodexScene', { callerKey: 'MainMenuScene' });
+      });
+    cx += 100 + gap;
+
+    // Continue (120x120, green, play icon)
+    this.buildSquareButton(cx + 60, baseY, 120, 120, 14, '\u25b6', 'Continue', 38, 18,
+      0x2ecc71, savedRunExists, () => {
+        if (this._transitioning) return;
+        this._transitioning = true;
+        this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
+          if (p === 1) this.scene.start('OverworldScene');
+        });
+      });
+    cx += 120 + gap;
+
+    // Fresh (120x120, gold, sparkle icon, glow pulse)
+    const freshX = cx + 60;
+    this.buildFreshGlow(freshX, baseY);
+    this.buildSquareButton(freshX, baseY, 120, 120, 14, '\u2726', 'Fresh', 38, 20,
       0xf1c40f, true, () => {
         if (this._transitioning) return;
         if (savedRunExists) {
@@ -960,34 +944,12 @@ export class MainMenuScene extends Phaser.Scene {
           this.goToSquadSelect();
         }
       });
-
-    // Continue (green)
-    this.buildSquareButton(continueX, baseY, 150, 76, 10, null, 'Continue \u25b8', 0, 24,
-      0x2ecc71, savedRunExists, () => {
-        if (this._transitioning) return;
-        this._transitioning = true;
-        this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
-          if (p === 1) this.scene.start('OverworldScene');
-        });
-      });
-
-    // Camp (amber, icon-forward)
-    this.buildSquareButton(campX, baseY, 86, 76, 10, '\u2692', 'Camp', 22, 16,
-      0xc8a840, true, () => {
-        this.scene.launch('CampUpgradesScene', { callerKey: 'MainMenuScene' });
-      });
-
-    // Codex (tan, icon-forward)
-    this.buildSquareButton(codexX, baseY, 86, 76, 10, '\ud83d\udcdc', 'Codex', 22, 16,
-      0xc0a060, true, () => {
-        this.scene.start('CodexScene', { callerKey: 'MainMenuScene' });
-      });
   }
 
-  private buildNewGameGlow(x: number, y: number) {
+  private buildFreshGlow(x: number, y: number) {
     const glow = this.add.graphics().setDepth(14);
     glow.fillStyle(0xf1c40f, 0.08);
-    glow.fillRoundedRect(x - 170 / 2 - 6, y - 86 / 2 - 6, 170 + 12, 86 + 12, 16);
+    glow.fillRoundedRect(x - 66, y - 66, 132, 132, 18);
     this.tweens.add({
       targets: glow,
       alpha: { from: 0.6, to: 1 },
@@ -1042,14 +1004,14 @@ export class MainMenuScene extends Phaser.Scene {
     const labelColor = enabled ? accentHex : '#6a6a7a';
 
     if (icon) {
-      // Icon above label layout
+      // Icon above label layout — icon offset up, label offset down
       container.add(
-        this.add.text(0, -10, icon, {
+        this.add.text(0, -18, icon, {
           fontSize: `${iconSize}px`, fontFamily: 'Nunito, sans-serif',
         }).setOrigin(0.5),
       );
       container.add(
-        this.add.text(0, 14, label, {
+        this.add.text(0, 24, label, {
           fontSize: `${labelSize}px`, fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
           color: labelColor, stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5),

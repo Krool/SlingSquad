@@ -8,10 +8,11 @@ import {
   isEnemyDiscovered, getEnemyKillCount,
   isHeroDiscovered,
 } from '@/systems/DiscoveryLog';
-import { getMasteryLevel, getXPForNextLevel } from '@/systems/MasterySystem';
+import { getMastery, getMasteryLevel, getXPForNextLevel } from '@/systems/MasterySystem';
 import { ScrollablePanel } from '@/ui/ScrollablePanel';
 import { getGlobalStats } from '@/systems/RunHistory';
 import { getMapById } from '@/data/maps/index';
+import { buildSettingsGear, buildBackButton } from '@/ui/TopBar';
 
 type TabId = 'heroes' | 'bestiary' | 'relics' | 'history';
 
@@ -51,9 +52,10 @@ export class CodexScene extends Phaser.Scene {
     this.callerKey = data?.callerKey ?? 'MainMenuScene';
     this.tabButtons.clear();
     this.buildBackground();
+    buildSettingsGear(this, 'CodexScene');
     this.buildTitle();
     this.buildTabs();
-    this.buildBackButton();
+    this.buildStdBackButton();
     this.showTab('heroes');
     this.cameras.main.fadeIn(200, 0, 0, 0);
   }
@@ -173,7 +175,7 @@ export class CodexScene extends Phaser.Scene {
   private buildHeroesTab(scrollW: number) {
     const classes = Object.keys(HERO_STATS) as (keyof typeof HERO_STATS)[];
     const cols = 4;
-    const cardW = 270, cardH = 240, gapX = 16, gapY = 14;
+    const cardW = 270, cardH = 290, gapX = 16, gapY = 14;
     const gridW = cols * cardW + (cols - 1) * gapX;
     const offsetX = (scrollW - gridW) / 2;
     const startY = 10;
@@ -249,9 +251,28 @@ export class CodexScene extends Phaser.Scene {
         if (passive) {
           container.add(
             this.add.text(cx, cy + 64, passive.name, {
-              fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
+              fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
             }).setOrigin(0.5),
           );
+        }
+
+        // Per-hero lifetime stats
+        const mastery = getMastery(cls);
+        let statY = cy + 80;
+        const statStyle = { fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a' };
+
+        if (mastery.runsPlayed > 0) {
+          let runLine = `Runs: ${mastery.runsPlayed}`;
+          if (mastery.runsWon > 0) runLine += `  \u{1F451} ${mastery.runsWon} wins`;
+          container.add(this.add.text(cx, statY, runLine, statStyle).setOrigin(0.5));
+          statY += 14;
+        }
+        if (mastery.highestAscensionWon >= 0) {
+          container.add(this.add.text(cx, statY, `Best Ascension: ${mastery.highestAscensionWon}`, statStyle).setOrigin(0.5));
+          statY += 14;
+        }
+        if (mastery.mvpCount > 0) {
+          container.add(this.add.text(cx, statY, `\u2605 ${mastery.mvpCount} MVP`, { ...statStyle, color: '#c0a060' }).setOrigin(0.5));
         }
 
         // Mastery level bar
@@ -362,7 +383,14 @@ export class CodexScene extends Phaser.Scene {
 
   // ── Relics Tab ─────────────────────────────────────────────────────────────
   private buildRelicsTab(scrollW: number) {
+    const RARITY_ORDER: Record<string, number> = { rare: 0, uncommon: 1, common: 2 };
     const allRelics = [...(relicsData as RelicDef[]), ...(cursesData as RelicDef[])];
+    allRelics.sort((a, b) => {
+      const aCurse = a.curse ? 1 : 0;
+      const bCurse = b.curse ? 1 : 0;
+      if (aCurse !== bCurse) return aCurse - bCurse; // curses last
+      return (RARITY_ORDER[a.rarity ?? 'common'] ?? 2) - (RARITY_ORDER[b.rarity ?? 'common'] ?? 2);
+    });
     const cols = 3;
     const cardW = 380, cardH = 80, gapX = 12, gapY = 8;
     const gridW = cols * cardW + (cols - 1) * gapX;
@@ -611,39 +639,13 @@ export class CodexScene extends Phaser.Scene {
     this._scrollPanel!.setContentHeight(cy + 10);
   }
 
-  // ── Back Button ────────────────────────────────────────────────────────────
-  private buildBackButton() {
-    const w = 140, h = 42;
-    const bx = 30, by = GAME_HEIGHT - 50;
-    const container = this.add.container(bx + w / 2, by + h / 2).setDepth(20);
-
-    const bg = this.add.graphics();
-    const drawBtn = (hovered: boolean) => {
-      bg.clear();
-      bg.fillStyle(hovered ? 0x1e1a10 : 0x0c0e16, 1);
-      bg.fillRoundedRect(-w / 2, -h / 2, w, h, 7);
-      bg.lineStyle(1, ACCENT, hovered ? 0.8 : 0.3);
-      bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 7);
-    };
-    drawBtn(false);
-    container.add(bg);
-    container.add(
-      this.add.text(0, 0, '\u2190 Back', {
-        fontSize: '17px', fontFamily: 'Nunito, sans-serif', color: ACCENT_HEX,
-      }).setOrigin(0.5),
-    );
-
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    container.on('pointerover', () => drawBtn(true));
-    container.on('pointerout', () => drawBtn(false));
-    container.on('pointerdown', () => {
+  // ── Back Button (standardized) ──────────────────────────────────────────
+  private buildStdBackButton() {
+    buildBackButton(this, '\u2190 Back', ACCENT, () => {
       this.destroyScrollPanel();
       this.cameras.main.fadeOut(200, 0, 0, 0, (_: unknown, p: number) => {
         if (p === 1) this.scene.start(this.callerKey);
       });
-    });
+    }, 20);
   }
 }

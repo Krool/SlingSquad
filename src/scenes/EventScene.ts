@@ -11,6 +11,7 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { discoverRelic } from '@/systems/DiscoveryLog';
 import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
+import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
 
 // ── Types mirroring events.json ────────────────────────────────────────────────
 interface EventOutcome {
@@ -44,8 +45,7 @@ const BG_COLOR = 0x0a0812;
 export class EventScene extends Phaser.Scene {
   private node!: NodeDef;
   private event!: EventDef;
-  private goldLabel!: Phaser.GameObjects.Text;
-  private goldPanel!: Phaser.GameObjects.Graphics;
+  private _goldBar: CurrencyBarResult | null = null;
 
   constructor() {
     super({ key: 'EventScene' });
@@ -62,31 +62,21 @@ export class EventScene extends Phaser.Scene {
     this.event = Phaser.Utils.Array.GetRandom(pool);
 
     this.buildBackground();
-    this.buildGoldHUD();
+    buildSettingsGear(this, 'EventScene');
+    this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold);
     this.buildTitle();
     this.buildNarrative();
     this.buildChoices();
 
     this.cameras.main.fadeIn(300, 0, 0, 0);
-  }
 
-  private buildGoldHUD() {
-    const run = getRunState();
-    this.goldPanel = this.add.graphics().setDepth(10);
-    this.goldPanel.fillStyle(0x0d1117, 0.9);
-    this.goldPanel.fillRoundedRect(18, 18, 120, 44, 7);
-    this.goldPanel.lineStyle(1, 0xf1c40f, 0.4);
-    this.goldPanel.strokeRoundedRect(18, 18, 120, 44, 7);
-
-    this.goldLabel = this.add.text(32, 32, `◆ ${run.gold}`, {
-      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
-      color: '#f1c40f', stroke: '#000', strokeThickness: 3,
-    }).setDepth(11);
+    this.events.on('resume', () => {
+      this._goldBar?.updateValue();
+    });
   }
 
   private refreshGoldHUD() {
-    const run = getRunState();
-    this.goldLabel.setText(`◆ ${run.gold}`);
+    this._goldBar?.updateValue();
   }
 
   // ── Background ─────────────────────────────────────────────────────────────
@@ -443,6 +433,7 @@ export class EventScene extends Phaser.Scene {
       case 'HEAL_ALL': {
         for (const hero of run.squad) {
           hero.currentHp = hero.maxHp;
+          hero.reviveCooldown = 0; // also clears revive cooldown
         }
         resultText = 'All heroes healed to full HP!';
         break;

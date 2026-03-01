@@ -3,7 +3,10 @@ import {
   GAME_WIDTH, GAME_HEIGHT, STARTER_SQUAD_SIZE, MAX_SQUAD_SIZE,
   type HeroClass,
 } from '@/config/constants';
-import { getMetaBonuses, getShards, pickRandomCommonRelic } from '@/systems/MetaState';
+import { getMetaBonuses, getShards, pickRandomCommonRelic, getAllUpgrades } from '@/systems/MetaState';
+import { buildSettingsGear, buildCurrencyBar, buildBackButton, type CurrencyBarResult } from '@/ui/TopBar';
+import { HERO_STATS, HERO_PASSIVES } from '@/config/constants';
+import heroesData from '@/data/heroes.json';
 import { Hero } from '@/entities/Hero';
 import { newRun, addRelic, clearSave, type NodeDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
@@ -46,7 +49,6 @@ interface SlotCard {
 interface RosterCard {
   container: Phaser.GameObjects.Container;
   heroClass: HeroClass;
-  sprite: Phaser.GameObjects.Sprite;
 }
 
 export class SquadSelectScene extends Phaser.Scene {
@@ -56,8 +58,11 @@ export class SquadSelectScene extends Phaser.Scene {
   private _availableClasses: HeroClass[] = [];
   private _meta!: MetaBonuses;
   private _beginBtn: Phaser.GameObjects.Container | null = null;
-  private _slotsContainer: Phaser.GameObjects.Container | null = null;
-  private _rosterContainer: Phaser.GameObjects.Container | null = null;
+  private _allHeroClasses: HeroClass[] = [];
+  private _shardBar: CurrencyBarResult | null = null;
+  private _tooltipContainer: Phaser.GameObjects.Container | null = null;
+  private _tooltipTimer: Phaser.Time.TimerEvent | null = null;
+  private _tooltipDismissListener: (() => void) | null = null;
 
   // Run config state
   private _selectedMapId = 'goblin_wastes';
@@ -86,6 +91,9 @@ export class SquadSelectScene extends Phaser.Scene {
       }
     }
 
+    // All hero classes (for displaying locked heroes too)
+    this._allHeroClasses = (heroesData as { class: string }[]).map(h => h.class as HeroClass);
+
     this.cameras.main.fadeIn(400, 0, 0, 0);
 
     // Clean up scene-level drag listeners on shutdown to prevent accumulation
@@ -96,8 +104,8 @@ export class SquadSelectScene extends Phaser.Scene {
     });
 
     this.buildBackground();
-    this.buildSettingsButton();
-    this.buildShardDisplay();
+    buildSettingsGear(this, 'SquadSelectScene');
+    this._shardBar = buildCurrencyBar(this, 'shard', () => getShards());
     this.buildTitleText();
     this.buildSlots();
     this.buildRoster();
@@ -106,6 +114,10 @@ export class SquadSelectScene extends Phaser.Scene {
 
     // Pre-fill with last squad or defaults
     this.prefillSquad();
+
+    this.events.on('resume', () => {
+      this._shardBar?.updateValue();
+    });
   }
 
   // ── Background ──────────────────────────────────────────────────────────
@@ -129,51 +141,9 @@ export class SquadSelectScene extends Phaser.Scene {
     }
   }
 
-  // ── Settings gear (top-left) ──────────────────────────────────────────
-  private buildSettingsButton() {
-    const size = 44, r = 8;
-    const bg = this.add.graphics().setDepth(20);
-    const draw = (hovered: boolean) => {
-      bg.clear();
-      bg.fillStyle(0x060b12, hovered ? 1 : 0.75);
-      bg.fillRoundedRect(10, 10, size, size, r);
-      bg.lineStyle(1, 0x3a5070, hovered ? 1 : 0.5);
-      bg.strokeRoundedRect(10, 10, size, size, r);
-    };
-    draw(false);
-    this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
-    }).setOrigin(0.5).setDepth(21);
-
-    const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(22);
-    hit.on('pointerover', () => draw(true));
-    hit.on('pointerout', () => draw(false));
-    hit.on('pointerdown', () => {
-      this.scene.launch('SettingsScene', { callerKey: 'SquadSelectScene' });
-    });
-  }
-
-  // ── Shard display (top-right) ─────────────────────────────────────────
-  private buildShardDisplay() {
-    const px = GAME_WIDTH - 20, py = 14;
-    const W = 140, H = 36;
-
-    const panel = this.add.graphics().setDepth(10);
-    panel.fillStyle(0x0d1526, 0.92);
-    panel.fillRoundedRect(px - W, py, W, H, 7);
-    panel.lineStyle(1, 0x3a5570, 0.7);
-    panel.strokeRoundedRect(px - W, py, W, H, 7);
-
-    this.add.text(px - W / 2, py + H / 2, `\u25c6 ${getShards()}`, {
-      fontSize: '16px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
-      color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(11);
-  }
-
   // ── Title ─────────────────────────────────────────────────────────────
   private buildTitleText() {
-    this.add.text(GAME_WIDTH / 2, 56, 'ASSEMBLE YOUR SQUAD', {
+    this.add.text(GAME_WIDTH / 2, 50, 'ASSEMBLE YOUR SQUAD', {
       fontSize: '36px', fontFamily: 'Nunito, sans-serif',
       color: '#c8a840', stroke: '#000', strokeThickness: 4,
       letterSpacing: 4,
@@ -182,14 +152,13 @@ export class SquadSelectScene extends Phaser.Scene {
 
   // ── Squad Slots ───────────────────────────────────────────────────────
   private buildSlots() {
-    const slotW = this._slotCount <= 4 ? 140 : 120;
-    const slotH = this._slotCount <= 4 ? 160 : 140;
-    const gap = this._slotCount <= 4 ? 16 : 12;
+    const slotW = this._slotCount <= 4 ? 120 : 100;
+    const slotH = 130;
+    const gap = this._slotCount <= 4 ? 14 : 10;
     const totalW = this._slotCount * slotW + (this._slotCount - 1) * gap;
     const startX = GAME_WIDTH / 2 - totalW / 2 + slotW / 2;
-    const slotY = 160;
+    const slotY = 130;
 
-    this._slotsContainer = this.add.container(0, 0).setDepth(5);
     this._slots = [];
 
     for (let i = 0; i < this._slotCount; i++) {
@@ -362,9 +331,7 @@ export class SquadSelectScene extends Phaser.Scene {
 
   // ── Roster Panel ──────────────────────────────────────────────────────
   private buildRoster() {
-    this._rosterContainer = this.add.container(0, 0).setDepth(5);
     this._roster = [];
-
     this.layoutRoster();
   }
 
@@ -375,60 +342,100 @@ export class SquadSelectScene extends Phaser.Scene {
     }
     this._roster = [];
 
-    const cardW = 100, cardH = 110, gap = 12;
-    const totalW = this._availableClasses.length * cardW + (this._availableClasses.length - 1) * gap;
-    const startX = GAME_WIDTH / 2 - totalW / 2 + cardW / 2;
-    const rosterY = 370;
+    // 4x2 grid for all hero classes (unlocked + locked)
+    const cardW = 120, cardH = 120, gapH = 14, gapV = 12;
+    const cols = 4;
+    const gridW = cols * cardW + (cols - 1) * gapH;
+    const startX = GAME_WIDTH / 2 - gridW / 2 + cardW / 2;
+    const rosterStartY = 300;
 
     const slotted = new Set(this.getSlottedClasses());
+    const unlocked = new Set(this._availableClasses);
 
-    for (let i = 0; i < this._availableClasses.length; i++) {
-      const cls = this._availableClasses[i];
-      const rx = startX + i * (cardW + gap);
-      const isSlotted = slotted.has(cls);
+    for (let i = 0; i < this._allHeroClasses.length; i++) {
+      const cls = this._allHeroClasses[i];
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const rx = startX + col * (cardW + gapH);
+      const ry = rosterStartY + row * (cardH + gapV);
+      const isLocked = !unlocked.has(cls);
+      const isSlotted = !isLocked && slotted.has(cls);
 
-      const container = this.add.container(rx, rosterY).setDepth(6);
+      const container = this.add.container(rx, ry).setDepth(6);
       const color = CLASS_COLORS[cls] ?? 0x3a5070;
 
       // Card background
       const bg = this.add.graphics();
-      bg.fillStyle(0x0a1526, isSlotted ? 0.5 : 0.9);
-      bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 6);
-      bg.lineStyle(1.5, color, isSlotted ? 0.3 : 0.7);
-      bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 6);
+      if (isLocked) {
+        bg.fillStyle(0x0a0e16, 0.5);
+        bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 6);
+        bg.lineStyle(1.5, 0x2a2a3a, 0.3);
+        bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 6);
+      } else {
+        bg.fillStyle(0x0a1526, isSlotted ? 0.5 : 0.9);
+        bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 6);
+        bg.lineStyle(1.5, color, isSlotted ? 0.3 : 0.7);
+        bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 6);
+      }
       container.add(bg);
 
       // Hero sprite
       const key = cls.toLowerCase();
-      const sprite = this.add.sprite(0, -14, `${key}_idle_1`)
-        .setDisplaySize(48, 48)
-        .setAlpha(isSlotted ? 0.35 : 1);
+      const sprite = this.add.sprite(0, -16, `${key}_idle_1`)
+        .setDisplaySize(56, 56);
       const animKey = `${key}_idle`;
       if (this.anims.exists(animKey)) sprite.play(animKey);
       const rosterTint = Hero.CLASS_TINT[cls];
-      if (rosterTint) sprite.setTint(rosterTint);
+
+      if (isLocked) {
+        sprite.setTint(0x222222);
+        sprite.setAlpha(0.35);
+      } else if (isSlotted) {
+        if (rosterTint) sprite.setTint(rosterTint);
+        sprite.setAlpha(0.35);
+      } else {
+        if (rosterTint) sprite.setTint(rosterTint);
+      }
       container.add(sprite);
+
+      // Lock icon for locked heroes
+      if (isLocked) {
+        const lockGfx = this.add.graphics();
+        // Padlock body
+        lockGfx.fillStyle(0x4a4a5a, 0.7);
+        lockGfx.fillRoundedRect(-10, -8, 20, 16, 3);
+        // Padlock shackle
+        lockGfx.lineStyle(2.5, 0x4a4a5a, 0.7);
+        lockGfx.beginPath();
+        lockGfx.arc(0, -10, 7, Math.PI, 0, false);
+        lockGfx.strokePath();
+        // Keyhole
+        lockGfx.fillStyle(0x1a1a2a, 1);
+        lockGfx.fillCircle(0, -2, 3);
+        lockGfx.fillRect(-1.5, -1, 3, 6);
+        container.add(lockGfx);
+      }
 
       // Label
       const label = CLASS_LABELS[cls] ?? cls;
-      const nameText = this.add.text(0, cardH / 2 - 28, label, {
-        fontSize: '15px', fontFamily: 'Nunito, sans-serif',
-        color: isSlotted ? '#6a7a8a' : '#' + color.toString(16).padStart(6, '0'),
+      const nameText = this.add.text(0, cardH / 2 - 26, label, {
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif',
+        color: isLocked ? '#4a4a5a' : (isSlotted ? '#6a7a8a' : '#' + color.toString(16).padStart(6, '0')),
         stroke: '#000', strokeThickness: 1,
       }).setOrigin(0.5);
       container.add(nameText);
 
       // "In Squad" label if slotted
       if (isSlotted) {
-        const inSquad = this.add.text(0, cardH / 2 - 14, 'In Squad', {
-          fontSize: '13px', fontFamily: 'Nunito, sans-serif',
+        const inSquad = this.add.text(0, cardH / 2 - 12, 'In Squad', {
+          fontSize: '12px', fontFamily: 'Nunito, sans-serif',
           color: '#4a5a6a',
         }).setOrigin(0.5);
         container.add(inSquad);
       }
 
-      // Interactive — click to add to first empty slot
-      if (!isSlotted) {
+      // Interactive — click to add to first empty slot (unlocked only)
+      if (!isLocked && !isSlotted) {
         const hit = this.add.rectangle(0, 0, cardW, cardH, 0, 0)
           .setInteractive({ useHandCursor: true, draggable: true });
         container.add(hit);
@@ -457,9 +464,17 @@ export class SquadSelectScene extends Phaser.Scene {
         // Drag support
         hit.setData('heroClass', cls);
         this.input.setDraggable(hit);
+      } else if (isLocked) {
+        // Locked hero — click to show info tooltip
+        const hit = this.add.rectangle(0, 0, cardW, cardH, 0, 0)
+          .setInteractive();
+        container.add(hit);
+        hit.on('pointerdown', () => {
+          this.showLockedHeroTooltip(cls, rx, ry);
+        });
       }
 
-      this._roster.push({ container, heroClass: cls, sprite });
+      this._roster.push({ container, heroClass: cls });
     }
 
     // Drag events (scene-level)
@@ -495,27 +510,21 @@ export class SquadSelectScene extends Phaser.Scene {
   }
 
   private refreshRoster() {
-    if (this._rosterContainer) {
-      this._rosterContainer.destroy();
-      this._rosterContainer = this.add.container(0, 0).setDepth(5);
-    }
-    this._roster = [];
+    // layoutRoster destroys existing roster card containers before rebuilding
     this.layoutRoster();
   }
 
   // ── Bottom Buttons ────────────────────────────────────────────────────
   private buildBottomButtons() {
-    const btnY = GAME_HEIGHT - 60;
-
-    // Back button (left)
-    this.buildButton(GAME_WIDTH / 2 - 140, btnY, '\u2190 Back', 0x3a5070, () => {
+    // Back button (bottom-left, standardized)
+    buildBackButton(this, '\u2190 Back', 0x3a5070, () => {
       this.cameras.main.fadeOut(300, 0, 0, 0, (_: unknown, p: number) => {
         if (p === 1) this.scene.start('MainMenuScene');
       });
     });
 
-    // Begin Run button (right)
-    this._beginBtn = this.buildButton(GAME_WIDTH / 2 + 140, btnY, 'Begin Run \u2192', 0x2ecc71, () => {
+    // Begin Run button (bottom-right, symmetric with back button)
+    this._beginBtn = this.buildButton(GAME_WIDTH - 90, GAME_HEIGHT - 52, 'Begin Run \u2192', 0x2ecc71, () => {
       this.startRun();
     });
 
@@ -612,8 +621,8 @@ export class SquadSelectScene extends Phaser.Scene {
   // ── Run Config (map, ascension, modifiers) ────────────────────────────
   private buildRunConfig() {
     const cx = GAME_WIDTH / 2;
-    const panelY = 490;
-    const pw = 620, ph = 100, pr = 8;
+    const panelY = 560;
+    const pw = 620, ph = 80, pr = 8;
 
     // Panel background — centered below roster
     const panel = this.add.graphics().setDepth(10);
@@ -624,15 +633,15 @@ export class SquadSelectScene extends Phaser.Scene {
 
     // ── Map selection (left column) ──
     const mapCX = cx - 200;
-    this.add.text(mapCX, panelY + 10, 'MAP', {
-      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
+    this.add.text(mapCX, panelY + 6, 'MAP', {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const maps = getAllMaps();
     let mapIdx = maps.findIndex(m => m.id === this._selectedMapId);
     if (mapIdx < 0) mapIdx = 0;
-    const mapLabel = this.add.text(mapCX, panelY + 32, maps[mapIdx].name, {
-      fontSize: '18px', fontFamily: 'Nunito, sans-serif', color: '#f1c40f',
+    const mapLabel = this.add.text(mapCX, panelY + 24, maps[mapIdx].name, {
+      fontSize: '17px', fontFamily: 'Nunito, sans-serif', color: '#f1c40f',
       stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
@@ -640,26 +649,26 @@ export class SquadSelectScene extends Phaser.Scene {
       this._selectedMapId = maps[mapIdx].id;
       mapLabel.setText(maps[mapIdx].name);
     };
-    this.buildSmallArrowBtn(mapCX - 80, panelY + 36, '\u25c0', () => {
+    this.buildSmallArrowBtn(mapCX - 80, panelY + 24, '\u25c0', () => {
       mapIdx = (mapIdx - 1 + maps.length) % maps.length; updateMap();
     });
-    this.buildSmallArrowBtn(mapCX + 80, panelY + 36, '\u25b6', () => {
+    this.buildSmallArrowBtn(mapCX + 80, panelY + 24, '\u25b6', () => {
       mapIdx = (mapIdx + 1) % maps.length; updateMap();
     });
 
     // Subtle divider
     panel.lineStyle(1, 0x2a3a50, 0.4);
-    panel.lineBetween(cx - 80, panelY + 12, cx - 80, panelY + ph - 12);
+    panel.lineBetween(cx - 80, panelY + 8, cx - 80, panelY + ph - 8);
 
     // ── Ascension (center column) ──
     const ascCX = cx;
-    this.add.text(ascCX, panelY + 10, 'ASCENSION', {
-      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
+    this.add.text(ascCX, panelY + 6, 'ASCENSION', {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const maxAsc = getUnlockedAscension();
-    const ascLabel = this.add.text(ascCX, panelY + 32, `${this._ascensionLevel}`, {
-      fontSize: '20px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+    const ascLabel = this.add.text(ascCX, panelY + 26, `${this._ascensionLevel}`, {
+      fontSize: '18px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
       color: this._ascensionLevel > 0 ? '#e74c3c' : '#5a7a9a',
       stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5, 0).setDepth(11);
@@ -668,20 +677,20 @@ export class SquadSelectScene extends Phaser.Scene {
       ascLabel.setText(`${this._ascensionLevel}`);
       ascLabel.setColor(this._ascensionLevel > 0 ? '#e74c3c' : '#5a7a9a');
     };
-    this.buildSmallArrowBtn(ascCX - 36, panelY + 36, '\u25c0', () => {
+    this.buildSmallArrowBtn(ascCX - 36, panelY + 26, '\u25c0', () => {
       this._ascensionLevel = Math.max(0, this._ascensionLevel - 1); updateAsc();
     });
-    this.buildSmallArrowBtn(ascCX + 36, panelY + 36, '\u25b6', () => {
+    this.buildSmallArrowBtn(ascCX + 36, panelY + 26, '\u25b6', () => {
       this._ascensionLevel = Math.min(maxAsc, this._ascensionLevel + 1); updateAsc();
     });
 
     // Subtle divider
-    panel.lineBetween(cx + 80, panelY + 12, cx + 80, panelY + ph - 12);
+    panel.lineBetween(cx + 80, panelY + 8, cx + 80, panelY + ph - 8);
 
     // ── Modifier toggles (right column) ──
     const modCX = cx + 200;
-    this.add.text(modCX, panelY + 10, 'MODIFIERS', {
-      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
+    this.add.text(modCX, panelY + 6, 'MODIFIERS', {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const modDefs = [
@@ -696,7 +705,7 @@ export class SquadSelectScene extends Phaser.Scene {
       const col = i % 2;
       const row = Math.floor(i / 2);
       const mx = modCX - 55 + col * 110;
-      const my = panelY + 32 + row * 30;
+      const my = panelY + 22 + row * 28;
       this.buildModChip(mx, my, mod.id, mod.label, mod.color);
     });
   }
@@ -770,6 +779,128 @@ export class SquadSelectScene extends Phaser.Scene {
       draw(true);
       textObj.setColor(active ? '#' + color.toString(16).padStart(6, '0') : '#4a5a6a');
     });
+  }
+
+  // ── Locked hero tooltip ────────────────────────────────────────────────
+  private showLockedHeroTooltip(cls: HeroClass, anchorX: number, anchorY: number) {
+    this.dismissTooltip();
+
+    const stats = HERO_STATS[cls];
+    const passive = HERO_PASSIVES[cls];
+    if (!stats) return;
+
+    // Find unlock upgrade for this class
+    const upgrades = getAllUpgrades();
+    const unlockUpgrade = upgrades.find(
+      u => u.effect === 'UNLOCK_HERO' && u.value === cls,
+    );
+
+    const PW = 280, pr = 8;
+    const borderColor = stats.color ?? 0xc0a060;
+
+    // Build content first to measure actual height
+    const contentItems: Phaser.GameObjects.GameObject[] = [];
+
+    // Hero name from data
+    const heroData = (heroesData as { class: string; name: string }[]).find(h => h.class === cls);
+    const heroName = heroData?.name ?? cls;
+    contentItems.push(this.add.text(0, 12, heroName, {
+      fontSize: '20px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+      color: '#' + borderColor.toString(16).padStart(6, '0'),
+      stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 0));
+
+    // Class name
+    const classLabel = CLASS_LABELS[cls] ?? cls;
+    contentItems.push(this.add.text(0, 36, classLabel, {
+      fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
+    }).setOrigin(0.5, 0));
+
+    // Passive description — measure actual wrapped height
+    let nextY = 58;
+    if (passive) {
+      const passiveText = this.add.text(0, nextY, `${passive.name} — ${passive.desc}`, {
+        fontSize: '13px', fontFamily: 'Nunito, sans-serif', fontStyle: 'italic',
+        color: '#8a8a7a', wordWrap: { width: PW - 24 }, align: 'center',
+      }).setOrigin(0.5, 0);
+      contentItems.push(passiveText);
+      nextY += passiveText.height + 8;
+    }
+
+    // Divider
+    const div = this.add.graphics();
+    div.lineStyle(1, 0x3a5070, 0.3);
+    div.lineBetween(-PW / 2 + 16, nextY, PW / 2 - 16, nextY);
+    contentItems.push(div);
+    nextY += 8;
+
+    // Unlock info
+    contentItems.push(this.add.text(0, nextY, 'Unlock via Camp Upgrades', {
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
+    }).setOrigin(0.5, 0));
+    nextY += 22;
+
+    if (unlockUpgrade) {
+      const shards = getShards();
+      const costText = `${unlockUpgrade.name} — ${unlockUpgrade.shardCost} \u25c6`;
+      contentItems.push(this.add.text(0, nextY, costText, {
+        fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
+      }).setOrigin(0.5, 0));
+
+      if (shards < unlockUpgrade.shardCost) {
+        const need = unlockUpgrade.shardCost - shards;
+        contentItems.push(this.add.text(0, nextY + 18, `(need ${need} more)`, {
+          fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#8a4040',
+        }).setOrigin(0.5, 0));
+        nextY += 18;
+      }
+    }
+
+    const PH = nextY + 18; // bottom padding
+
+    const tx = Phaser.Math.Clamp(anchorX, PW / 2 + 10, GAME_WIDTH - PW / 2 - 10);
+    const ty = Math.min(anchorY + 70, GAME_HEIGHT - PH - 10);
+
+    const container = this.add.container(tx, ty).setDepth(30).setAlpha(0);
+    this._tooltipContainer = container;
+
+    // Background — drawn after measuring content
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a1220, 0.96);
+    bg.fillRoundedRect(-PW / 2, 0, PW, PH, pr);
+    bg.lineStyle(1.5, borderColor, 0.5);
+    bg.strokeRoundedRect(-PW / 2, 0, PW, PH, pr);
+    container.add(bg);
+
+    // Add all content items to container (on top of bg)
+    for (const item of contentItems) container.add(item);
+
+    this.tweens.add({ targets: container, alpha: 1, duration: 150 });
+    this._tooltipTimer = this.time.delayedCall(5000, () => this.dismissTooltip());
+
+    // Click-elsewhere dismiss
+    const onElsewhere = () => {
+      this.dismissTooltip();
+    };
+    this._tooltipDismissListener = onElsewhere;
+    this.time.delayedCall(100, () => {
+      this.input.on('pointerdown', onElsewhere);
+    });
+  }
+
+  private dismissTooltip() {
+    if (this._tooltipDismissListener) {
+      this.input.off('pointerdown', this._tooltipDismissListener);
+      this._tooltipDismissListener = null;
+    }
+    if (this._tooltipTimer) {
+      this._tooltipTimer.destroy();
+      this._tooltipTimer = null;
+    }
+    if (this._tooltipContainer) {
+      this._tooltipContainer.destroy();
+      this._tooltipContainer = null;
+    }
   }
 
   // ── Start Run ─────────────────────────────────────────────────────────

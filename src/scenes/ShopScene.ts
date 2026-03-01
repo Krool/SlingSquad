@@ -5,6 +5,7 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { discoverRelic } from '@/systems/DiscoveryLog';
 import { checkAchievements } from '@/systems/AchievementSystem';
+import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
 
 const RARITY_COLOR: Record<string, number> = {
   common:   0x95a5a6,
@@ -92,8 +93,7 @@ export class ShopScene extends Phaser.Scene {
   private offeredRelics: RelicDef[] = [];
   private _transitioning = false;
 
-  private goldLabel!: Phaser.GameObjects.Text;
-  private goldPanel!: Phaser.GameObjects.Graphics;
+  private _goldBar: CurrencyBarResult | null = null;
   private cardContainers: Phaser.GameObjects.Container[] = [];
   private soldSet = new Set<number>();
 
@@ -113,10 +113,15 @@ export class ShopScene extends Phaser.Scene {
 
     this.buildBackground();
     this.buildTitle();
-    this.buildGoldHUD();
+    buildSettingsGear(this, 'ShopScene');
+    this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold);
     this.pickRelics();
     this.buildRelicCards();
     this.buildSkipButton();
+
+    this.events.on('resume', () => {
+      this._goldBar?.updateValue();
+    });
   }
 
   // ── Background ─────────────────────────────────────────────────────────────
@@ -185,23 +190,8 @@ export class ShopScene extends Phaser.Scene {
     rule.lineBetween(GAME_WIDTH / 2 - 240, 128, GAME_WIDTH / 2 + 240, 128);
   }
 
-  private buildGoldHUD() {
-    const run = getRunState();
-    this.goldPanel = this.add.graphics().setDepth(10);
-    this.goldPanel.fillStyle(0x0d1117, 0.9);
-    this.goldPanel.fillRoundedRect(18, 18, 120, 44, 7);
-    this.goldPanel.lineStyle(1, 0xf1c40f, 0.4);
-    this.goldPanel.strokeRoundedRect(18, 18, 120, 44, 7);
-
-    this.goldLabel = this.add.text(32, 32, `◆ ${run.gold}`, {
-      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
-      color: '#f1c40f', stroke: '#000', strokeThickness: 3,
-    }).setDepth(11);
-  }
-
   private refreshGoldHUD() {
-    const run = getRunState();
-    this.goldLabel.setText(`◆ ${run.gold}`);
+    this._goldBar?.updateValue();
   }
 
   // ── Pick 3 random relics the player doesn't have ───────────────────────────

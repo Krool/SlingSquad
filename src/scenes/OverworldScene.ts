@@ -5,6 +5,8 @@ import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reord
 import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
 import { getMapById } from '@/data/maps/index';
+import { finalizeRun } from '@/systems/RunHistory';
+import { buildSettingsGear, buildCurrencyBar, buildBackButton, type CurrencyBarResult } from '@/ui/TopBar';
 
 const NODE_RADIUS = 26;
 const NODE_COLORS: Record<string, number> = {
@@ -70,7 +72,7 @@ export class OverworldScene extends Phaser.Scene {
   private nodeGlows: Map<number, Phaser.GameObjects.Graphics> = new Map();
   private pulseTime = 0;
 
-  private goldText!: Phaser.GameObjects.Text;
+  private _goldBar: CurrencyBarResult | null = null;
   private relicRow!: Phaser.GameObjects.Container;
   private tooltip!: Phaser.GameObjects.Container;
   /** Tracks which node was last tapped on touch — used for two-tap confirm. */
@@ -114,10 +116,14 @@ export class OverworldScene extends Phaser.Scene {
     this.buildNodes();
     this.buildHUD();
     this.buildSquadPreview();
-    this.buildSettingsButton();
+    buildSettingsGear(this, 'OverworldScene', 30);
     this.buildQuitRunButton();
 
     this.cameras.main.fadeIn(300, 0, 0, 0);
+
+    this.events.on('resume', () => {
+      this._goldBar?.updateValue();
+    });
 
     // Tapping background dismisses touch tooltip selection
     this.input.on('pointerdown', (_ptr: Phaser.Input.Pointer, hit: Phaser.GameObjects.GameObject[]) => {
@@ -690,25 +696,17 @@ export class OverworldScene extends Phaser.Scene {
   private buildHUD() {
     const run = getRunState();
 
-    const goldPanel = this.add.graphics().setDepth(20);
-    goldPanel.fillStyle(0x060b12, 0.92);
-    goldPanel.fillRoundedRect(12, 58, 120, 40, 7);
-    goldPanel.lineStyle(1, 0xf1c40f, 0.35);
-    goldPanel.strokeRoundedRect(12, 58, 120, 40, 7);
+    // Gold bar (top-right, via TopBar)
+    this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold, 20);
 
-    this.goldText = this.add.text(26, 70, `◆ ${run.gold}`, {
-      fontSize: '24px', fontFamily: 'Nunito, sans-serif',
-      color: '#f1c40f', stroke: '#000', strokeThickness: 3,
-    }).setDepth(21);
-
-    // Floor indicator (right side)
+    // Floor indicator (below the map title bar)
     const floorLabel = run.totalFloors > 1 ? getCurrentFloorDisplay() : 'RUN 1';
     const floorPanel = this.add.graphics().setDepth(20);
     floorPanel.fillStyle(0x060b12, 0.88);
-    floorPanel.fillRoundedRect(GAME_WIDTH - 132, 58, 120, 40, 7);
+    floorPanel.fillRoundedRect(12, 58, 120, 40, 7);
     floorPanel.lineStyle(1, 0x5a7a9a, 0.35);
-    floorPanel.strokeRoundedRect(GAME_WIDTH - 132, 58, 120, 40, 7);
-    this.add.text(GAME_WIDTH - 72, 78, floorLabel, {
+    floorPanel.strokeRoundedRect(12, 58, 120, 40, 7);
+    this.add.text(72, 78, floorLabel, {
       fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
     }).setOrigin(0.5).setDepth(21);
 
@@ -973,26 +971,45 @@ export class OverworldScene extends Phaser.Scene {
     run.squad.forEach((h, i) => {
       const hx = startX + i * spacing;
       const hy = panelY + 54;
-      const pct = Math.max(0, h.currentHp / h.maxHp);
       const col = heroColors[h.heroClass] ?? 0x888888;
+      const onCooldown = (h.reviveCooldown ?? 0) > 0;
 
       const g = this.add.graphics();
-      g.lineStyle(1, col, 0.7);
-      g.strokeCircle(hx, hy, 17);
-      g.fillStyle(col, 0.85);
-      g.fillCircle(hx, hy, 14);
-      g.fillStyle(0x1a2a3a, 1);
-      g.fillRect(hx - 12, hy + 18, 24, 3);
-      g.fillStyle(pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c, 1);
-      g.fillRect(hx - 12, hy + 18, 24 * pct, 3);
+      if (onCooldown) {
+        // Grayed-out circle — no HP bar
+        g.lineStyle(1, 0x555555, 0.5);
+        g.strokeCircle(hx, hy, 17);
+        g.fillStyle(0x333333, 0.6);
+        g.fillCircle(hx, hy, 14);
+      } else {
+        const pct = Math.max(0, h.currentHp / h.maxHp);
+        g.lineStyle(1, col, 0.7);
+        g.strokeCircle(hx, hy, 17);
+        g.fillStyle(col, 0.85);
+        g.fillCircle(hx, hy, 14);
+        g.fillStyle(0x1a2a3a, 1);
+        g.fillRect(hx - 12, hy + 18, 24, 3);
+        g.fillStyle(pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c, 1);
+        g.fillRect(hx - 12, hy + 18, 24 * pct, 3);
+      }
       this.squadPreviewCt.add(g);
 
-      this.squadPreviewCt.add(
-        this.add.text(hx, hy, h.heroClass[0], {
-          fontSize: '13px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', color: '#fff',
-          stroke: '#000', strokeThickness: 2,
-        }).setOrigin(0.5),
-      );
+      if (onCooldown) {
+        // Red cooldown number instead of class initial
+        this.squadPreviewCt.add(
+          this.add.text(hx, hy, `${h.reviveCooldown}`, {
+            fontSize: '15px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', color: '#e74c3c',
+            stroke: '#000', strokeThickness: 2,
+          }).setOrigin(0.5),
+        );
+      } else {
+        this.squadPreviewCt.add(
+          this.add.text(hx, hy, h.heroClass[0], {
+            fontSize: '13px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', color: '#fff',
+            stroke: '#000', strokeThickness: 2,
+          }).setOrigin(0.5),
+        );
+      }
     });
   }
 
@@ -1063,12 +1080,13 @@ export class OverworldScene extends Phaser.Scene {
       const hexCol = '#' + col.toString(16).padStart(6, '0');
       const pct    = Math.max(0, heroData.currentHp / heroData.maxHp);
       const stats  = HERO_STATS[heroData.heroClass as HeroClass];
+      const onCooldown = (heroData.reviveCooldown ?? 0) > 0;
 
       // Card bg
       const cardBg = this.add.graphics();
-      cardBg.fillStyle(0x0b1828, 1);
+      cardBg.fillStyle(onCooldown ? 0x0a0a12 : 0x0b1828, 1);
       cardBg.fillRoundedRect(10, cardY + 2, PANEL_W - 20, CARD_H - 4, 6);
-      cardBg.lineStyle(1, col, 0.2);
+      cardBg.lineStyle(1, onCooldown ? 0x444444 : col, onCooldown ? 0.15 : 0.2);
       cardBg.strokeRoundedRect(10, cardY + 2, PANEL_W - 20, CARD_H - 4, 6);
       panel.add(cardBg);
 
@@ -1076,51 +1094,67 @@ export class OverworldScene extends Phaser.Scene {
       const charKey = heroData.heroClass.toLowerCase();
       const portrait = this.add.image(48, cardY + CARD_H / 2, `${charKey}_idle_1`)
         .setDisplaySize(58, 58);
+      if (onCooldown) {
+        portrait.setTint(0x444444);
+        portrait.setAlpha(0.5);
+      }
       panel.add(portrait);
 
       // Name
       panel.add(this.add.text(88, cardY + 13, heroData.name, {
         fontSize: '18px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
-        color: '#ddd0b0', stroke: '#000', strokeThickness: 2,
+        color: onCooldown ? '#666666' : '#ddd0b0', stroke: '#000', strokeThickness: 2,
       }));
 
       // Class badge
       panel.add(this.add.text(88, cardY + 32, heroData.heroClass, {
-        fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: hexCol, letterSpacing: 2,
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: onCooldown ? '#555555' : hexCol, letterSpacing: 2,
       }));
 
-      // HP bar
-      const barX = 88, barY = cardY + 50, barW = PANEL_W - 170;
-      const hpBg = this.add.graphics();
-      hpBg.fillStyle(0x1a2a3a, 1);
-      hpBg.fillRoundedRect(barX, barY, barW, 6, 3);
-      panel.add(hpBg);
+      if (onCooldown) {
+        // "REVIVING" badge + cooldown text instead of HP bar / stats
+        panel.add(this.add.text(88, cardY + 50, 'REVIVING', {
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+          color: '#e74c3c', stroke: '#000', strokeThickness: 2,
+        }));
+        const nodesLeft = heroData.reviveCooldown!;
+        panel.add(this.add.text(88, cardY + 68, `Returns in ${nodesLeft} node${nodesLeft > 1 ? 's' : ''}`, {
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#8a6060',
+        }));
+      } else {
+        // HP bar
+        const barX = 88, barY = cardY + 50, barW = PANEL_W - 170;
+        const hpBg = this.add.graphics();
+        hpBg.fillStyle(0x1a2a3a, 1);
+        hpBg.fillRoundedRect(barX, barY, barW, 6, 3);
+        panel.add(hpBg);
 
-      const hpFill = this.add.graphics();
-      const hpCol = pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c;
-      hpFill.fillStyle(hpCol, 1);
-      hpFill.fillRoundedRect(barX, barY, Math.max(3, barW * pct), 6, 3);
-      panel.add(hpFill);
+        const hpFill = this.add.graphics();
+        const hpCol = pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c;
+        hpFill.fillStyle(hpCol, 1);
+        hpFill.fillRoundedRect(barX, barY, Math.max(3, barW * pct), 6, 3);
+        panel.add(hpFill);
 
-      const hpHex = pct > 0.5 ? '#2ecc71' : pct > 0.25 ? '#f39c12' : '#e74c3c';
-      panel.add(this.add.text(barX + barW + 8, barY - 1,
-        `${heroData.currentHp} / ${heroData.maxHp}`, {
-          fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: hpHex,
+        const hpHex = pct > 0.5 ? '#2ecc71' : pct > 0.25 ? '#f39c12' : '#e74c3c';
+        panel.add(this.add.text(barX + barW + 8, barY - 1,
+          `${heroData.currentHp} / ${heroData.maxHp}`, {
+            fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: hpHex,
+          }));
+
+        // Description
+        const desc = HERO_DESCS[heroData.heroClass] ?? '';
+        panel.add(this.add.text(88, cardY + 63, desc, {
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#6a8aaa',
+          wordWrap: { width: PANEL_W - 190 },
         }));
 
-      // Description
-      const desc = HERO_DESCS[heroData.heroClass] ?? '';
-      panel.add(this.add.text(88, cardY + 63, desc, {
-        fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#6a8aaa',
-        wordWrap: { width: PANEL_W - 190 },
-      }));
-
-      // Stats row
-      const keyStat = HERO_KEY_STAT[heroData.heroClass] ?? '';
-      panel.add(this.add.text(88, cardY + 83,
-        `\u2694 ${stats.combatDamage} atk   \u25ce ${stats.combatRange} range   ${keyStat}`, {
-          fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6080',
-        }));
+        // Stats row
+        const keyStat = HERO_KEY_STAT[heroData.heroClass] ?? '';
+        panel.add(this.add.text(88, cardY + 83,
+          `\u2694 ${stats.combatDamage} atk   \u25ce ${stats.combatRange} range   ${keyStat}`, {
+            fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6080',
+          }));
+      }
 
       // Reorder arrows ▲ ▼ (larger touch targets)
       const arrowW = 36, arrowH = 32;
@@ -1205,60 +1239,14 @@ export class OverworldScene extends Phaser.Scene {
     this.refreshSquadPreview();  // update the mini-preview too
   }
 
-  // ── Settings button (top-left) ─────────────────────────────────────────────
-  private buildSettingsButton() {
-    const size = 72, r = 12;
-    const bg = this.add.graphics().setDepth(30);
-    const draw = (hovered: boolean) => {
-      bg.clear();
-      bg.fillStyle(0x060b12, hovered ? 1 : 0.75);
-      bg.fillRoundedRect(10, 10, size, size, r);
-      bg.lineStyle(1, 0x3a5070, hovered ? 1 : 0.5);
-      bg.strokeRoundedRect(10, 10, size, size, r);
-    };
-    draw(false);
-    this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '34px', fontFamily: 'Nunito, sans-serif',
-    }).setOrigin(0.5).setDepth(31);
-
-    const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(32);
-    hit.on('pointerover', () => draw(true));
-    hit.on('pointerout', () => draw(false));
-    hit.on('pointerdown', () => {
-      this.scene.launch('SettingsScene', { callerKey: 'OverworldScene' });
-    });
-  }
-
   // ── Quit Run button (bottom-left) ──────────────────────────────────────────
   private buildQuitRunButton() {
-    const w = 170, h = 48, r = 7;
-    const bx = 16, by = GAME_HEIGHT - 56;
-
-    const bg = this.add.graphics().setDepth(20);
-    const draw = (hovered: boolean) => {
-      bg.clear();
-      bg.fillStyle(hovered ? 0x3a1010 : 0x0f0808, hovered ? 1 : 0.85);
-      bg.fillRoundedRect(bx, by, w, h, r);
-      bg.lineStyle(1, 0xe74c3c, hovered ? 0.9 : 0.4);
-      bg.strokeRoundedRect(bx, by, w, h, r);
-    };
-    draw(false);
-
-    this.add.text(bx + w / 2, by + h / 2, '\u2190 Quit Run', {
-      fontSize: '17px', fontFamily: 'Nunito, sans-serif',
-      color: '#c06060', stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(21);
-
-    const hit = this.add.rectangle(bx + w / 2, by + h / 2, w, h, 0x000000, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(22);
-    hit.on('pointerover', () => draw(true));
-    hit.on('pointerout', () => draw(false));
-    hit.on('pointerdown', () => {
+    buildBackButton(this, '\u2190 Quit Run', 0xe74c3c, () => {
+      finalizeRun(false);
       this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
         if (p === 1) this.scene.start('MainMenuScene');
       });
-    });
+    }, 20);
   }
 
   private showAvailableGlow() {
@@ -1463,6 +1451,7 @@ export class OverworldScene extends Phaser.Scene {
       btn.on('pointerover', () => { drawBtn(true); this.tweens.add({ targets: btn, scaleX: 1.05, scaleY: 1.05, duration: 80 }); });
       btn.on('pointerout',  () => { drawBtn(false); this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 80 }); });
       btn.on('pointerdown', () => {
+        finalizeRun(true);
         this.cameras.main.fadeOut(400, 0, 0, 0, (_: unknown, p: number) => {
           if (p === 1) this.scene.start('MainMenuScene', { shardsEarned: 0 });
         });
@@ -1499,7 +1488,6 @@ export class OverworldScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     this.pulseTime += delta;
     const run = getRunState();
-    this.goldText.setText(`◆ ${run.gold}`);
 
     const pulseMag = 0.09 * Math.sin(this.pulseTime / 380);
     for (const id of run.availableNodeIds) {

@@ -5,6 +5,7 @@ import {
   getAllUpgrades, type UpgradeDef,
 } from '@/systems/MetaState';
 import { ScrollablePanel } from '@/ui/ScrollablePanel';
+import { drawCrystalIcon } from '@/ui/TopBar';
 import { CAMP_STRUCTURES } from '@/data/campBuildings';
 
 export class CampUpgradesScene extends Phaser.Scene {
@@ -82,22 +83,22 @@ export class CampUpgradesScene extends Phaser.Scene {
   private buildShardDisplay(panelX: number, panelY: number) {
     const px = panelX + (GAME_WIDTH - 80) - 20;
     const py = panelY + 12;
-    const W = 160, H = 38;
+    const W = 110, H = 38;
 
     const bg = this.add.graphics().setDepth(20);
     bg.fillStyle(0x0d1526, 0.92);
     bg.fillRoundedRect(px - W, py, W, H, 7);
-    bg.lineStyle(1, 0x3a5570, 0.7);
+    bg.lineStyle(1, 0x5aaac8, 0.35);
     bg.strokeRoundedRect(px - W, py, W, H, 7);
 
-    this.add.text(px - W / 2, py + 5, 'SHARDS', {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
-    }).setOrigin(0.5, 0).setDepth(21);
+    // Crystal icon (procedural shard — shared with TopBar)
+    const iconGfx = this.add.graphics().setDepth(21);
+    drawCrystalIcon(iconGfx, px - W + 18, py + H / 2);
 
-    this._shardText = this.add.text(px - W / 2, py + 18, `\u25c6 ${getShards()}`, {
-      fontSize: '18px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+    this._shardText = this.add.text(px - W + 36, py + H / 2, `${getShards()}`, {
+      fontSize: '20px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
       color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5, 0).setDepth(21);
+    }).setOrigin(0, 0.5).setDepth(21);
   }
 
   // ── Upgrade grid (3 columns) ───────────────────────────────────────────
@@ -325,7 +326,7 @@ export class CampUpgradesScene extends Phaser.Scene {
   }
 
   private refreshShardDisplay() {
-    this._shardText?.setText(`\u25c6 ${getShards()}`);
+    this._shardText?.setText(`${getShards()}`);
   }
 
   // ── Close button ───────────────────────────────────────────────────────

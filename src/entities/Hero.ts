@@ -53,6 +53,9 @@ export class Hero {
   battleEnemiesKilled = 0;
   battleHealingDone = 0;
 
+  // Warrior gravity listener (applied via beforeupdate for correct timing)
+  private _gravityListener: (() => void) | null = null;
+
   // Last known position (saved before body is destroyed on death, used by revive)
   private _lastX = SLING_X;
   private _lastY = SLING_Y;
@@ -129,9 +132,19 @@ export class Hero {
     }) as GameBody;
     this.body.__hero = this;
 
-    // Warrior battering ram: skip engine gravity, apply reduced gravity manually in update()
+    // Warrior battering ram: skip engine gravity, apply reduced gravity via beforeupdate
+    // event so the force is available in the same physics step (not 1 frame late).
+    // This keeps the actual flight arc aligned with the trajectory preview.
     if (this.heroClass === 'WARRIOR') {
       (this.body as any).ignoreGravity = true;
+      const warriorBody = this.body;
+      const gravScale = HERO_STATS.WARRIOR.gravityScale;
+      this._gravityListener = () => {
+        if (warriorBody && this.state === 'flying') {
+          warriorBody.force.y += warriorBody.mass * 1.08 * 0.001 * gravScale;
+        }
+      };
+      this.scene.matter.world.on('beforeupdate', this._gravityListener);
     }
 
     this.scene.matter.setVelocity(this.body, vx, vy);
@@ -167,10 +180,19 @@ export class Hero {
     this.hpBarFill.fillRect(-w / 2, -this.stats.radius * 2 - 4, w * pct, h);
   }
 
+  /** Remove warrior gravity listener when no longer flying */
+  private _removeGravityListener() {
+    if (this._gravityListener) {
+      this.scene.matter.world.off('beforeupdate', this._gravityListener);
+      this._gravityListener = null;
+    }
+  }
+
   /** Switch from flying projectile to grounded combat unit */
   enterCombat() {
     if (this.state !== 'flying' || !this.body) return;
     this.state = 'combat';
+    this._removeGravityListener();
     this.scene.events.emit('heroLanded', this.body.position.x, this.body.position.y);
     // Increase friction so hero slows on rubble but stays dynamic — allows terrain traversal
     if (this.body) {
@@ -244,6 +266,7 @@ export class Hero {
   die() {
     if (this.state === 'dead') return;
     this.state = 'dead';
+    this._removeGravityListener();
     this.scene.events.emit('heroDied', this);
     if (this.body) {
       this._lastX = this.body.position.x;
@@ -326,13 +349,6 @@ export class Hero {
         this.die();
         return;
       }
-    }
-
-    // Warrior battering ram: engine gravity is disabled (ignoreGravity=true),
-    // apply only gravityScale fraction of gravity as a downward force
-    if (this.state === 'flying' && this.heroClass === 'WARRIOR') {
-      const gravScale = HERO_STATS.WARRIOR.gravityScale;
-      this.body.force.y += this.body.mass * 1.08 * 0.001 * gravScale;
     }
 
     // Check if hero has settled (low velocity) — enter combat

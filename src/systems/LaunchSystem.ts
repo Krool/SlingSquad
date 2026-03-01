@@ -112,7 +112,7 @@ export class LaunchSystem {
     const charKey = hero.heroClass.toLowerCase();
     this.previewSprite = this.scene.add.sprite(SLING_X, SLING_Y - r * 0.25, `${charKey}_idle_1`)
       .setDisplaySize(r * 2.5, r * 2.5)
-      .setDepth(9);
+      .setDepth(11);
     this.previewSprite.play(`${charKey}_idle`);
     // Apply class tint for heroes that reuse another class's sprite folder
     const classTint = Hero.CLASS_TINT[hero.heroClass];
@@ -254,9 +254,20 @@ export class LaunchSystem {
     // ── Frame-by-frame simulation (matches actual physics exactly) ──
     // Warrior gravityScale: nearly flat trajectory
     const gravScale = this.currentHero?.heroClass === 'WARRIOR' ? HERO_STATS.WARRIOR.gravityScale : 1.0;
+    // Use effective frictionAir (accounts for AIR_FRICTION_REDUCE relic)
+    const simFrictionAir = this.airFrictionReduce > 0
+      ? Math.max(0.0005, HERO_FRICTION_AIR - this.airFrictionReduce)
+      : HERO_FRICTION_AIR;
+
+    // Encore passive (Bard): preview should reflect the +15% power boost
+    let simVx = vx, simVy = vy;
+    if (this.encoreActive) {
+      simVx *= 1.15;
+      simVy *= 1.15;
+    }
 
     let px = SLING_X, py = SLING_Y;
-    let pvx = vx, pvy = vy;
+    let pvx = simVx, pvy = simVy;
     let dotsDrawn = 0;
     // Track last above-ground position for Mage AoE preview
     let landX = SLING_X, landY = SLING_Y;
@@ -267,8 +278,8 @@ export class LaunchSystem {
 
     for (let frame = 0; frame < TRAJECTORY_SIM_FRAMES && dotsDrawn < effectiveDots; frame++) {
       // Match Matter.js Body.update: frictionAir on both axes, then gravity
-      pvx *= (1 - HERO_FRICTION_AIR);
-      pvy *= (1 - HERO_FRICTION_AIR);
+      pvx *= (1 - simFrictionAir);
+      pvy *= (1 - simFrictionAir);
       pvy += GRAVITY_PER_FRAME * gravScale;
       px += pvx;
       py += pvy;
@@ -290,8 +301,8 @@ export class LaunchSystem {
     // Ranger: draw 2 flanking trajectory trails at ±splitSpreadDeg
     if (this.currentHero?.heroClass === 'RANGER') {
       const spreadDeg = HERO_STATS.RANGER.splitSpreadDeg;
-      const launchAngle = Math.atan2(vy, vx);
-      const launchSpeed = Math.hypot(vx, vy) * 0.85; // flanking arrows 85% speed
+      const launchAngle = Math.atan2(simVy, simVx);
+      const launchSpeed = Math.hypot(simVx, simVy) * 0.85; // flanking arrows 85% speed
       for (const sign of [-1, 1]) {
         const angle = launchAngle + Phaser.Math.DegToRad(spreadDeg * sign);
         let fx = SLING_X, fy = SLING_Y;
@@ -299,8 +310,8 @@ export class LaunchSystem {
         let fvy = Math.sin(angle) * launchSpeed;
         let fDots = 0;
         for (let frame = 0; frame < TRAJECTORY_SIM_FRAMES && fDots < effectiveDots; frame++) {
-          fvx *= (1 - HERO_FRICTION_AIR);
-          fvy *= (1 - HERO_FRICTION_AIR);
+          fvx *= (1 - simFrictionAir);
+          fvy *= (1 - simFrictionAir);
           fvy += GRAVITY_PER_FRAME;
           fx += fvx;
           fy += fvy;

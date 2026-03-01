@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
+import { GAME_WIDTH, GAME_HEIGHT, type HeroClass } from '@/config/constants';
 import { getRunState, type NodeDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { calcShardsEarned } from '@/systems/MetaState';
-import { addXP } from '@/systems/MasterySystem';
-import { recordRunEnd } from '@/systems/RunHistory';
-import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
+import { addXP, addMVP } from '@/systems/MasterySystem';
+import { finalizeRun } from '@/systems/RunHistory';
+import { checkAchievements } from '@/systems/AchievementSystem';
 import { recordDailyScore, getTodayString } from '@/systems/DailyChallenge';
 import nodesData from '@/data/nodes.json';
 
@@ -23,6 +23,22 @@ interface ResultData {
   gold?: number;
   nodeId?: number;
   heroStats?: HeroBattleStats[];
+}
+
+function mvpScore(s: HeroBattleStats): number {
+  return s.damageDealt + s.enemiesKilled * 50 + s.healingDone;
+}
+
+/** Returns the index of the MVP hero, or -1 if none qualifies. */
+function findMVP(heroStats: HeroBattleStats[] | undefined): number {
+  if (!heroStats || heroStats.length <= 1) return -1;
+  let bestScore = 0;
+  let bestIndex = -1;
+  heroStats.forEach((s, i) => {
+    const score = mvpScore(s);
+    if (score > bestScore) { bestScore = score; bestIndex = i; }
+  });
+  return bestIndex;
 }
 
 export class ResultScene extends Phaser.Scene {
@@ -46,27 +62,17 @@ export class ResultScene extends Phaser.Scene {
       const killedBoss = bossNode ? run.completedNodeIds.has(bossNode.id) : false;
       shardsEarned = calcShardsEarned({ nodesCompleted, killedBoss, victory });
 
-      // Award mastery XP to each hero used
+      // Award mastery XP to each hero used (per-battle, cosmetic progression)
       for (const h of run.squad) {
         const xp = victory ? (h.currentHp > 0 ? 20 : 5) + 10 : 5;
         addXP(h.heroClass, xp);
       }
 
-      // Record run stats
-      incrementStat('runs_completed');
-      incrementStat('total_gold', gold);
-      recordRunEnd({
-        mapId: run.currentMapId,
-        squad: run.squad.map(h => h.heroClass),
-        relicCount: run.relics.length,
-        nodesCleared: nodesCompleted,
-        gold: run.gold,
-        victory,
-        timestamp: Date.now(),
-        floorsCompleted: (run.completedFloors?.length ?? 0) + (victory ? 1 : 0),
-      });
+      // Track MVP for this battle
+      const mvpIdx = findMVP(heroStats);
+      if (mvpIdx >= 0) addMVP(heroStats![mvpIdx].heroClass as HeroClass);
 
-      // Post-run achievement checks
+      // Post-run achievement checks (some are battle-specific)
       checkAchievements({
         battlesWon: victory ? 1 : 0,
         mapCleared: victory ? run.currentMapId : undefined,
@@ -229,6 +235,7 @@ export class ResultScene extends Phaser.Scene {
         });
       });
       this.buildButton(cx + 115, cy + 178, 'To Camp  ◆', 0x0d1a2e, 0x7ec8e3, () => {
+        finalizeRun(false);
         this.cameras.main.fadeOut(300, 0, 0, 0, (_: unknown, p: number) => {
           if (p === 1) this.scene.start('MainMenuScene', { shardsEarned: shards, fromDefeat: true });
         });
@@ -285,15 +292,8 @@ export class ResultScene extends Phaser.Scene {
       };
 
       // Determine MVP (highest composite score; skip if solo hero or all zeros)
-      let mvpIndex = -1;
-      if (heroStats && heroStats.length > 1) {
-        let bestScore = 0;
-        heroStats.forEach((s, i) => {
-          const score = s.damageDealt + s.enemiesKilled * 50 + s.healingDone;
-          if (score > bestScore) { bestScore = score; mvpIndex = i; }
-        });
-        if (bestScore === 0) mvpIndex = -1;
-      }
+      const mvpIndex = findMVP(heroStats);
+      const mvpClass = mvpIndex >= 0 ? heroStats![mvpIndex].heroClass : null;
 
       const count = run.squad.length;
       const spacing = 110;
@@ -304,12 +304,13 @@ export class ResultScene extends Phaser.Scene {
         const col = heroColors[h.heroClass] ?? 0x888888;
         const pct = Math.max(0, h.currentHp / h.maxHp);
         const alive = h.currentHp > 0;
-        const stats = heroStats?.[i];
+        // Match stats by heroClass (not index) since cooldown heroes are absent from heroStats
+        const stats = heroStats?.find(s => s.heroClass === h.heroClass);
 
         const container = this.add.container(hx, cy + 16).setDepth(15).setAlpha(0);
 
         // MVP badge
-        if (i === mvpIndex) {
+        if (h.heroClass === mvpClass) {
           container.add(
             this.add.text(0, -46, '\u2605 MVP', {
               fontSize: '15px', fontFamily: 'Nunito, sans-serif',
@@ -367,6 +368,16 @@ export class ResultScene extends Phaser.Scene {
             this.add.text(0, 40, alive ? `${Math.round(h.currentHp)} hp` : 'fallen', {
               fontSize: '14px', color: alive ? '#8ca0b8' : '#4a2a2a',
               fontFamily: 'Nunito, sans-serif',
+            }).setOrigin(0.5),
+          );
+        }
+
+        // Cooldown indicator for heroes on revive cooldown
+        if ((h.reviveCooldown ?? 0) > 0) {
+          container.add(
+            this.add.text(0, stats ? 80 : 56, `\u231b ${h.reviveCooldown}`, {
+              fontSize: '13px', fontFamily: 'Nunito, sans-serif',
+              color: '#e74c3c', stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5),
           );
         }

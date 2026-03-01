@@ -34,7 +34,7 @@ import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
 
 import {
   getRunState, hasRunState, completeNode, syncSquadHp, newRun, getRelicModifiers, loadRun,
-  addRelic,
+  addRelic, ensureActiveHero,
   type NodeDef, type RelicDef,
 } from '@/systems/RunState';
 import { AudioSystem } from '@/systems/AudioSystem';
@@ -49,6 +49,7 @@ import type { StructureContext, HazardType } from '@/structures/types';
 import nodesData from '@/data/nodes.json';
 import relicsData from '@/data/relics.json';
 import cursesData from '@/data/curses.json';
+import { buildSettingsGear } from '@/ui/TopBar';
 
 // ─── Scene ───────────────────────────────────────────────────────────────────
 
@@ -177,30 +178,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ─── Settings button ──────────────────────────────────────────────────────
-  private buildSettingsButton() {
-    const size = 72, r = 12;
-    const bg = this.add.graphics().setDepth(55);
-    const draw = (hovered: boolean) => {
-      bg.clear();
-      bg.fillStyle(0x060b12, hovered ? 1 : 0.75);
-      bg.fillRoundedRect(10, 10, size, size, r);
-      bg.lineStyle(1, 0x3a5070, hovered ? 1 : 0.5);
-      bg.strokeRoundedRect(10, 10, size, size, r);
-    };
-    draw(false);
-    this.add.text(10 + size / 2, 10 + size / 2, '\u2699', {
-      fontSize: '34px', fontFamily: 'Nunito, sans-serif',
-    }).setOrigin(0.5).setDepth(56);
-
-    const hit = this.add.rectangle(10 + size / 2, 10 + size / 2, size, size, 0x000000, 0)
-      .setInteractive({ useHandCursor: true }).setDepth(57);
-    hit.on('pointerover', () => draw(true));
-    hit.on('pointerout', () => draw(false));
-    hit.on('pointerdown', () => {
-      if (!this.battleEnded) this.scene.launch('SettingsScene', { callerKey: 'BattleScene' });
-    });
-  }
-
   // ─── End-run button ───────────────────────────────────────────────────────
   private buildEndRunButton() {
     const W = 160, H = 44, R = 7;
@@ -579,8 +556,11 @@ export class BattleScene extends Phaser.Scene {
     const mods = getRelicModifiers();
     const ascMods = getAscensionModifiers(run.ascensionLevel);
 
-    // Ascension: fewer heroes
-    let squadData = [...run.squad];
+    // Ensure at least one hero is available (failsafe if all are on cooldown)
+    ensureActiveHero();
+
+    // Filter out heroes on revive cooldown, then apply ascension cuts
+    let squadData = run.squad.filter(h => (h.reviveCooldown ?? 0) <= 0);
     if (ascMods.fewerHeroes > 0 && squadData.length > 1) {
       squadData = squadData.slice(0, Math.max(1, squadData.length - ascMods.fewerHeroes));
     }
@@ -659,8 +639,13 @@ export class BattleScene extends Phaser.Scene {
       },
     ).setOrigin(0.5, 0).setDepth(50);
 
-    // Gear / settings button — top-left corner
-    this.buildSettingsButton();
+    // Gear / settings button — top-left corner (standardized TopBar)
+    // Override default listener with battle-aware one that blocks after battle ends
+    const gearHit = buildSettingsGear(this, 'BattleScene', 55);
+    gearHit.removeAllListeners('pointerdown');
+    gearHit.on('pointerdown', () => {
+      if (!this.battleEnded) this.scene.launch('SettingsScene', { callerKey: 'BattleScene' });
+    });
 
     this.launchSystem.onLaunch = () => {
       this.audio.playLaunch();
@@ -998,8 +983,9 @@ export class BattleScene extends Phaser.Scene {
 
     if (victory) {
       this.audio.playWin();
-      syncSquadHp(this.heroes.map(h => ({ heroClass: h.heroClass, hp: h.hp, maxHp: h.maxHp, state: h.state })));
+      // completeNode first (ticks existing cooldowns), then syncSquadHp (assigns new cooldowns for dead heroes)
       completeNode(this.activeNode.id);
+      syncSquadHp(this.heroes.map(h => ({ heroClass: h.heroClass, hp: h.hp, maxHp: h.maxHp, state: h.state })));
     } else {
       this.audio.playLose();
     }

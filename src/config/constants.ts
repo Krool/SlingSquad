@@ -446,5 +446,9 @@ export const CAMP_SHOOTING_STAR_MIN_INTERVAL = 4000;
 export const CAMP_SHOOTING_STAR_MAX_INTERVAL = 10000;
 export const CAMP_SHOOTING_STAR_COLOR = 0xccddff;
 
+// ─── Hero Revive ────────────────────────────────────────────────────────────
+export const REVIVE_COOLDOWN_NODES = 2;   // nodes a dead hero must wait before reviving
+export const REVIVE_HP_PERCENT = 0.5;     // fraction of maxHp on revive
+
 // ─── Multi-Floor Runs ────────────────────────────────────────────────────────
 export const TOTAL_FLOORS_PER_RUN = 3;

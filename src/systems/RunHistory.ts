@@ -1,3 +1,7 @@
+import { getRunState, hasRunState } from '@/systems/RunState';
+import { addRunPlayed, addRunWon } from '@/systems/MasterySystem';
+import { incrementStat } from '@/systems/AchievementSystem';
+
 const SAVE_KEY = 'slingsquad_stats_v1';
 
 export interface RunSummary {
@@ -100,4 +104,38 @@ export function recordBattleTime(ms: number): void {
     s.fastestBattleMs = ms;
     _save();
   }
+}
+
+// ── Whole-run finalization (call once when a run truly ends) ─────────────────
+
+let _runFinalized = false;
+
+/** Reset the finalized guard (call when starting a new run). */
+export function resetRunFinalized(): void { _runFinalized = false; }
+
+export function finalizeRun(victory: boolean): void {
+  if (_runFinalized || !hasRunState()) return;
+  _runFinalized = true;
+  const run = getRunState();
+
+  recordRunEnd({
+    mapId: run.currentMapId,
+    squad: run.squad.map(h => h.heroClass),
+    relicCount: run.relics.length,
+    nodesCleared: run.completedNodeIds.size,
+    gold: run.gold,
+    victory,
+    timestamp: Date.now(),
+    floorsCompleted: (run.completedFloors?.length ?? 0) + (victory ? 1 : 0),
+  });
+
+  // Per-hero run stats
+  for (const h of run.squad) {
+    addRunPlayed(h.heroClass);
+    if (victory) addRunWon(h.heroClass, run.ascensionLevel);
+  }
+
+  // Achievement stats (once per run, not per battle)
+  incrementStat('runs_completed');
+  incrementStat('total_gold', run.gold);
 }
