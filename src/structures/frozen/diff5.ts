@@ -325,6 +325,11 @@ export const frozenGauntlet: TemplateFn = (ctx) => {
   ctx.coin(525, groundY - 18, 5);              // risky — near barrel between walls
   ctx.coin(FX + 55, groundY - 18, 5);          // risky — near compound barrel + ice
   ctx.coin(FX + 55, ff2 - 40, 6);             // treasury — compound top
+
+  // Terrain — ledge between first two walls
+  raisedPlatform(ctx, 600, groundY, 120, 22);
+  // Terrain — ice tunnel at far end
+  tunnel(ctx, 900, 980, groundY, 45, 'ICE', 'ICE');
 };
 
 export const diff5Templates: TemplateFn[] = [
