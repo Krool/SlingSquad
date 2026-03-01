@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {
-  getRunState, completeNode, saveRun, getRelicModifiers, getHeroesOnCooldown,
+  getRunState, completeNode, saveRun, getRelicModifiers, getHeroesOnCooldown, applyAndStoreRegen,
   type NodeDef,
 } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
@@ -30,6 +30,7 @@ export class RestScene extends Phaser.Scene {
     (this.registry.get('music') as MusicSystem | null)?.play('event');
     this.node = data.node;
     completeNode(this.node.id);
+    applyAndStoreRegen();
 
     this.buildBackground();
     buildSettingsGear(this, 'RestScene');

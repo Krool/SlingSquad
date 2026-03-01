@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import relicsData from '@/data/relics.json';
 import {
-  getRunState, addRelic, removeRelic, upgradeRelic, completeNode,
+  getRunState, addRelic, removeRelic, upgradeRelic, completeNode, applyAndStoreRegen,
   getCurses, getNonCurseRelics,
   type NodeDef, type RelicDef,
 } from '@/systems/RunState';
@@ -40,6 +40,7 @@ export class ForgeScene extends Phaser.Scene {
     (this.registry.get('music') as MusicSystem | null)?.play('shop');
     this.node = data.node;
     completeNode(this.node.id);
+    applyAndStoreRegen();
 
     this.buildBackground();
     buildSettingsGear(this, 'ForgeScene');

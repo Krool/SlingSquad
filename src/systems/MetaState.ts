@@ -56,6 +56,14 @@ export function earnShards(amount: number): void {
   saveMeta();
 }
 
+export function spendShards(amount: number): boolean {
+  const m = _ensure();
+  if (m.shards < amount) return false;
+  m.shards -= amount;
+  saveMeta();
+  return true;
+}
+
 export function getPurchaseCount(upgradeId: string): number {
   return _ensure().purchases[upgradeId] ?? 0;
 }

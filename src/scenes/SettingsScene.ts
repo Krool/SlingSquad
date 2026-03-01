@@ -14,6 +14,7 @@ export class SettingsScene extends Phaser.Scene {
   create(data?: { callerKey?: string }) {
     this.callerKey = data?.callerKey ?? '';
     if (this.callerKey) this.scene.pause(this.callerKey);
+    this.scene.bringToTop();
 
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;

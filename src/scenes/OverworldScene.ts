@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import nodesData from '@/data/nodes.json';
 import type { MusicSystem } from '@/systems/MusicSystem';
-import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, advanceFloor, isRunFullyComplete, getCurrentFloorDisplay, getHeroesOnCooldown, type NodeDef, type RelicDef } from '@/systems/RunState';
+import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, advanceFloor, isRunFullyComplete, getCurrentFloorDisplay, getHeroesOnCooldown, consumePendingRegen, type NodeDef, type RelicDef } from '@/systems/RunState';
 import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
 import { getMapById } from '@/data/maps/index';
@@ -184,9 +184,13 @@ export class OverworldScene extends Phaser.Scene {
         // Current floor done but more floors remain
         this.time.delayedCall(400, () => this.buildFloorCompleteOverlay());
       }
-    } else if (data?.fromBattle) {
-      this.centerCameraOnActiveNode(true); // animated pan after battle
+    } else if (data?.fromBattle !== undefined) {
+      if (data.fromBattle) {
+        this.centerCameraOnActiveNode(true); // animated pan after battle
+      }
       this.showAvailableGlow();
+      // Show regen floating text on squad preview after a short delay
+      this.time.delayedCall(500, () => this.showRegenFeedback());
     }
   }
 
@@ -1071,6 +1075,46 @@ export class OverworldScene extends Phaser.Scene {
         );
       }
     });
+  }
+
+  // ── Regen visual feedback ────────────────────────────────────────────────────
+  private showRegenFeedback() {
+    const regenResults = consumePendingRegen();
+    if (regenResults.length === 0) return;
+
+    const run = getRunState();
+    const panelX = GAME_WIDTH - 188, panelY = GAME_HEIGHT - 102;
+    const panelW = 176;
+    const count = run.squad.length;
+    const spacing = Math.min(40, (panelW - 20) / Math.max(count, 1));
+    const startX = panelX + panelW / 2 - ((count - 1) * spacing) / 2;
+
+    for (let i = 0; i < run.squad.length; i++) {
+      const h = run.squad[i];
+      const regen = regenResults.find(r => r.heroClass === h.heroClass);
+      if (!regen) continue;
+
+      const hx = startX + i * spacing;
+      const hy = panelY + 54;
+
+      // Floating "+N" text that drifts upward and fades out
+      const txt = this.add.text(hx, hy - 20, `+${regen.healed}`, {
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+        color: '#2ecc71', stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(30).setScrollFactor(0).setAlpha(0);
+
+      this.tweens.add({
+        targets: txt,
+        y: hy - 48,
+        alpha: { from: 1, to: 0 },
+        duration: 1200,
+        ease: 'Cubic.easeOut',
+        onComplete: () => txt.destroy(),
+      });
+    }
+
+    // Refresh squad preview to show updated HP bars
+    this.time.delayedCall(200, () => this.refreshSquadPreview());
   }
 
   // ── Party management panel ───────────────────────────────────────────────────

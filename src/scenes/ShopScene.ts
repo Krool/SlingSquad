@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import relicsData from '@/data/relics.json';
-import { getRunState, addRelic, spendGold, completeNode, type NodeDef, type RelicDef } from '@/systems/RunState';
+import { getRunState, addRelic, spendGold, completeNode, applyAndStoreRegen, type NodeDef, type RelicDef } from '@/systems/RunState';
 import { getAscensionModifiers } from '@/systems/AscensionSystem';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
@@ -122,6 +122,7 @@ export class ShopScene extends Phaser.Scene {
     this._transitioning = false;
 
     completeNode(this.node.id);
+    applyAndStoreRegen();
 
     this.buildBackground();
     this.buildTitle();

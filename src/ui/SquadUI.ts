@@ -7,6 +7,11 @@ export interface CooldownHeroInfo {
   cooldownRemaining: number;
 }
 
+/** One slot in the HUD bar: either a live hero or a cooldown placeholder. */
+export type SquadSlot =
+  | { type: 'hero'; hero: Hero }
+  | { type: 'cooldown'; info: CooldownHeroInfo };
+
 const STATUS_COLOR: Record<string, number> = {
   queued:  0x2ecc71,  // green  — ready to launch
   flying:  0xf39c12,  // amber  — airborne
@@ -18,7 +23,7 @@ const STATUS_COLOR: Record<string, number> = {
 export class SquadUI {
   private scene: Phaser.Scene;
   private heroes: Hero[];
-  private cooldownHeroes: CooldownHeroInfo[];
+  private slots: SquadSlot[];
 
   private portraits:      Map<Hero, Phaser.GameObjects.Graphics> = new Map();
   private portraitSprites: Map<Hero, Phaser.GameObjects.Image>   = new Map();
@@ -31,10 +36,51 @@ export class SquadUI {
   // Cooldown portrait elements (keyed by index since they're not Hero instances)
   private cdPortraits: Phaser.GameObjects.GameObject[] = [];
 
-  constructor(scene: Phaser.Scene, heroes: Hero[], cooldownHeroes: CooldownHeroInfo[] = []) {
+  // Positions of each slot for update()
+  private slotPositions: number[] = [];
+
+  constructor(scene: Phaser.Scene, heroes: Hero[], cooldownHeroes: CooldownHeroInfo[] = [], squadOrder?: HeroClass[]) {
     this.scene = scene;
     this.heroes = heroes;
-    this.cooldownHeroes = cooldownHeroes;
+
+    // Build interleaved slots in original squad order
+    if (squadOrder && squadOrder.length > 0) {
+      const heroMap = new Map<HeroClass, Hero[]>();
+      for (const h of heroes) {
+        const list = heroMap.get(h.heroClass) || [];
+        list.push(h);
+        heroMap.set(h.heroClass, list);
+      }
+      const cdMap = new Map<HeroClass, CooldownHeroInfo[]>();
+      for (const cd of cooldownHeroes) {
+        const list = cdMap.get(cd.heroClass) || [];
+        list.push(cd);
+        cdMap.set(cd.heroClass, list);
+      }
+
+      this.slots = [];
+      for (const cls of squadOrder) {
+        const heroList = heroMap.get(cls);
+        if (heroList && heroList.length > 0) {
+          this.slots.push({ type: 'hero', hero: heroList.shift()! });
+        } else {
+          const cdList = cdMap.get(cls);
+          if (cdList && cdList.length > 0) {
+            this.slots.push({ type: 'cooldown', info: cdList.shift()! });
+          }
+        }
+      }
+      // Append any extra heroes (from extraLaunches relic) not in squadOrder
+      for (const [, list] of heroMap) {
+        for (const h of list) this.slots.push({ type: 'hero', hero: h });
+      }
+    } else {
+      // Fallback: heroes first, then cooldown
+      this.slots = [
+        ...heroes.map(h => ({ type: 'hero' as const, hero: h })),
+        ...cooldownHeroes.map(info => ({ type: 'cooldown' as const, info })),
+      ];
+    }
 
     // ── HUD bar background ─────────────────────────────────────────────────
     this.bg = scene.add.rectangle(
@@ -59,65 +105,67 @@ export class SquadUI {
   }
 
   private buildPortraits() {
-    const totalSlots = this.heroes.length + this.cooldownHeroes.length;
+    const totalSlots = this.slots.length;
     const totalW = totalSlots * (PORTRAIT_SIZE + PORTRAIT_PADDING) - PORTRAIT_PADDING;
     let startX = (GAME_WIDTH - totalW) / 2 + PORTRAIT_SIZE / 2;
     const cy = GAME_HEIGHT - HUD_BAR_HEIGHT / 2;
 
-    for (const hero of this.heroes) {
-      // ── Portrait background ──────────────────────────────────────────────
-      const g = this.scene.add.graphics().setDepth(41);
-      g.fillStyle(hero.stats.color, 1);
-      g.fillRoundedRect(
-        startX - PORTRAIT_SIZE / 2,
-        cy - PORTRAIT_SIZE / 2,
-        PORTRAIT_SIZE, PORTRAIT_SIZE, 7,
-      );
-      // Inner highlight sheen
-      g.fillStyle(0xffffff, 0.07);
-      g.fillRoundedRect(
-        startX - PORTRAIT_SIZE / 2 + 3,
-        cy - PORTRAIT_SIZE / 2 + 3,
-        PORTRAIT_SIZE - 6, (PORTRAIT_SIZE - 6) * 0.45, 5,
-      );
-      // Border
-      g.lineStyle(1, 0xffffff, 0.25);
-      g.strokeRoundedRect(
-        startX - PORTRAIT_SIZE / 2,
-        cy - PORTRAIT_SIZE / 2,
-        PORTRAIT_SIZE, PORTRAIT_SIZE, 7,
-      );
-
-      // ── Character portrait sprite ────────────────────────────────────────
-      const charKey = hero.heroClass.toLowerCase();
-      const portraitSprite = this.scene.add.image(startX, cy - 2, `${charKey}_idle_1`)
-        .setDisplaySize(PORTRAIT_SIZE - 8, PORTRAIT_SIZE - 8)
-        .setDepth(42);
-
-      // ── Short class tag below portrait ────────────────────────────────────
-      const nameTag = this.scene.add.text(
-        startX, cy + PORTRAIT_SIZE / 2 - 14,
-        hero.heroClass.slice(0, 3),
-        { fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#a0b8d0' },
-      ).setOrigin(0.5).setDepth(43);
-
-      // ── Status dot ───────────────────────────────────────────────────────
-      const dot = this.scene.add.graphics().setDepth(43);
-      this.drawStatusDot(dot, startX + PORTRAIT_SIZE / 2 - 8, cy - PORTRAIT_SIZE / 2 + 8, hero);
-
-      this.portraits.set(hero, g);
-      this.portraitSprites.set(hero, portraitSprite);
-      this.nameLabels.set(hero, nameTag);
-      this.statusDots.set(hero, dot);
-
+    for (const slot of this.slots) {
+      this.slotPositions.push(startX);
+      if (slot.type === 'hero') {
+        this.buildHeroPortrait(slot.hero, startX, cy);
+      } else {
+        this.buildCooldownPortrait(slot.info, startX, cy);
+      }
       startX += PORTRAIT_SIZE + PORTRAIT_PADDING;
     }
+  }
 
-    // ── Cooldown hero portraits ───────────────────────────────────────────
-    for (const cd of this.cooldownHeroes) {
-      this.buildCooldownPortrait(cd, startX, cy);
-      startX += PORTRAIT_SIZE + PORTRAIT_PADDING;
-    }
+  private buildHeroPortrait(hero: Hero, startX: number, cy: number) {
+    // ── Portrait background ──────────────────────────────────────────────
+    const g = this.scene.add.graphics().setDepth(41);
+    g.fillStyle(hero.stats.color, 1);
+    g.fillRoundedRect(
+      startX - PORTRAIT_SIZE / 2,
+      cy - PORTRAIT_SIZE / 2,
+      PORTRAIT_SIZE, PORTRAIT_SIZE, 7,
+    );
+    // Inner highlight sheen
+    g.fillStyle(0xffffff, 0.07);
+    g.fillRoundedRect(
+      startX - PORTRAIT_SIZE / 2 + 3,
+      cy - PORTRAIT_SIZE / 2 + 3,
+      PORTRAIT_SIZE - 6, (PORTRAIT_SIZE - 6) * 0.45, 5,
+    );
+    // Border
+    g.lineStyle(1, 0xffffff, 0.25);
+    g.strokeRoundedRect(
+      startX - PORTRAIT_SIZE / 2,
+      cy - PORTRAIT_SIZE / 2,
+      PORTRAIT_SIZE, PORTRAIT_SIZE, 7,
+    );
+
+    // ── Character portrait sprite ────────────────────────────────────────
+    const charKey = hero.heroClass.toLowerCase();
+    const portraitSprite = this.scene.add.image(startX, cy - 2, `${charKey}_idle_1`)
+      .setDisplaySize(PORTRAIT_SIZE - 8, PORTRAIT_SIZE - 8)
+      .setDepth(42);
+
+    // ── Short class tag below portrait ────────────────────────────────────
+    const nameTag = this.scene.add.text(
+      startX, cy + PORTRAIT_SIZE / 2 - 14,
+      hero.heroClass.slice(0, 3),
+      { fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#a0b8d0' },
+    ).setOrigin(0.5).setDepth(43);
+
+    // ── Status dot ───────────────────────────────────────────────────────
+    const dot = this.scene.add.graphics().setDepth(43);
+    this.drawStatusDot(dot, startX + PORTRAIT_SIZE / 2 - 8, cy - PORTRAIT_SIZE / 2 + 8, hero);
+
+    this.portraits.set(hero, g);
+    this.portraitSprites.set(hero, portraitSprite);
+    this.nameLabels.set(hero, nameTag);
+    this.statusDots.set(hero, dot);
   }
 
   private buildCooldownPortrait(cd: CooldownHeroInfo, cx: number, cy: number) {
@@ -181,14 +229,16 @@ export class SquadUI {
   }
 
   update() {
-    const totalW = this.heroes.length * (PORTRAIT_SIZE + PORTRAIT_PADDING) - PORTRAIT_PADDING;
     const cy = GAME_HEIGHT - HUD_BAR_HEIGHT / 2;
 
     // Find the first queued hero — that's the "NEXT" to launch
     const nextHero = this.heroes.find(h => h.state === 'queued');
 
-    for (let i = 0; i < this.heroes.length; i++) {
-      const hero = this.heroes[i];
+    for (let i = 0; i < this.slots.length; i++) {
+      const slot = this.slots[i];
+      if (slot.type !== 'hero') continue;
+
+      const hero   = slot.hero;
       const g      = this.portraits.get(hero);
       const dot    = this.statusDots.get(hero);
       const sprite = this.portraitSprites.get(hero);
@@ -205,7 +255,7 @@ export class SquadUI {
       tag.setAlpha(isDead ? 0.22 : 0.7);
 
       // Redraw status dot
-      const startX = (GAME_WIDTH - totalW) / 2 + PORTRAIT_SIZE / 2 + i * (PORTRAIT_SIZE + PORTRAIT_PADDING);
+      const startX = this.slotPositions[i];
       this.drawStatusDot(
         dot,
         startX + PORTRAIT_SIZE / 2 - 8,

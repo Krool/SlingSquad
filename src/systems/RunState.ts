@@ -1,4 +1,4 @@
-import { HERO_STATS, MAX_SQUAD_SIZE, TOTAL_FLOORS_PER_RUN, REVIVE_COOLDOWN_NODES, REVIVE_HP_PERCENT, type HeroClass } from '@/config/constants';
+import { HERO_STATS, MAX_SQUAD_SIZE, TOTAL_FLOORS_PER_RUN, REVIVE_COOLDOWN_NODES, REVIVE_HP_PERCENT, HERO_REGEN_PERCENT, type HeroClass } from '@/config/constants';
 import type { MetaBonuses } from '@/systems/MetaState';
 import { getAscensionModifiers } from '@/systems/AscensionSystem';
 import { getMapById } from '@/data/maps/index';
@@ -37,6 +37,7 @@ export interface HeroRunData {
   currentHp: number;  // persists between battles
   maxHp: number;
   reviveCooldown?: number; // 0/undefined = alive, >0 = nodes until auto-revive
+  deathCount?: number;     // times this hero has died this run (escalates cooldown)
 }
 
 // ─── The run ─────────────────────────────────────────────────────────────────
@@ -127,6 +128,7 @@ export function newRun(
         currentHp: maxHp,
         maxHp,
         reviveCooldown: 0,
+        deathCount: 0,
       };
     }),
     gold: startingGold,
@@ -168,6 +170,21 @@ export function newRun(
   return _state;
 }
 
+// ─── Pending regen results (consumed by OverworldScene for visual feedback) ──
+let _pendingRegen: Array<{ heroClass: HeroClass; healed: number }> = [];
+
+/** Apply regen and store results for overworld visual feedback. */
+export function applyAndStoreRegen() {
+  _pendingRegen = applyRegen();
+}
+
+/** Consume and return any pending regen results (for overworld display). */
+export function consumePendingRegen(): Array<{ heroClass: HeroClass; healed: number }> {
+  const r = _pendingRegen;
+  _pendingRegen = [];
+  return r;
+}
+
 // Called after winning a node's battle
 export function completeNode(nodeId: number) {
   const s = getRunState();
@@ -190,6 +207,7 @@ export function completeNode(nodeId: number) {
   for (const nextId of node.next) {
     s.availableNodeIds.add(nextId);
   }
+
   saveRun();
 }
 
@@ -332,6 +350,7 @@ export function recruitHero(heroClass: HeroClass): boolean {
     currentHp: baseHp,
     maxHp: baseHp,
     reviveCooldown: 0,
+    deathCount: 0,
   });
   saveRun();
   return true;
@@ -416,6 +435,22 @@ export function ensureActiveHero() {
   saveRun();
 }
 
+/** Apply regen to all alive (non-cooldown) heroes. Returns array of { heroClass, healed } for visual feedback. */
+export function applyRegen(): Array<{ heroClass: HeroClass; healed: number }> {
+  const s = getRunState();
+  const results: Array<{ heroClass: HeroClass; healed: number }> = [];
+  for (const h of s.squad) {
+    if ((h.reviveCooldown ?? 0) > 0) continue; // skip dead/cooldown heroes
+    if (h.currentHp >= h.maxHp) continue; // already full
+    const amount = Math.round(h.maxHp * HERO_REGEN_PERCENT);
+    const healed = Math.min(amount, h.maxHp - h.currentHp);
+    h.currentHp += healed;
+    if (healed > 0) results.push({ heroClass: h.heroClass, healed });
+  }
+  if (results.length > 0) saveRun();
+  return results;
+}
+
 /** Persist hero HP after a victory.
  *  Living heroes fully heal. Dead heroes go on revive cooldown.
  *  Heroes already on cooldown (not in this battle) are left untouched. */
@@ -427,9 +462,12 @@ export function syncSquadHp(heroes: Array<{ heroClass: HeroClass; hp: number; ma
     entry.maxHp = h.maxHp;
     if (h.state === 'dead') {
       entry.currentHp = 0;
+      entry.deathCount = (entry.deathCount ?? 0) + 1;
       const mods = getRelicModifiers();
       const totalReduction = mods.reviveCooldownReduce + (s.metaReviveCooldownReduction ?? 0);
-      entry.reviveCooldown = Math.max(1, REVIVE_COOLDOWN_NODES - totalReduction);
+      // Escalating: base + (deathCount - 1), so 1st=2, 2nd=3, 3rd=4...
+      const baseCooldown = REVIVE_COOLDOWN_NODES + (entry.deathCount - 1);
+      entry.reviveCooldown = Math.max(1, baseCooldown - totalReduction);
     } else {
       entry.currentHp = h.maxHp; // full heal after every battle
     }
@@ -480,9 +518,10 @@ export function loadRun(): boolean {
       metaLaunchPowerPct: data.metaLaunchPowerPct ?? 0,
       metaReviveCooldownReduction: data.metaReviveCooldownReduction ?? 0,
     };
-    // Patch old saves: ensure every squad member has reviveCooldown
+    // Patch old saves: ensure every squad member has reviveCooldown and deathCount
     for (const h of _state!.squad) {
       if (h.reviveCooldown === undefined) h.reviveCooldown = 0;
+      if (h.deathCount === undefined) h.deathCount = 0;
     }
     return true;
   } catch {

@@ -34,7 +34,7 @@ import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
 
 import {
   getRunState, hasRunState, completeNode, syncSquadHp, newRun, getRelicModifiers, loadRun,
-  addRelic, ensureActiveHero, getHeroesOnCooldown,
+  addRelic, ensureActiveHero, getHeroesOnCooldown, applyAndStoreRegen,
   type NodeDef, type RelicDef,
 } from '@/systems/RunState';
 import { AudioSystem } from '@/systems/AudioSystem';
@@ -631,7 +631,8 @@ export class BattleScene extends Phaser.Scene {
       heroClass: h.heroClass,
       cooldownRemaining: h.reviveCooldown ?? 0,
     }));
-    this.squadUI = new SquadUI(this, this.heroes, cooldownHeroes);
+    const squadOrder = getRunState().squad.map(h => h.heroClass);
+    this.squadUI = new SquadUI(this, this.heroes, cooldownHeroes, squadOrder);
 
     // Enemies-remaining counter panel (top-right)
     this.enemyPanel = this.add.graphics().setDepth(49);
@@ -1007,9 +1008,10 @@ export class BattleScene extends Phaser.Scene {
 
     if (victory) {
       this.audio.playWin();
-      // completeNode first (ticks existing cooldowns), then syncSquadHp (assigns new cooldowns for dead heroes)
+      // completeNode first (ticks existing cooldowns), then syncSquadHp (assigns new cooldowns for dead heroes), then regen alive heroes
       completeNode(this.activeNode.id);
       syncSquadHp(this.heroes.map(h => ({ heroClass: h.heroClass, hp: h.hp, maxHp: h.maxHp, state: h.state })));
+      applyAndStoreRegen();
     } else {
       this.audio.playLose();
     }

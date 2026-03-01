@@ -272,5 +272,45 @@
       { "label": "Bottle the water", "desc": "Gain Tome of Healing", "outcome": { "type": "SPECIFIC_RELIC", "relicId": "tome_of_healing" } },
       { "label": "Toss in a coin (15g)", "desc": "Pay 15g for an uncommon relic", "outcome": { "type": "BUY_RELIC", "cost": 15, "rarity": "uncommon" } }
     ]
+  },
+  {
+    "id": "crystal_cavern",
+    "name": "Crystal Cavern",
+    "text": "Glowing crystals jut from the cave walls, pulsing with ethereal energy.",
+    "choices": [
+      { "label": "Mine the crystals", "desc": "Gain 3 shards", "outcome": { "type": "GAIN_SHARDS", "shards": 3 } },
+      { "label": "Sell crystal fragments", "desc": "Gain 30 gold", "outcome": { "type": "GOLD", "gold": 30 } },
+      { "label": "Too deep, too dark", "desc": "Leave the cavern alone", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "ethereal_merchant",
+    "name": "Ethereal Merchant",
+    "text": "A spectral figure hovers before a display of otherworldly artifacts. 'I trade only in crystallized essence...'",
+    "choices": [
+      { "label": "Buy rare artifact (◆5)", "desc": "Spend 5 shards for a rare relic", "outcome": { "type": "SHARD_RELIC", "shardCost": 5, "rarity": "rare" } },
+      { "label": "Buy minor charm (◆3)", "desc": "Spend 3 shards for an uncommon relic", "outcome": { "type": "SHARD_RELIC", "shardCost": 3, "rarity": "uncommon" } },
+      { "label": "Not interested", "desc": "Move along", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "ancient_monument",
+    "name": "Ancient Monument",
+    "text": "A crumbling monument to a forgotten hero. Shard-like crystals are embedded in its base.",
+    "choices": [
+      { "label": "Pry out the crystals", "desc": "Gain 2 shards", "outcome": { "type": "GAIN_SHARDS", "shards": 2 } },
+      { "label": "Pay respects", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } },
+      { "label": "Walk past", "desc": "Continue your journey", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "crystal_shrine",
+    "name": "Crystal Shrine",
+    "text": "A shrine adorned with crystalline shards hums with ancient magic. It seems to respond to crystal offerings.",
+    "choices": [
+      { "label": "Offer shards (◆4)", "desc": "Spend 4 shards for a rare relic", "outcome": { "type": "SHARD_RELIC", "shardCost": 4, "rarity": "rare" } },
+      { "label": "Harvest the crystals", "desc": "Gain 2 shards from the shrine", "outcome": { "type": "GAIN_SHARDS", "shards": 2 } },
+      { "label": "Meditate here", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } }
+    ]
   }
 ]
