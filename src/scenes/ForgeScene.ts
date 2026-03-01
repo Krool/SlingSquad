@@ -9,7 +9,8 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { discoverRelic } from '@/systems/DiscoveryLog';
 import { incrementStat } from '@/systems/AchievementSystem';
-import { buildSettingsGear } from '@/ui/TopBar';
+import { getShards } from '@/systems/MetaState';
+import { buildSettingsGear, buildCurrencyBar } from '@/ui/TopBar';
 
 const ACCENT = 0xe67e22;
 const ACCENT_HEX = '#e67e22';
@@ -42,6 +43,8 @@ export class ForgeScene extends Phaser.Scene {
 
     this.buildBackground();
     buildSettingsGear(this, 'ForgeScene');
+    buildCurrencyBar(this, 'shard', () => getShards(), 10, 0);
+    buildCurrencyBar(this, 'gold', () => getRunState().gold, 10, 1);
     this.buildTitle();
     this.buildOptions();
 

@@ -12,7 +12,8 @@ import { getMastery, getMasteryLevel, getXPForNextLevel } from '@/systems/Master
 import { ScrollablePanel } from '@/ui/ScrollablePanel';
 import { getGlobalStats } from '@/systems/RunHistory';
 import { getMapById } from '@/data/maps/index';
-import { buildSettingsGear, buildBackButton } from '@/ui/TopBar';
+import { getShards } from '@/systems/MetaState';
+import { buildSettingsGear, buildBackButton, buildCurrencyBar } from '@/ui/TopBar';
 
 type TabId = 'heroes' | 'bestiary' | 'relics' | 'history';
 
@@ -53,6 +54,7 @@ export class CodexScene extends Phaser.Scene {
     this.tabButtons.clear();
     this.buildBackground();
     buildSettingsGear(this, 'CodexScene');
+    buildCurrencyBar(this, 'shard', () => getShards());
     this.buildTitle();
     this.buildTabs();
     this.buildStdBackButton();
