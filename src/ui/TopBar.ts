@@ -95,15 +95,17 @@ export interface CurrencyBarResult {
  * @param type 'gold' or 'shard'
  * @param getValue Function that returns the current value to display.
  * @param depth Depth for the container.
+ * @param slot 0 = rightmost, 1 = second from right, etc.
  */
 export function buildCurrencyBar(
   scene: Phaser.Scene,
   type: 'gold' | 'shard',
   getValue: () => number,
   depth = 10,
+  slot = 0,
 ): CurrencyBarResult {
   const W = 110, H = 40, R = 7;
-  const px = GAME_WIDTH - 126;
+  const px = GAME_WIDTH - 126 - slot * (W + 6);
   const py = 12;
 
   const container = scene.add.container(px, py).setDepth(depth);

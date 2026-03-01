@@ -5,6 +5,7 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { discoverRelic } from '@/systems/DiscoveryLog';
 import { checkAchievements } from '@/systems/AchievementSystem';
+import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
 
 const RARITY_COLOR: Record<string, number> = {
@@ -114,7 +115,8 @@ export class ShopScene extends Phaser.Scene {
     this.buildBackground();
     this.buildTitle();
     buildSettingsGear(this, 'ShopScene');
-    this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold);
+    buildCurrencyBar(this, 'shard', () => getShards(), 10, 0);
+    this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold, 10, 1);
     this.pickRelics();
     this.buildRelicCards();
     this.buildSkipButton();

@@ -6,6 +6,7 @@ import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
 import { getMapById } from '@/data/maps/index';
 import { finalizeRun } from '@/systems/RunHistory';
+import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar, buildBackButton, type CurrencyBarResult } from '@/ui/TopBar';
 
 const NODE_RADIUS = 26;
@@ -696,8 +697,9 @@ export class OverworldScene extends Phaser.Scene {
   private buildHUD() {
     const run = getRunState();
 
-    // Gold bar (top-right, via TopBar)
-    this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold, 20);
+    // Currency bars (top-right): shards rightmost, gold to its left
+    buildCurrencyBar(this, 'shard', () => getShards(), 20, 0);
+    this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold, 20, 1);
 
     // Floor indicator (below the map title bar)
     const floorLabel = run.totalFloors > 1 ? getCurrentFloorDisplay() : 'RUN 1';

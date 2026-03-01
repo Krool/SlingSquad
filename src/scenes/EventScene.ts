@@ -11,6 +11,7 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { discoverRelic } from '@/systems/DiscoveryLog';
 import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
+import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
 
 // ── Types mirroring events.json ────────────────────────────────────────────────
@@ -63,7 +64,8 @@ export class EventScene extends Phaser.Scene {
 
     this.buildBackground();
     buildSettingsGear(this, 'EventScene');
-    this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold);
+    buildCurrencyBar(this, 'shard', () => getShards(), 10, 0);
+    this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold, 10, 1);
     this.buildTitle();
     this.buildNarrative();
     this.buildChoices();
