@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform } from '../shared';
 
 // ─── "Ice Pillars" — simple frozen pillars with ice shelves ─────────────────
 export const icePillars: TemplateFn = (ctx) => {
@@ -34,6 +35,13 @@ export const icePillars: TemplateFn = (ctx) => {
     { x: RX + 40, y: rf1 - 6 - eR },
     { x: 640, y: groundY - eR },
   );
+
+  // Coins (~14g total)
+  ctx.coin(460, 300, 2);                          // approach — arc path
+  ctx.coin(LX + span / 2, floor2 - 30, 3);       // structure — above top block
+  ctx.coin(RX + 40, rf1 - 30, 3);                // structure — above right platform
+  ctx.coin(640, groundY - 18, 2);                 // ground — between structures
+  ctx.coin(LX + span / 2, groundY - 18, 4);      // risky — near left barrel
 };
 
 // ─── "Frozen Outpost" — wooden hut with ice walls ──────────────────────────
@@ -71,6 +79,13 @@ export const frozenOutpost: TemplateFn = (ctx) => {
     { x: SX + 25, y: groundY - 40 - 6 - 6 - eR },
     { x: 700, y: groundY - eR },
   );
+
+  // Coins (~14g total)
+  ctx.coin(480, 320, 2);                          // approach — arc path
+  ctx.coin(HX + span / 2, peak - 18, 3);         // structure — above hut roof
+  ctx.coin(SX + 25, groundY - 60, 3);            // structure — near side platform
+  ctx.coin(700, groundY - 18, 2);                 // ground — near ice patch
+  ctx.coin(HX + span / 2, groundY - 18, 4);      // risky — near barrel inside hut
 };
 
 // ─── "Glacier Shelf" — stacked ice blocks prone to toppling ────────────────
@@ -101,6 +116,13 @@ export const glacierShelf: TemplateFn = (ctx) => {
     { x: RX + 35, y: rf - 6 - eR },
     { x: 720, y: groundY - eR },
   );
+
+  // Coins (~13g total)
+  ctx.coin(500, 280, 2);                          // approach — arc path
+  ctx.coin(CX, groundY - 140, 3);                // structure — above glacier stack
+  ctx.coin(RX + 35, rf - 30, 3);                 // structure — above right platform
+  ctx.coin(CX, groundY - 128, 2);                // risky — near barrel on glacier top
+  ctx.coin(RX + 35, groundY - 18, 3);            // risky — near right barrel
 };
 
 // ─── "Snow Fort" — low ice walls with wood supports ────────────────────────
@@ -136,6 +158,16 @@ export const snowFort: TemplateFn = (ctx) => {
     { x: startX + 4 * wallSpacing, y: groundY - eR },
     { x: SX + 27, y: groundY - 45 - 6 - 6 - eR },
   );
+
+  // Coins (~14g total)
+  ctx.coin(450, 300, 2);                                      // approach — arc path
+  ctx.coin(startX + 2.5 * wallSpacing, plankY - 18, 3);      // structure — above long plank
+  ctx.coin(SX + 27, groundY - 60, 3);                        // structure — near side platform
+  ctx.coin(startX + 3 * wallSpacing, groundY - 18, 2);       // ground — near ice patch
+  ctx.coin(startX + 1.5 * wallSpacing, groundY - 18, 4);     // risky — near left barrel
+
+  // Terrain — snowdrift mound near fort
+  raisedPlatform(ctx, 700, groundY, 110, 18);
 };
 
 export const diff1Templates: TemplateFn[] = [

@@ -27,6 +27,7 @@ export interface MetaBonuses {
   startingRelic: boolean;       // grant a random common relic at run start
   squadSizeBonus: number;       // extra squad slots beyond STARTER_SQUAD_SIZE
   unlockedHeroClasses: string[];// hero classes unlocked via meta upgrades
+  reviveCooldownReduction: number; // nodes subtracted from revive cooldown
 }
 
 // ─── Persistent meta state ────────────────────────────────────────────────────
@@ -89,6 +90,7 @@ export function getMetaBonuses(): MetaBonuses {
     startingRelic: false,
     squadSizeBonus: 0,
     unlockedHeroClasses: [],
+    reviveCooldownReduction: 0,
   };
 
   for (const upgrade of getAllUpgrades()) {
@@ -102,6 +104,7 @@ export function getMetaBonuses(): MetaBonuses {
       case 'LAUNCH_POWER_PCT': bonuses.launchPowerPct   += (upgrade.value as number) * count; break;
       case 'STARTING_RELIC':   bonuses.startingRelic     = true; break;
       case 'SQUAD_SIZE':       bonuses.squadSizeBonus   += (upgrade.value as number) * count; break;
+      case 'REVIVE_COOLDOWN_BONUS': bonuses.reviveCooldownReduction += (upgrade.value as number) * count; break;
       case 'UNLOCK_HERO': {
         const cls = upgrade.heroClass ?? (typeof upgrade.value === 'string' ? upgrade.value : '');
         if (cls) bonuses.unlockedHeroClasses.push(cls);

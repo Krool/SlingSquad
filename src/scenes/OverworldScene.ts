@@ -1,13 +1,16 @@
 import Phaser from 'phaser';
 import nodesData from '@/data/nodes.json';
 import type { MusicSystem } from '@/systems/MusicSystem';
-import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, advanceFloor, isRunFullyComplete, getCurrentFloorDisplay, type NodeDef, type RelicDef } from '@/systems/RunState';
+import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, advanceFloor, isRunFullyComplete, getCurrentFloorDisplay, getHeroesOnCooldown, type NodeDef, type RelicDef } from '@/systems/RunState';
 import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
 import { getMapById } from '@/data/maps/index';
 import { finalizeRun } from '@/systems/RunHistory';
 import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar, buildBackButton, type CurrencyBarResult } from '@/ui/TopBar';
+
+const MAP_SPREAD = 2.0;       // Horizontal spread factor for node positions
+const MAP_PADDING_X = 200;    // World padding beyond outermost nodes
 
 const NODE_RADIUS = 26;
 const NODE_COLORS: Record<string, number> = {
@@ -18,6 +21,7 @@ const NODE_COLORS: Record<string, number> = {
   BOSS:   0xc0392b,
   EVENT:  0x9b59b6,
   FORGE:  0xe67e22,
+  REST:   0x2ecc71,
 };
 const NODE_ICONS: Record<string, string> = {
   BATTLE: '⚔',
@@ -27,6 +31,7 @@ const NODE_ICONS: Record<string, string> = {
   BOSS:   '☠',
   EVENT:  '?',
   FORGE:  '⚒',
+  REST:   '\u2665',
 };
 const RARITY_COLOR: Record<string, string> = {
   common:   '#95a5a6',
@@ -88,6 +93,10 @@ export class OverworldScene extends Phaser.Scene {
   private partyVeil:     Phaser.GameObjects.Rectangle | null = null;
   private squadPreviewCt!: Phaser.GameObjects.Container;
 
+  // Horizontal scroll
+  private worldWidth = GAME_WIDTH;
+  private _scrollDrag: { startX: number; startScroll: number; moved: boolean } | null = null;
+
   constructor() {
     super({ key: 'OverworldScene' });
   }
@@ -108,6 +117,10 @@ export class OverworldScene extends Phaser.Scene {
     // Use map-specific node data from the run state
     this.nodeMap = run.nodeMap;
 
+    // Compute world width from node positions (spread factor applied)
+    const maxNodeX = Math.max(...this.nodeMap.map(n => n.x));
+    this.worldWidth = Math.max(GAME_WIDTH, maxNodeX * MAP_SPREAD + MAP_PADDING_X);
+
     this.buildBackground();
     this.buildMapTitle();
 
@@ -117,8 +130,12 @@ export class OverworldScene extends Phaser.Scene {
     this.buildNodes();
     this.buildHUD();
     this.buildSquadPreview();
-    buildSettingsGear(this, 'OverworldScene', 30);
+    buildSettingsGear(this, 'OverworldScene', 30).setScrollFactor(0);
     this.buildQuitRunButton();
+
+    // Camera bounds + initial scroll position
+    this.cameras.main.setBounds(0, 0, this.worldWidth, GAME_HEIGHT);
+    this.centerCameraOnActiveNode(false); // instant snap, no tween
 
     this.cameras.main.fadeIn(300, 0, 0, 0);
 
@@ -126,10 +143,36 @@ export class OverworldScene extends Phaser.Scene {
       this._goldBar?.updateValue();
     });
 
-    // Tapping background dismisses touch tooltip selection
-    this.input.on('pointerdown', (_ptr: Phaser.Input.Pointer, hit: Phaser.GameObjects.GameObject[]) => {
-      if (hit.length === 0) this.clearTouchSelection();
+    // ── Scroll input ──────────────────────────────────────────────────────────
+    // Mouse wheel scrolls map horizontally (blocked when overlay/panel is open)
+    this.input.on('wheel', (_ptr: Phaser.Input.Pointer, _objs: Phaser.GameObjects.GameObject[], _dx: number, deltaY: number) => {
+      if (this.partyPanel || this.relicDetailPanel || this.partyVeil || this.relicDetailVeil) return;
+      const cam = this.cameras.main;
+      cam.scrollX = Phaser.Math.Clamp(
+        cam.scrollX + deltaY * 0.5,
+        0, this.worldWidth - GAME_WIDTH,
+      );
     });
+
+    // Touch/mouse drag from empty space scrolls map
+    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer, hit: Phaser.GameObjects.GameObject[]) => {
+      if (hit.length === 0) {
+        this._scrollDrag = { startX: ptr.x, startScroll: this.cameras.main.scrollX, moved: false };
+        this.clearTouchSelection();
+      }
+    });
+    this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
+      if (!this._scrollDrag || !ptr.isDown) return;
+      const dx = ptr.x - this._scrollDrag.startX;
+      if (Math.abs(dx) > 5) this._scrollDrag.moved = true;
+      if (this._scrollDrag.moved) {
+        this.cameras.main.scrollX = Phaser.Math.Clamp(
+          this._scrollDrag.startScroll - dx,
+          0, this.worldWidth - GAME_WIDTH,
+        );
+      }
+    });
+    this.input.on('pointerup', () => { this._scrollDrag = null; });
 
     // Floor/Run complete detection
     const floorDone = this.isRunComplete();
@@ -142,11 +185,14 @@ export class OverworldScene extends Phaser.Scene {
         this.time.delayedCall(400, () => this.buildFloorCompleteOverlay());
       }
     } else if (data?.fromBattle) {
+      this.centerCameraOnActiveNode(true); // animated pan after battle
       this.showAvailableGlow();
     }
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
+  private worldX(x: number): number { return x * MAP_SPREAD; }
+
   private getNodeState(nodeId: number): NodeState {
     const run = getRunState();
     if (run.completedNodeIds.has(nodeId)) return 'completed';
@@ -186,13 +232,13 @@ export class OverworldScene extends Phaser.Scene {
     const theme = mapTheme[run.currentMapId] ?? mapTheme.goblin_wastes;
 
     bg.fillStyle(theme.sky, 1);
-    bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    bg.fillRect(0, 0, this.worldWidth, GAME_HEIGHT);
 
     bg.lineStyle(1, theme.grid, 0.7);
     const size = 55;
     const w = size * 1.5;
     const h = size * Math.sqrt(3);
-    for (let col = -1; col < GAME_WIDTH / w + 1; col++) {
+    for (let col = -1; col < this.worldWidth / w + 1; col++) {
       for (let row = -1; row < GAME_HEIGHT / h + 2; row++) {
         const xo = col * w;
         const yo = row * h + (col % 2 === 0 ? 0 : h / 2);
@@ -208,14 +254,14 @@ export class OverworldScene extends Phaser.Scene {
     }
 
     for (let i = 0; i < 40; i++) {
-      const sx = Phaser.Math.Between(0, GAME_WIDTH);
+      const sx = Phaser.Math.Between(0, this.worldWidth);
       const sy = Phaser.Math.Between(0, GAME_HEIGHT);
       const bright = Math.random() * 0.35 + 0.08;
       bg.fillStyle(theme.star, bright);
       bg.fillCircle(sx, sy, Math.random() < 0.2 ? 2 : 1);
     }
 
-    const fog = this.add.graphics().setDepth(1);
+    const fog = this.add.graphics().setDepth(1).setScrollFactor(0);
     fog.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.6, 0.6, 0, 0);
     fog.fillRect(0, 0, 180, GAME_HEIGHT);
     fog.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.6, 0.6);
@@ -231,7 +277,7 @@ export class OverworldScene extends Phaser.Scene {
     const mapDef = getMapById(run.currentMapId);
     const title = mapDef?.name ?? nodesData.name;
 
-    const titleBg = this.add.graphics().setDepth(9);
+    const titleBg = this.add.graphics().setDepth(9).setScrollFactor(0);
     titleBg.fillStyle(0x000000, 0.55);
     titleBg.fillRect(0, 0, GAME_WIDTH, 52);
     titleBg.lineStyle(1, 0xc0a060, 0.25);
@@ -240,7 +286,7 @@ export class OverworldScene extends Phaser.Scene {
     this.add.text(GAME_WIDTH / 2, 26, title.toUpperCase(), {
       fontSize: '20px', fontFamily: 'Nunito, sans-serif',
       color: '#c0a060', stroke: '#000', strokeThickness: 3, letterSpacing: 6,
-    }).setOrigin(0.5).setDepth(10);
+    }).setOrigin(0.5).setDepth(10).setScrollFactor(0);
   }
 
   // ── Paths ──────────────────────────────────────────────────────────────────
@@ -272,13 +318,14 @@ export class OverworldScene extends Phaser.Scene {
         }
 
         const steps = 20;
+        const nx0 = this.worldX(node.x), nx1 = this.worldX(next.x);
         for (let i = 0; i < steps; i++) {
           if (i % 2 === 1) continue;
           const t0 = i / steps;
           const t1 = (i + 0.7) / steps;
-          const x0 = Phaser.Math.Interpolation.Linear([node.x, next.x], t0);
+          const x0 = Phaser.Math.Interpolation.Linear([nx0, nx1], t0);
           const y0 = Phaser.Math.Interpolation.Linear([node.y, next.y], t0);
-          const x1 = Phaser.Math.Interpolation.Linear([node.x, next.x], t1);
+          const x1 = Phaser.Math.Interpolation.Linear([nx0, nx1], t1);
           const y1 = Phaser.Math.Interpolation.Linear([node.y, next.y], t1);
 
           this.pathLayer.lineStyle(thickness, color, alpha);
@@ -292,7 +339,7 @@ export class OverworldScene extends Phaser.Scene {
   private buildNodes() {
     for (const node of this.nodeMap) {
       const state = this.getNodeState(node.id);
-      const container = this.add.container(node.x, node.y).setDepth(5);
+      const container = this.add.container(this.worldX(node.x), node.y).setDepth(5);
       this.nodeContainers.set(node.id, container);
 
       this.buildNodeVisual(container, node, state);
@@ -562,6 +609,7 @@ export class OverworldScene extends Phaser.Scene {
     if (node.type === 'SHOP')                    lines.push('Spend gold on relics');
     if (node.type === 'EVENT')                   lines.push('Random encounter — choose wisely');
     if (node.type === 'FORGE')                   lines.push('Upgrade, fuse, or purge relics');
+    if (node.type === 'REST')                    lines.push('Heal your squad or rally fallen heroes');
     if (node.difficulty && node.difficulty > 0) {
       const stars = '★'.repeat(node.difficulty) + '☆'.repeat(5 - node.difficulty);
       lines.push(`Threat  ${stars}`);
@@ -613,11 +661,14 @@ export class OverworldScene extends Phaser.Scene {
     }
 
     // ── Smart positioning ────────────────────────────────────────────────────
-    // Prefer ABOVE the node (touch-friendly — finger doesn't obscure it).
-    // Fall back to below, then right/left.
-    const nx = node.x, ny = node.y;
+    // Tooltip stays in world space (scrolls with map, near its node).
+    // Clamp to visible camera viewport.
+    const cam = this.cameras.main;
+    const nx = this.worldX(node.x), ny = node.y;
     const HUD_TOP = 60, HUD_BOT = 64; // safe margins from title bar + bottom HUD
     const GAP = 12;
+    const viewLeft = cam.scrollX + 8;
+    const viewRight = cam.scrollX + GAME_WIDTH - ttW - 8;
 
     const aboveY = ny - NODE_RADIUS - GAP - ttH;
     const belowY = ny + NODE_RADIUS + GAP;
@@ -627,17 +678,15 @@ export class OverworldScene extends Phaser.Scene {
     let tx: number, ty: number;
 
     if (aboveFits) {
-      // Center-aligned above the node
-      tx = Math.max(8, Math.min(nx - ttW / 2, GAME_WIDTH - ttW - 8));
+      tx = Phaser.Math.Clamp(nx - ttW / 2, viewLeft, viewRight);
       ty = aboveY;
     } else if (belowFits) {
-      tx = Math.max(8, Math.min(nx - ttW / 2, GAME_WIDTH - ttW - 8));
+      tx = Phaser.Math.Clamp(nx - ttW / 2, viewLeft, viewRight);
       ty = belowY;
     } else {
-      // Side positioning (original behaviour — good for desktop)
       tx = nx + NODE_RADIUS + GAP;
       ty = Phaser.Math.Clamp(ny - ttH / 2, HUD_TOP, GAME_HEIGHT - HUD_BOT - ttH);
-      if (tx + ttW > GAME_WIDTH - 8) tx = nx - NODE_RADIUS - GAP - ttW;
+      if (tx + ttW > cam.scrollX + GAME_WIDTH - 8) tx = nx - NODE_RADIUS - GAP - ttW;
     }
 
     this.tooltip.setPosition(tx, ty).setVisible(true);
@@ -688,6 +737,8 @@ export class OverworldScene extends Phaser.Scene {
           this.scene.start('EventScene', { node });
         } else if (node.type === 'FORGE') {
           this.scene.start('ForgeScene', { node });
+        } else if (node.type === 'REST') {
+          this.scene.start('RestScene', { node });
         }
       }
     });
@@ -698,21 +749,23 @@ export class OverworldScene extends Phaser.Scene {
     const run = getRunState();
 
     // Currency bars (top-right): shards rightmost, gold to its left
-    buildCurrencyBar(this, 'shard', () => getShards(), 20, 0);
+    const shardBar = buildCurrencyBar(this, 'shard', () => getShards(), 20, 0);
+    shardBar.container.setScrollFactor(0);
     this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold, 20, 1);
+    this._goldBar.container.setScrollFactor(0);
 
     // Floor indicator (below the map title bar)
     const floorLabel = run.totalFloors > 1 ? getCurrentFloorDisplay() : 'RUN 1';
-    const floorPanel = this.add.graphics().setDepth(20);
+    const floorPanel = this.add.graphics().setDepth(20).setScrollFactor(0);
     floorPanel.fillStyle(0x060b12, 0.88);
     floorPanel.fillRoundedRect(12, 58, 120, 40, 7);
     floorPanel.lineStyle(1, 0x5a7a9a, 0.35);
     floorPanel.strokeRoundedRect(12, 58, 120, 40, 7);
     this.add.text(72, 78, floorLabel, {
       fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
-    }).setOrigin(0.5).setDepth(21);
+    }).setOrigin(0.5).setDepth(21).setScrollFactor(0);
 
-    this.relicRow = this.add.container(14, GAME_HEIGHT - 96).setDepth(21);
+    this.relicRow = this.add.container(14, GAME_HEIGHT - 96).setDepth(21).setScrollFactor(0);
     this.refreshRelicRow();
   }
 
@@ -786,7 +839,7 @@ export class OverworldScene extends Phaser.Scene {
     // Veil
     this.relicDetailVeil = this.add.rectangle(
       GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000,
-    ).setAlpha(0).setDepth(45).setInteractive();
+    ).setAlpha(0).setDepth(45).setInteractive().setScrollFactor(0);
     this.relicDetailVeil.on('pointerdown', () => this.closeRelicDetail());
     this.tweens.add({ targets: this.relicDetailVeil, alpha: 0.7, duration: 150 });
 
@@ -795,7 +848,7 @@ export class OverworldScene extends Phaser.Scene {
     const px = Math.round(GAME_WIDTH / 2 - PW / 2);
     const py = Math.round(GAME_HEIGHT / 2 - PH / 2);
 
-    const panel = this.add.container(px, py).setDepth(46).setAlpha(0);
+    const panel = this.add.container(px, py).setDepth(46).setAlpha(0).setScrollFactor(0);
     this.relicDetailPanel = panel;
     this.tweens.add({ targets: panel, alpha: 1, duration: 150 });
 
@@ -918,6 +971,11 @@ export class OverworldScene extends Phaser.Scene {
       case 'GOLD_TAX_PCT':         return `-${Math.round(v * 100)}% gold on win`;
       case 'TRAJECTORY_REDUCE':    return `-${v} trajectory dots`;
       case 'LAUNCH_POWER_CURSE':   return `${Math.round(v * 100)}% launch power`;
+      case 'DRUID_WOLF_BONUS':     return `${sign}${v} wolf summon${v !== 1 ? 's' : ''}`;
+      case 'ROGUE_PIERCE_BONUS':   return `${sign}${v} extra pierce`;
+      case 'HEAL_ON_KILL':         return `${sign}${v} HP per kill`;
+      case 'REST_HP_BONUS':        return `${sign}${v} max HP at REST`;
+      case 'REVIVE_COOLDOWN_REDUCE': return `-${v} revive cooldown`;
       default:                     return '';
     }
   }
@@ -928,7 +986,7 @@ export class OverworldScene extends Phaser.Scene {
     const panelW = 176, panelH = 90;
 
     // Static bg + title (never changes)
-    const bg = this.add.graphics().setDepth(20);
+    const bg = this.add.graphics().setDepth(20).setScrollFactor(0);
     bg.fillStyle(0x060b12, 0.92);
     bg.fillRoundedRect(panelX, panelY, panelW, panelH, 8);
     bg.lineStyle(1, 0x2a3a50, 0.6);
@@ -936,17 +994,17 @@ export class OverworldScene extends Phaser.Scene {
 
     this.add.text(panelX + panelW / 2, panelY + 14, 'PARTY  \u25b6', {
       fontSize: '14px', color: '#5a7a9a', fontFamily: 'Nunito, sans-serif', letterSpacing: 2,
-    }).setOrigin(0.5).setDepth(21);
+    }).setOrigin(0.5).setDepth(21).setScrollFactor(0);
 
     // Dynamic hero bubbles container (refreshed when order changes)
-    this.squadPreviewCt = this.add.container(0, 0).setDepth(21);
+    this.squadPreviewCt = this.add.container(0, 0).setDepth(21).setScrollFactor(0);
     this.refreshSquadPreview();
 
     // Hover highlight + click to open party panel
-    const hoverRing = this.add.graphics().setDepth(22);
+    const hoverRing = this.add.graphics().setDepth(22).setScrollFactor(0);
     const hit = this.add.rectangle(
       panelX + panelW / 2, panelY + panelH / 2, panelW, panelH, 0x000000, 0,
-    ).setInteractive({ useHandCursor: true }).setDepth(23);
+    ).setInteractive({ useHandCursor: true }).setDepth(23).setScrollFactor(0);
     hit.on('pointerover', () => {
       hoverRing.clear();
       hoverRing.lineStyle(1, 0xc0a060, 0.5);
@@ -1033,12 +1091,12 @@ export class OverworldScene extends Phaser.Scene {
     // Veil
     this.partyVeil = this.add.rectangle(
       GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000,
-    ).setAlpha(0).setDepth(45).setInteractive();
+    ).setAlpha(0).setDepth(45).setInteractive().setScrollFactor(0);
     this.partyVeil.on('pointerdown', () => this.closePartyPanel());
     this.tweens.add({ targets: this.partyVeil, alpha: 0.75, duration: 180 });
 
     // Panel container — use local ref so TS knows it's non-null throughout
-    const panel = this.add.container(px, py).setDepth(46).setAlpha(0);
+    const panel = this.add.container(px, py).setDepth(46).setAlpha(0).setScrollFactor(0);
     this.partyPanel = panel;
     this.tweens.add({ targets: panel, alpha: 1, duration: 180 });
 
@@ -1248,7 +1306,7 @@ export class OverworldScene extends Phaser.Scene {
       this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
         if (p === 1) this.scene.start('MainMenuScene');
       });
-    }, 20);
+    }, 20).setScrollFactor(0);
   }
 
   private showAvailableGlow() {
@@ -1275,11 +1333,11 @@ export class OverworldScene extends Phaser.Scene {
 
     // Dark veil
     const veil = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000)
-      .setDepth(50).setAlpha(0);
+      .setDepth(50).setAlpha(0).setScrollFactor(0);
     this.tweens.add({ targets: veil, alpha: 0.8, duration: 500 });
 
     // Top glow
-    const glow = this.add.graphics().setDepth(51).setAlpha(0);
+    const glow = this.add.graphics().setDepth(51).setAlpha(0).setScrollFactor(0);
     glow.fillGradientStyle(0x3498db, 0x3498db, 0x000000, 0x000000, 0.15, 0.15, 0, 0);
     glow.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT * 0.55);
     this.tweens.add({ targets: glow, alpha: 1, duration: 700, delay: 200 });
@@ -1289,7 +1347,7 @@ export class OverworldScene extends Phaser.Scene {
       fontSize: '56px', fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#3498db', stroke: '#0a1a30', strokeThickness: 6,
       letterSpacing: 4,
-    }).setOrigin(0.5).setDepth(52).setAlpha(0);
+    }).setOrigin(0.5).setDepth(52).setAlpha(0).setScrollFactor(0);
     this.tweens.add({
       targets: title, y: cy - 130, alpha: 1,
       duration: 650, ease: 'Back.easeOut', delay: 280,
@@ -1300,7 +1358,7 @@ export class OverworldScene extends Phaser.Scene {
     for (let i = 0; i < run.totalFloors; i++) {
       const dotX = cx - ((run.totalFloors - 1) * 30) / 2 + i * 30;
       const done = i <= run.currentFloor;
-      const dot = this.add.graphics().setDepth(52).setAlpha(0);
+      const dot = this.add.graphics().setDepth(52).setAlpha(0).setScrollFactor(0);
       dot.fillStyle(done ? 0x3498db : 0x2a3a4a, 1);
       dot.fillCircle(dotX, dotY, done ? 8 : 6);
       if (done) {
@@ -1313,7 +1371,7 @@ export class OverworldScene extends Phaser.Scene {
       const numText = this.add.text(dotX, dotY + 18, `${i + 1}`, {
         fontSize: '12px', fontFamily: 'Nunito, sans-serif',
         color: done ? '#5ab8e8' : '#3a4a5a',
-      }).setOrigin(0.5).setDepth(52).setAlpha(0);
+      }).setOrigin(0.5).setDepth(52).setAlpha(0).setScrollFactor(0);
       this.tweens.add({ targets: numText, alpha: 1, duration: 300, delay: 600 + i * 100 });
     }
 
@@ -1321,14 +1379,14 @@ export class OverworldScene extends Phaser.Scene {
     const sub = this.add.text(cx, cy - 16, `Next: ${nextMapName}`, {
       fontSize: '20px', fontFamily: 'Nunito, sans-serif', color: '#c8a840',
       stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(52).setAlpha(0);
+    }).setOrigin(0.5).setDepth(52).setAlpha(0).setScrollFactor(0);
     this.tweens.add({ targets: sub, alpha: 1, duration: 380, delay: 860 });
 
     // Button
     this.time.delayedCall(1100, () => {
       const w = 280, h = 52;
       const btnLabel = `Onward to Floor ${nextFloor + 1}  \u2192`;
-      const btn = this.add.container(cx, cy + 60).setDepth(52).setAlpha(0);
+      const btn = this.add.container(cx, cy + 60).setDepth(52).setAlpha(0).setScrollFactor(0);
 
       const btnBg = this.add.graphics();
       const drawBtn = (hovered: boolean) => {
@@ -1380,17 +1438,17 @@ export class OverworldScene extends Phaser.Scene {
 
     // Dark veil
     const veil = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000)
-      .setDepth(50).setAlpha(0);
+      .setDepth(50).setAlpha(0).setScrollFactor(0);
     this.tweens.add({ targets: veil, alpha: 0.8, duration: 500 });
 
     // Top glow
-    const glow = this.add.graphics().setDepth(51).setAlpha(0);
+    const glow = this.add.graphics().setDepth(51).setAlpha(0).setScrollFactor(0);
     glow.fillGradientStyle(glowColor, glowColor, 0x000000, 0x000000, 0.18, 0.18, 0, 0);
     glow.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT * 0.55);
     this.tweens.add({ targets: glow, alpha: 1, duration: 700, delay: 200 });
 
     // Decorative rules
-    const rules = this.add.graphics().setDepth(52).setAlpha(0);
+    const rules = this.add.graphics().setDepth(52).setAlpha(0).setScrollFactor(0);
     rules.lineStyle(1, glowColor, 0.35);
     rules.lineBetween(cx - 320, cy - 62, cx + 320, cy - 62);
     rules.lineBetween(cx - 320, cy + 22, cx + 320, cy + 22);
@@ -1402,7 +1460,7 @@ export class OverworldScene extends Phaser.Scene {
       fontFamily: 'Cinzel, Nunito, sans-serif',
       color: '#f1c40f', stroke: '#5c3d00', strokeThickness: 7,
       letterSpacing: 4,
-    }).setOrigin(0.5).setDepth(52).setAlpha(0);
+    }).setOrigin(0.5).setDepth(52).setAlpha(0).setScrollFactor(0);
     this.tweens.add({
       targets: title, y: cy - 148, alpha: 1,
       duration: 650, ease: 'Back.easeOut', delay: 280,
@@ -1412,7 +1470,7 @@ export class OverworldScene extends Phaser.Scene {
     const sub = this.add.text(cx, cy - 22, subText, {
       fontSize: '20px', fontFamily: 'Nunito, sans-serif', color: '#c8a840',
       stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(52).setAlpha(0);
+    }).setOrigin(0.5).setDepth(52).setAlpha(0).setScrollFactor(0);
     this.tweens.add({ targets: sub, alpha: 1, duration: 380, delay: 860 });
 
     // Gold particle rain (only on boss victory)
@@ -1430,7 +1488,7 @@ export class OverworldScene extends Phaser.Scene {
     // Button
     this.time.delayedCall(1100, () => {
       const w = 260, h = 52;
-      const btn = this.add.container(cx, cy + 72).setDepth(52).setAlpha(0);
+      const btn = this.add.container(cx, cy + 72).setDepth(52).setAlpha(0).setScrollFactor(0);
 
       const btnBg = this.add.graphics();
       const drawBtn = (hovered: boolean) => {
@@ -1467,7 +1525,7 @@ export class OverworldScene extends Phaser.Scene {
     const x = Phaser.Math.Between(60, GAME_WIDTH - 60);
     const size = Phaser.Math.Between(2, 7);
     const col = colors[Phaser.Math.Between(0, colors.length - 1)];
-    const g = this.add.graphics().setDepth(53);
+    const g = this.add.graphics().setDepth(53).setScrollFactor(0);
     g.fillStyle(col, 1);
     if (size >= 5) {
       g.fillTriangle(-size, 0, 0, -size, size, 0);
@@ -1484,6 +1542,29 @@ export class OverworldScene extends Phaser.Scene {
       ease: 'Linear',
       onComplete: () => g.destroy(),
     });
+  }
+
+  // ── Camera centering ──────────────────────────────────────────────────────
+  private centerCameraOnActiveNode(animate = true) {
+    const run = getRunState();
+    // Find the leftmost available (non-completed, non-locked) node
+    let targetX = this.worldWidth / 2;
+    let bestRawX = Infinity;
+    for (const id of run.availableNodeIds) {
+      if (!run.completedNodeIds.has(id) && !run.lockedNodeIds.has(id)) {
+        const node = this.nodeMap.find(n => n.id === id);
+        if (node && node.x < bestRawX) {
+          bestRawX = node.x;
+          targetX = this.worldX(node.x);
+        }
+      }
+    }
+    const scrollX = Phaser.Math.Clamp(targetX - GAME_WIDTH / 2, 0, this.worldWidth - GAME_WIDTH);
+    if (animate) {
+      this.tweens.add({ targets: this.cameras.main, scrollX, duration: 500, ease: 'Cubic.easeOut' });
+    } else {
+      this.cameras.main.scrollX = scrollX;
+    }
   }
 
   // ── Update ────────────────────────────────────────────────────────────────

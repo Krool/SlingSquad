@@ -46,7 +46,7 @@
       "x": 820, "y": 175, "next": [10], "gold": 0, "difficulty": 0
     },
     {
-      "id": 9, "type": "REWARD", "name": "Hidden Cache",
+      "id": 9, "type": "REST", "name": "Mountain Camp",
       "x": 820, "y": 455, "next": [10], "gold": 0, "difficulty": 0
     },
     {

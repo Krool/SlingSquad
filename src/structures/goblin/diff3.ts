@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform, treasuryRoom } from '../shared';
 
 // ─── "Fortress Wall" — colonnade with flanking towers (migrated) ────────────
 export const fortressWall: TemplateFn = (ctx) => {
@@ -56,6 +57,17 @@ export const fortressWall: TemplateFn = (ctx) => {
     { x: WX + 2.5 * colSpacing, y: row1Y - 6 - eR },
     { x: colRight + 120, y: groundY - towerPillarH - 6 - 6 - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(440, 280, 3);                                     // approach — arc path
+  ctx.coin(plankCX, capY - 20, 5);                           // structure — above fortress cap
+  ctx.coin(WX - 115, groundY - towerPillarH - 6 - 50 - 30, 4); // structure — above left tower
+  ctx.coin(WX + 2.5 * colSpacing, groundY - 18, 3);         // risky — near ground barrel
+  ctx.coin(colRight + 120, groundY - towerPillarH - 6 - 50 - 30, 3); // structure — above right tower
+
+  // Terrain — berms flanking the colonnade
+  raisedPlatform(ctx, 580, groundY, 80, 18);
+  raisedPlatform(ctx, 900, groundY, 80, 18);
 };
 
 // ─── "The Cage" — 3-tier skeletal frame (migrated) ──────────────────────────
@@ -99,6 +111,13 @@ export const theCage: TemplateFn = (ctx) => {
     { x: frontL + 50, y: groundY - eR },
     { x: frontR - 50, y: groundY - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(460, 280, 3);                          // approach — arc path
+  ctx.coin(cx, capY - 30, 5);                    // structure — above cage cap stones
+  ctx.coin(cx, midY - 10, 4);                    // structure — inside cage mid level
+  ctx.coin(frontL + 40, groundY - 18, 3);        // risky — near ground barrel
+  ctx.coin(frontR - 40, upperY - 6 - 18, 3);     // risky — near upper barrel
 };
 
 // ─── "The Catapult" — fulcrum + plank + target tower (migrated) ─────────────
@@ -143,6 +162,13 @@ export const theCatapult: TemplateFn = (ctx) => {
     { x: TX + tSpan / 2, y: tFloor2 - 6 - 28 - eR },
     { x: TX + tSpan / 2, y: groundY - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(440, 300, 3);                                     // approach — arc path
+  ctx.coin(FX, plankY - 30, 4);                              // structure — above fulcrum
+  ctx.coin(TX + tSpan / 2, tFloor2 - 40, 5);                // structure — above tower cap
+  ctx.coin(FX + plankW / 2 - 25, groundY - 18, 3);          // risky — near catapult barrel
+  ctx.coin(700, groundY - 18, 3);                            // ground — between structures
 };
 
 // ─── "The Shelf" — 4-level shelving + barrel under each shelf (migrated) ────
@@ -186,6 +212,16 @@ export const theShelf: TemplateFn = (ctx) => {
     { x: CX, y: floors[2] - 6 - eR },
     { x: CX, y: floors[3] - 6 - 32 - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(470, 280, 3);                          // approach — arc path
+  ctx.coin(CX, floors[3] - 6 - 44, 5);           // treasury — above top shelf cap stones
+  ctx.coin(CX - shelfW / 2 - 20, floors[1] - 10, 4); // structure — beside shelf level 2
+  ctx.coin(CX, groundY - 18, 3);                 // risky — near ground barrel
+  ctx.coin(CX + shelfW / 2 + 20, floors[2] - 10, 3); // structure — beside shelf level 3
+
+  // Terrain — hidden stash to the right of shelving
+  treasuryRoom(ctx, 900, groundY, 90, 55, 'WOOD', 5);
 };
 
 // ─── "Goblin Arena" — circular pit with surrounding platforms ───────────────
@@ -233,6 +269,13 @@ export const goblinArena: TemplateFn = (ctx) => {
     { x: RX + 30, y: rf - 6 - eR },
     { x: CX, y: overY - 6 - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(440, 280, 3);                          // approach — arc path
+  ctx.coin(CX, overY - 30, 5);                   // structure — above overhead plank
+  ctx.coin(LX + 30, lf - 30, 4);                 // structure — above left platform
+  ctx.coin(CX - 40, groundY - 18, 3);            // risky — near pit barrel + spikes
+  ctx.coin(CX + 40, groundY - 18, 3);            // risky — near pit barrel + spikes
 };
 
 // ─── "Raider Outpost" — L-shaped compound ──────────────────────────────────
@@ -266,6 +309,10 @@ export const raiderOutpost: TemplateFn = (ctx) => {
   ctx.barrel(HX + 100, groundY - 18);
   ctx.barrel(VX + vSpan / 2, hFloor - 6 - 18);
 
+  // Spike traps at compound entrance and interior
+  ctx.hazard('SPIKE_TRAP', HX + 33, groundY - 5);
+  ctx.hazard('SPIKE_TRAP', HX + 166, groundY - 5);
+
   const eR = 20;
   ctx.enemySlots.push(
     { x: HX + 66, y: hFloor - 6 - eR },
@@ -273,6 +320,13 @@ export const raiderOutpost: TemplateFn = (ctx) => {
     { x: VX + vSpan / 2, y: vf1 - 6 - eR },
     { x: VX + vSpan / 2, y: vf2 - 6 - 28 - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(440, 290, 3);                          // approach — arc path
+  ctx.coin(HX + wingW / 2, hFloor - 20, 4);      // structure — above horizontal wing
+  ctx.coin(VX + vSpan / 2, vf2 - 40, 5);         // structure — above vertical tower cap
+  ctx.coin(HX + 100, groundY - 18, 3);           // risky — near ground barrel
+  ctx.coin(VX + vSpan / 2, hFloor - 6 - 18, 3);  // risky — near upper barrel
 };
 
 // ─── "Barrel Gallery" — multi-level barrel chain connected by thin supports ─
@@ -316,6 +370,9 @@ export const barrelGallery: TemplateFn = (ctx) => {
   // Stone cap
   b(CX, floors[2] - 6 - 14, 28, 28, 'STONE');
 
+  // Spike trap near gallery entrance
+  ctx.hazard('SPIKE_TRAP', CX - shelfW / 2 - 30, groundY - 5);
+
   // Side watchtower
   const SX = 870;
   b(SX, groundY - 50 / 2, 14, 50, 'WOOD');
@@ -329,6 +386,13 @@ export const barrelGallery: TemplateFn = (ctx) => {
     { x: CX, y: floors[2] - 6 - 28 - eR },
     { x: SX + 27, y: groundY - 50 - 6 - 6 - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(440, 280, 3);                          // approach — arc path
+  ctx.coin(CX, floors[2] - 6 - 40, 5);           // structure — above gallery cap
+  ctx.coin(CX + shelfW / 2 + 20, floors[0] - 10, 4); // structure — beside first shelf
+  ctx.coin(SX + 27, groundY - 18, 3);            // ground — near watchtower
+  ctx.coin(CX - 20, groundY - 18, 3);            // risky — near ground barrels
 };
 
 // ─── "Twin Forts" — two fortified structures with bridge ────────────────────
@@ -380,6 +444,13 @@ export const twinForts: TemplateFn = (ctx) => {
     { x: RX + fortW / 2, y: rf2 - 6 - 28 - eR },
     { x: bridgeCX, y: groundY - 50 - 6 - 6 - eR },
   );
+
+  // Coins (~20g)
+  ctx.coin(440, 280, 3);                          // approach — arc path
+  ctx.coin(LX + fortW / 2, lf2 - 40, 5);         // structure — above left fort cap
+  ctx.coin(RX + fortW / 2, rf2 - 40, 5);         // structure — above right fort cap
+  ctx.coin(bridgeCX, groundY - 50 - 18, 4);      // structure — above bridge
+  ctx.coin(bridgeCX, groundY - 18, 3);           // risky — near bridge barrel
 };
 
 export const diff3Templates: TemplateFn[] = [

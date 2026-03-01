@@ -40,6 +40,13 @@ export const demonGatehouse: TemplateFn = (ctx) => {
     { x: TX + 35, y: tFloor - 6 - eR },
     { x: GX + gateW + 40, y: groundY - eR },
   );
+
+  // Coins (~16g)
+  ctx.coin(490, 310, 2);                        // approach — arc path
+  ctx.coin(GX + gateW / 2, topY - 30, 3);       // structure — above gate battlements
+  ctx.coin(TX + 35, tFloor - 30, 3);             // structure — above guard tower
+  ctx.coin(GX + gateW / 2 - 30, groundY - 40, 4); // risky — near lava pit
+  ctx.coin(TX + 35, groundY - 18, 4);            // risky — near barrel inside tower
 };
 
 // ─── "Lava Bridge" — elevated deck over lava hazards ────────────────────────
@@ -83,6 +90,13 @@ export const lavaBridge: TemplateFn = (ctx) => {
     { x: startX + spacing * 2.5, y: deckY - 6 - eR },
     { x: startX + spacing * 3, y: groundY - eR },
   );
+
+  // Coins (~16g)
+  ctx.coin(450, 330, 2);                              // approach — arc path
+  ctx.coin(deckCX, deckY - 30, 3);                    // structure — above bridge deck
+  ctx.coin(startX + spacing * 2, deckY - 30, 3);      // structure — above right railing
+  ctx.coin(startX + spacing, groundY - 18, 4);        // risky — under bridge near lava
+  ctx.coin(startX + spacing * 2, groundY - 18, 4);    // risky — under bridge near lava
 };
 
 // ─── "Obsidian Pillbox" — low armored bunker with slit openings ─────────────
@@ -125,6 +139,12 @@ export const obsidianPillbox: TemplateFn = (ctx) => {
     { x: CX, y: roofY - 6 - 28 - eR },
     { x: SX, y: groundY - 45 - 6 - 6 - eR },
   );
+
+  // Coins (~15g)
+  ctx.coin(500, 340, 2);                          // approach — arc path
+  ctx.coin(CX, roofY - 40, 3);                    // structure — above bunker roof
+  ctx.coin(SX, groundY - 45 - 20, 3);             // structure — near side post platform
+  ctx.coin(CX + boxW / 2 + 40, groundY - 40, 4); // risky — near lava pit
 };
 
 // ─── "Hell Scaffold" — multi-tier scaffold with wood platforms ──────────────
@@ -171,6 +191,13 @@ export const hellScaffold: TemplateFn = (ctx) => {
     { x: CX, y: f3 - 6 - eR },
     { x: SX + 30, y: sf - 6 - eR },
   );
+
+  // Coins (~16g)
+  ctx.coin(440, 320, 2);                         // approach — arc path
+  ctx.coin(CX, f2 - 30, 3);                      // structure — above level 2 platform
+  ctx.coin(SX + 30, sf - 30, 3);                  // structure — above side platform
+  ctx.coin(CX + span / 2 + 30, groundY - 40, 4); // risky — near lava pit
+  ctx.coin(CX, f3 - 30, 4);                       // risky — above narrow top level
 };
 
 // ─── "Cinder Hut" — compact obsidian shelter with wood roof ─────────────────
@@ -210,6 +237,12 @@ export const cinderHut: TemplateFn = (ctx) => {
     { x: RX + 40, y: rFloor - 6 - eR },
     { x: RX + 40, y: groundY - eR },
   );
+
+  // Coins (~14g)
+  ctx.coin(460, 300, 2);                          // approach — arc path
+  ctx.coin(HX + hutW / 2, roofY - 30, 3);         // structure — above hut roof
+  ctx.coin(RX + 40, rFloor - 30, 3);              // structure — above secondary structure
+  ctx.coin(HX + hutW + 30, groundY - 40, 4);      // risky — near lava pit
 };
 
 // ─── "Ash Barricade" — layered barricade walls ──────────────────────────────
@@ -250,6 +283,13 @@ export const ashBarricade: TemplateFn = (ctx) => {
     { x: RX + 40, y: rFloor - 6 - eR },
     { x: 720, y: groundY - 65 - 6 - 20 - eR },
   );
+
+  // Coins (~17g)
+  ctx.coin(430, 350, 2);                 // approach — arc path
+  ctx.coin(660, groundY - 55 - 30, 3);   // structure — above second barricade
+  ctx.coin(RX + 40, rFloor - 30, 3);     // structure — above rear platform
+  ctx.coin(720, groundY - 65 - 40, 4);   // structure — above tallest barricade cap
+  ctx.coin(540, groundY - 18, 5);        // risky — near lava pit on ground
 };
 
 // ─── "Magma Vent" — structure built around central lava hazard ──────────────
@@ -296,6 +336,13 @@ export const magmaVent: TemplateFn = (ctx) => {
     { x: CX, y: topY - 6 - eR },
     { x: SX + 27, y: sf - 6 - eR },
   );
+
+  // Coins (~16g)
+  ctx.coin(500, 310, 2);                    // approach — arc path
+  ctx.coin(CX, topY - 30, 3);               // structure — above upper turret
+  ctx.coin(SX + 27, sf - 30, 3);            // structure — above watchtower
+  ctx.coin(CX - 20, groundY - 40, 4);       // risky — near lava vent
+  ctx.coin(CX + 20, groundY - 40, 4);       // risky — near lava vent
 };
 
 // ─── "Inferno Watchtower" — tall obsidian tower with lava moat ──────────────
@@ -342,6 +389,13 @@ export const infernoWatchtower: TemplateFn = (ctx) => {
     { x: TX + span / 2, y: f3 - 6 - 28 - eR },
     { x: SX + 20, y: groundY - eR },
   );
+
+  // Coins (~15g)
+  ctx.coin(480, 300, 2);                       // approach — arc path
+  ctx.coin(TX + span / 2, f2 - 30, 3);         // structure — above level 2
+  ctx.coin(TX + span / 2, f3 - 40, 3);         // structure — above tower cap
+  ctx.coin(TX - 40, groundY - 40, 4);          // risky — near lava moat
+  ctx.coin(SX + 20, groundY - 18, 3);          // structure — near side rubble
 };
 
 export const diff2Templates: TemplateFn[] = [

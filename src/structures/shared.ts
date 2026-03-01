@@ -136,6 +136,84 @@ export function capBlock(
   ctx.block(cx, floorY - 6 - size / 2, size, size, mat);
 }
 
+// ─── Terrain Helpers ───────────────────────────────────────────────────────
+// These produce static ground-level bodies via ctx.terrain() for elevation changes.
+
+/**
+ * raisedPlatform — A flat terrain elevation.
+ * Creates a solid rectangle at (cx, groundY - height/2).
+ */
+export function raisedPlatform(
+  ctx: StructureContext,
+  cx: number,
+  groundY: number,
+  width: number,
+  height: number,
+) {
+  ctx.terrain(cx, groundY - height / 2, width, height);
+}
+
+/**
+ * pit — Raised edges flanking a gap, creating a depression.
+ * Two terrain mounds on either side of cx.
+ */
+export function pit(
+  ctx: StructureContext,
+  cx: number,
+  groundY: number,
+  pitWidth: number,
+  edgeHeight: number,
+) {
+  const edgeW = 40;
+  ctx.terrain(cx - pitWidth / 2 - edgeW / 2, groundY - edgeHeight / 2, edgeW, edgeHeight);
+  ctx.terrain(cx + pitWidth / 2 + edgeW / 2, groundY - edgeHeight / 2, edgeW, edgeHeight);
+}
+
+/**
+ * tunnel — Walled passage with ceiling. Heroes rolling low pass through;
+ * high-arc heroes fly over.
+ */
+export function tunnel(
+  ctx: StructureContext,
+  startX: number,
+  endX: number,
+  groundY: number,
+  height: number,
+  wallMat: MaterialType,
+  ceilingMat: MaterialType,
+) {
+  const w = endX - startX;
+  const cx = (startX + endX) / 2;
+  // Side walls
+  ctx.block(startX, groundY - height / 2, 14, height, wallMat);
+  ctx.block(endX, groundY - height / 2, 14, height, wallMat);
+  // Ceiling
+  ctx.block(cx, groundY - height - 6, w + 14, 12, ceilingMat);
+}
+
+/**
+ * treasuryRoom — Enclosed coin stash with breakable walls.
+ * Places walls + roof around a coin. Destroy walls to collect.
+ */
+export function treasuryRoom(
+  ctx: StructureContext,
+  cx: number,
+  baseY: number,
+  w: number,
+  h: number,
+  wallMat: MaterialType,
+  coinValue: number,
+) {
+  // Left wall
+  ctx.block(cx - w / 2, baseY - h / 2, 14, h, wallMat);
+  // Right wall
+  ctx.block(cx + w / 2, baseY - h / 2, 14, h, wallMat);
+  // Roof
+  ctx.block(cx, baseY - h - 6, w + 14, 12, wallMat);
+  // Coin inside
+  ctx.coin(cx, baseY - h / 2, coinValue);
+}
+
 /**
  * triPillar — Three pillars (two outer + one center) with plank.
  * Returns the floor Y.

@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform, tunnel } from '../shared';
 
 // ─── "Frost Throne" — massive ice palace with central throne room ──────────
 export const frostThrone: TemplateFn = (ctx) => {
@@ -86,6 +87,14 @@ export const frostThrone: TemplateFn = (ctx) => {
     { x: CX, y: throneFloor - 6 - 24 - eR },
     { x: RX, y: rf1 - 6 - eR },
   );
+
+  // Coins (~28g total)
+  ctx.coin(430, 350, 4);                          // approach — arc path
+  ctx.coin(LX, lf2 - 20, 4);                     // structure — left tower mid level
+  ctx.coin(CX, cf2 - 20, 5);                     // structure — center hall upper
+  ctx.coin(RX, rf2 - 30, 4);                     // structure — right wing upper
+  ctx.coin(CX - hallSpan / 4, groundY - 18, 5);  // risky — near center barrel + ice
+  ctx.coin(CX, throneFloor - 30, 6);             // treasury — throne platform
 };
 
 // ─── "Glacier Citadel" — 3 connected ice chambers, escalating difficulty ───
@@ -171,6 +180,14 @@ export const glacierCitadel: TemplateFn = (ctx) => {
     { x: C3X + chamberW / 2, y: c3Floor - 6 - eR },
     { x: C3X + chamberW / 2, y: c3Floor2 - 6 - 32 - eR },
   );
+
+  // Coins (~29g total)
+  ctx.coin(430, 350, 4);                                    // approach — arc path
+  ctx.coin(C1X + chamberW / 2, c1Floor2 - 20, 4);          // structure — chamber 1 upper
+  ctx.coin(C2X + chamberW / 2, c2Floor2 - 20, 5);          // structure — chamber 2 upper
+  ctx.coin(bridge1X + bridgeW / 2, groundY - 18, 5);       // risky — near bridge 1 barrel
+  ctx.coin(C2X + chamberW / 2, groundY - 18, 5);           // risky — near chamber 2 ice patch
+  ctx.coin(C3X + chamberW / 2, c3Floor2 - 40, 6);          // treasury — deep inside chamber 3
 };
 
 // ─── "Ice Queen Lair" — massive ice throne with cascading ice platforms ────
@@ -235,6 +252,14 @@ export const iceQueenLair: TemplateFn = (ctx) => {
     { x: throneX, y: tf - 6 - 28 - eR },
     { x: RX + 35, y: rf1 - 6 - 28 - eR },
   );
+
+  // Coins (~29g total)
+  ctx.coin(430, 340, 4);                          // approach — arc path
+  ctx.coin(HX + hallW / 3, hf1 - 20, 4);         // structure — hall roof left
+  ctx.coin(HX + hallW * 2 / 3, hf2 - 20, 5);     // structure — hall upper right
+  ctx.coin(RX + 35, rf1 - 30, 5);                // structure — rear tower top
+  ctx.coin(GX + 30, groundY - 18, 5);            // risky — near gate barrel + ice
+  ctx.coin(throneX, tf - 40, 6);                 // treasury — throne platform
 };
 
 // ─── "Frozen Gauntlet" — multi-wall ice defense with cascading hazards ─────
@@ -292,6 +317,14 @@ export const frozenGauntlet: TemplateFn = (ctx) => {
     { x: 460, y: groundY - 60 - 6 - 28 - eR },
     { x: 730, y: groundY - 80 - 6 - 28 - eR },
   );
+
+  // Coins (~29g total)
+  ctx.coin(430, 330, 4);                        // approach — arc path
+  ctx.coin(525, groundY - 70, 4);              // structure — between wall 1-2 platform
+  ctx.coin(660, groundY - 80, 5);              // structure — between wall 2-3 platform
+  ctx.coin(525, groundY - 18, 5);              // risky — near barrel between walls
+  ctx.coin(FX + 55, groundY - 18, 5);          // risky — near compound barrel + ice
+  ctx.coin(FX + 55, ff2 - 40, 6);             // treasury — compound top
 };
 
 export const diff5Templates: TemplateFn[] = [

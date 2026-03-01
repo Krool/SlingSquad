@@ -148,6 +148,17 @@
       "maxStack": 3,
       "shardCost": 3,
       "hidden": true
+    },
+    {
+      "id": "healers_tent",
+      "name": "Healer's Tent",
+      "desc": "Reduces hero revive cooldown by 1 node.",
+      "icon": "icon_health_potion",
+      "building": "healers_tent",
+      "effect": "REVIVE_COOLDOWN_BONUS",
+      "value": 1,
+      "maxStack": 1,
+      "shardCost": 6
     }
   ]
 }

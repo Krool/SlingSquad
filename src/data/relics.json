@@ -59,8 +59,8 @@
     "desc": "All heroes deal +4 combat damage.",
     "effect": "FLAT_COMBAT_DAMAGE",
     "value": 4,
-    "cost": 45,
-    "rarity": "rare"
+    "cost": 35,
+    "rarity": "uncommon"
   },
   {
     "id": "banner_of_rage",
@@ -68,7 +68,7 @@
     "desc": "Heroes in combat attack 15% faster.",
     "effect": "COMBAT_SPEED_MULT",
     "value": 0.85,
-    "cost": 50,
+    "cost": 45,
     "rarity": "rare"
   },
   {
@@ -212,8 +212,8 @@
     "desc": "Impact deals +30% damage to stone blocks.",
     "effect": "STONE_DAMAGE_BONUS",
     "value": 0.30,
-    "cost": 35,
-    "rarity": "common"
+    "cost": 40,
+    "rarity": "uncommon"
   },
   {
     "id": "berserker_helm",
@@ -221,6 +221,51 @@
     "desc": "Heroes below 30% HP deal double combat damage.",
     "effect": "LOW_HP_DAMAGE",
     "value": 2.0,
+    "cost": 45,
+    "rarity": "rare"
+  },
+  {
+    "id": "wolf_totem",
+    "name": "Wolf Totem",
+    "desc": "Druid summons 1 additional wolf.",
+    "effect": "DRUID_WOLF_BONUS",
+    "value": 1,
+    "cost": 40,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "shadow_cloak",
+    "name": "Shadow Cloak",
+    "desc": "Rogue pierces through 2 blocks instead of 1.",
+    "effect": "ROGUE_PIERCE_BONUS",
+    "value": 1,
+    "cost": 40,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "campfire_kit",
+    "name": "Campfire Kit",
+    "desc": "REST nodes also grant +15 max HP to all heroes.",
+    "effect": "REST_HP_BONUS",
+    "value": 15,
+    "cost": 30,
+    "rarity": "common"
+  },
+  {
+    "id": "battle_medic",
+    "name": "Battle Medic",
+    "desc": "Heroes heal 5 HP per enemy killed.",
+    "effect": "HEAL_ON_KILL",
+    "value": 5,
+    "cost": 35,
+    "rarity": "uncommon"
+  },
+  {
+    "id": "guardian_angel",
+    "name": "Guardian Angel",
+    "desc": "Revive cooldowns reduced by 1 at run start.",
+    "effect": "REVIVE_COOLDOWN_REDUCE",
+    "value": 1,
     "cost": 45,
     "rarity": "rare"
   }

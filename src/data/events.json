@@ -242,5 +242,35 @@
       { "label": "Claim a bounty", "desc": "Gain 20 gold from a completed bounty", "outcome": { "type": "GOLD", "gold": 20 } },
       { "label": "Check for intel", "desc": "Gain a common relic — local knowledge", "outcome": { "type": "FREE_RELIC", "rarity": "common" } }
     ]
+  },
+  {
+    "id": "healers_camp",
+    "name": "Healer's Camp",
+    "text": "A traveling healer has set up camp nearby. Bandages and poultices line the shelves.",
+    "choices": [
+      { "label": "Accept healing", "desc": "All heroes restored to full HP", "outcome": { "type": "HEAL_ALL" } },
+      { "label": "Buy medicine (25g)", "desc": "Purchase a common relic", "outcome": { "type": "BUY_RELIC", "cost": 25, "rarity": "common" } },
+      { "label": "Move on", "desc": "Continue your journey", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "fallen_comrade",
+    "name": "Fallen Comrade",
+    "text": "You find traces of a fallen ally who left behind supplies.",
+    "choices": [
+      { "label": "Salvage their gear", "desc": "Gain a common relic", "outcome": { "type": "FREE_RELIC", "rarity": "common" } },
+      { "label": "Use their medicine", "desc": "Reduce all revive cooldowns by 1", "outcome": { "type": "REDUCE_COOLDOWN" } },
+      { "label": "Leave undisturbed", "desc": "Show respect and move on", "outcome": { "type": "NOTHING" } }
+    ]
+  },
+  {
+    "id": "mystic_fountain",
+    "name": "Mystic Fountain",
+    "text": "A glowing fountain pulses with restorative energy. The water shimmers with healing magic.",
+    "choices": [
+      { "label": "Drink deeply", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } },
+      { "label": "Bottle the water", "desc": "Gain Tome of Healing", "outcome": { "type": "SPECIFIC_RELIC", "relicId": "tome_of_healing" } },
+      { "label": "Toss in a coin (15g)", "desc": "Pay 15g for an uncommon relic", "outcome": { "type": "BUY_RELIC", "cost": 15, "rarity": "uncommon" } }
+    ]
   }
 ]

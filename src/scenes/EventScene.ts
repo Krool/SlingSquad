@@ -4,7 +4,7 @@ import relicsData from '@/data/relics.json';
 import cursesData from '@/data/curses.json';
 import {
   getRunState, addRelic, spendGold, completeNode, removeRelic, upgradeRelic,
-  getCurses, getNonCurseRelics,
+  getCurses, getNonCurseRelics, reduceCooldown, getHeroesOnCooldown,
   type NodeDef, type RelicDef,
 } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
@@ -188,6 +188,8 @@ export class EventScene extends Phaser.Scene {
         return { text: '\u2665 Full Heal', color: 0x2ecc71 };
       case 'BUY_UPGRADE':
         return { text: `◆${outcome.cost ?? 0} \u2192 Upgrade`, color: 0x3498db };
+      case 'REDUCE_COOLDOWN':
+        return { text: '\u231b Rally Fallen', color: 0x2ecc71 };
       default:
         return { text: '...', color: 0x555555 };
     }
@@ -303,6 +305,7 @@ export class EventScene extends Phaser.Scene {
     if (o.type === 'REMOVE_CURSE' && getCurses().length === 0) return false;
     if (o.type === 'UPGRADE_RELIC' && getNonCurseRelics().filter(r => (r.rarity ?? 'common') === 'common').length === 0) return false;
     if (o.type === 'TRADE_RELIC' && getNonCurseRelics().filter(r => (r.rarity ?? 'common') === 'common').length === 0) return false;
+    if (o.type === 'REDUCE_COOLDOWN' && getHeroesOnCooldown().length === 0) return false;
     return true;
   }
 
@@ -438,6 +441,19 @@ export class EventScene extends Phaser.Scene {
           hero.reviveCooldown = 0; // also clears revive cooldown
         }
         resultText = 'All heroes healed to full HP!';
+        break;
+      }
+
+      case 'REDUCE_COOLDOWN': {
+        const onCooldown = getHeroesOnCooldown();
+        if (onCooldown.length > 0) {
+          for (const h of onCooldown) {
+            reduceCooldown(h.heroClass, 1);
+          }
+          resultText = 'All revive cooldowns reduced by 1!';
+        } else {
+          resultText = 'No heroes on cooldown.';
+        }
         break;
       }
 

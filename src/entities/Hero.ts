@@ -41,11 +41,15 @@ export class Hero {
   // Divine Shield (Paladin passive — survives one lethal hit)
   hasDivineShield = false;
 
-  // Rogue piercing — continues through first block hit
-  piercing = false;
+  // Rogue piercing — number of blocks remaining to pierce through
+  piercing = 0;
 
   // Vanguard passive: true if this hero was the first launched in the battle
   isFirstLaunch = false;
+
+  // Off-screen recovery (teleport back instead of dying)
+  recoveryCount = 0;
+  private static readonly MAX_RECOVERIES = 3;
 
   // Per-battle performance stats (auto-reset each battle since Hero instances are recreated)
   battleDamageDealt = 0;
@@ -318,6 +322,34 @@ export class Hero {
     this.state = 'combat';
   }
 
+  /** Teleport hero back to ground instead of dying when off-screen */
+  recover() {
+    this.recoveryCount++;
+    if (this.recoveryCount > Hero.MAX_RECOVERIES) {
+      this.die();
+      return;
+    }
+    this._removeGravityListener();
+    const groundY = GAME_HEIGHT - 100;
+    const safeX = SLING_X + 60 + this.recoveryCount * 30;
+    const safeY = groundY - this.stats.radius;
+    if (this.body) {
+      this.scene.matter.body.setPosition(this.body, { x: safeX, y: safeY });
+      this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
+      this.scene.matter.body.setAngularVelocity(this.body, 0);
+    }
+    if (this.state === 'flying') {
+      this.enterCombat();
+    }
+    // Blue flash to signal recovery teleport
+    if (this.sprite) {
+      this.sprite.setTint(0x5dade2);
+      this.scene.time.delayedCall(300, () => {
+        if (this.state !== 'dead') this.restoreTint();
+      });
+    }
+  }
+
   update() {
     if (!this.body || this.state === 'dead') return;
     const { x, y } = this.body.position;
@@ -329,16 +361,14 @@ export class Hero {
     this.hpBarBg?.setPosition(x, y);
     this.hpBarFill?.setPosition(x, y);
 
-    // Out-of-bounds handling for flying heroes
+    // Out-of-bounds handling — recover instead of dying
     if (this.state === 'flying') {
       if (y > GAME_HEIGHT + 80) {
-        // Fell off the bottom of the world — permanently lost
-        this.die();
+        this.recover();
         return;
       }
       if (x < -300 || x > GAME_WIDTH + 300) {
-        // Flew sideways off-screen — freeze in combat mode (missed the battle)
-        this.enterCombat();
+        this.recover();
         return;
       }
     }
@@ -346,7 +376,7 @@ export class Hero {
     // Non-static combat heroes can slide off the world
     if (this.state === 'combat') {
       if (y > GAME_HEIGHT + 120 || x < -400 || x > GAME_WIDTH + 400) {
-        this.die();
+        this.recover();
         return;
       }
     }

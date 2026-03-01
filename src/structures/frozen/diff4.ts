@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform } from '../shared';
 
 // ─── "Ice Monolith" — grand multi-tier ice keep ────────────────────────────
 export const iceMonolith: TemplateFn = (ctx) => {
@@ -57,6 +58,14 @@ export const iceMonolith: TemplateFn = (ctx) => {
     { x: upperCX, y: uf - 6 - eR },
     { x: upperCX, y: spireTop - 6 - 28 - eR },
   );
+
+  // Coins (~23g total)
+  ctx.coin(430, 300, 3);                                // approach — arc path
+  ctx.coin(roomCenters[0], lowerFloorY - 40, 3);       // structure — above room 1
+  ctx.coin(roomCenters[2], lowerFloorY - 40, 4);       // structure — above room 3
+  ctx.coin(upperCX, uf - 20, 4);                       // structure — on upper tier
+  ctx.coin(roomCenters[0] - 20, groundY - 18, 4);      // risky — near ice patch room 1
+  ctx.coin(upperCX, spireTop - 40, 5);                 // treasury — near spire top
 };
 
 // ─── "Frozen Stronghold" — thick-walled ice bunker with flanking towers ────
@@ -108,6 +117,14 @@ export const frozenStronghold: TemplateFn = (ctx) => {
     { x: BX + bunkerW / 2 + 70, y: groundY - 70 - 6 - 6 - eR },
     { x: BX, y: roofY - 6 - eR },
   );
+
+  // Coins (~23g total)
+  ctx.coin(430, 280, 3);                                    // approach — arc path
+  ctx.coin(BX - bunkerW / 4, roofY - 20, 3);               // structure — on left roof
+  ctx.coin(BX + bunkerW / 4, roofY - 20, 4);               // structure — on right roof
+  ctx.coin(BX - 40, groundY - 18, 4);                      // risky — near ice patch + barrel
+  ctx.coin(BX + bunkerW / 2 + 70, groundY - 90, 4);        // structure — flanking tower top
+  ctx.coin(BX, groundY - 18, 5);                           // risky — near center barrel
 };
 
 // ─── "Glacier Fortress" — wide compound with ice bridges ───────────────────
@@ -163,6 +180,14 @@ export const glacierFortress: TemplateFn = (ctx) => {
     { x: RX + fortW / 2, y: rf2 - 6 - 28 - eR },
     { x: bridgeCX, y: groundY - 55 - 6 - 6 - eR },
   );
+
+  // Coins (~23g total)
+  ctx.coin(430, 300, 3);                          // approach — arc path
+  ctx.coin(LX + fortW / 2, lf2 - 30, 3);         // structure — left fort upper
+  ctx.coin(RX + fortW / 2, rf2 - 30, 4);         // structure — right fort upper
+  ctx.coin(bridgeCX, groundY - 75, 4);           // structure — above bridge
+  ctx.coin(LX + fortW / 2, groundY - 18, 4);     // risky — near barrel + ice at left
+  ctx.coin(bridgeCX, groundY - 18, 5);           // risky — near barrel + ice at bridge
 };
 
 // ─── "Crystal Keep" — tall single tower, ice + stone layers ────────────────
@@ -219,6 +244,17 @@ export const crystalKeep: TemplateFn = (ctx) => {
     { x: TX + span / 2, y: f4 - 6 - 28 - eR },
     { x: RampX + 30, y: groundY - 35 - 6 - 6 - eR },
   );
+
+  // Coins (~23g total)
+  ctx.coin(460, 260, 3);                          // approach — arc path
+  ctx.coin(TX + span / 2, f1 - 20, 3);           // structure — above level 1
+  ctx.coin(TX + span / 2, f2 - 20, 4);           // structure — above level 2
+  ctx.coin(TX + span / 2, f3 - 20, 4);           // structure — above level 3
+  ctx.coin(TX + span / 2, groundY - 18, 4);      // risky — near ground barrel + ice
+  ctx.coin(TX + span / 2, f4 - 40, 5);           // treasury — near keep top
+
+  // Terrain — approach ledge
+  raisedPlatform(ctx, 550, groundY, 100, 20);
 };
 
 // ─── "Frostbite Complex" — multi-wing compound, ice walls everywhere ───────
@@ -280,6 +316,14 @@ export const frostbiteComplex: TemplateFn = (ctx) => {
     { x: throneX, y: tf - 6 - 28 - eR },
     { x: RX + 30, y: rf1 - 6 - eR },
   );
+
+  // Coins (~23g total)
+  ctx.coin(430, 340, 3);                        // approach — arc path
+  ctx.coin(HX + hallW / 3, hf1 - 20, 3);       // structure — on hall roof left
+  ctx.coin(HX + hallW * 2 / 3, hf2 - 20, 4);   // structure — on hall upper right
+  ctx.coin(RX + 30, groundY - 80, 4);          // structure — rear watchtower
+  ctx.coin(GX + 30, groundY - 18, 4);          // risky — near gate barrel + ice
+  ctx.coin(throneX, tf - 40, 5);               // treasury — throne platform
 };
 
 // ─── "Avalanche Keep" — walls lined with stone-on-ice traps ────────────────
@@ -326,6 +370,14 @@ export const avalancheKeep: TemplateFn = (ctx) => {
     { x: CX + wallW / 4, y: roofY - 6 - eR },
     { x: CX, y: upperRoof - 6 - 32 - eR },
   );
+
+  // Coins (~23g total)
+  ctx.coin(450, 300, 3);                        // approach — arc path
+  ctx.coin(CX, roofY - 20, 3);                 // structure — on stone roof
+  ctx.coin(CX - wallW / 4, upperRoof - 40, 4); // structure — near left battlement
+  ctx.coin(CX + wallW / 4, upperRoof - 40, 4); // structure — near right battlement
+  ctx.coin(CX - wallW / 4, groundY - 18, 5);   // risky — near barrels + ice left
+  ctx.coin(CX + wallW / 4, groundY - 18, 4);   // risky — near barrels + ice right
 };
 
 export const diff4Templates: TemplateFn[] = [

@@ -5,15 +5,18 @@ import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 
 /**
  * Standardized 52x52 settings gear button at top-left (12,12).
- * Returns the hit rectangle for optional cleanup.
+ * Returns a container wrapping bg, text, and hit area so callers can
+ * apply setScrollFactor(0) on the whole group.
  */
 export function buildSettingsGear(
   scene: Phaser.Scene,
   callerKey: string,
   depth = 20,
-): Phaser.GameObjects.Rectangle {
+): Phaser.GameObjects.Container {
   const size = 52, r = 10;
-  const bg = scene.add.graphics().setDepth(depth);
+  const container = scene.add.container(0, 0).setDepth(depth);
+
+  const bg = scene.add.graphics();
   const draw = (hovered: boolean) => {
     bg.clear();
     bg.fillStyle(0x060b12, hovered ? 1 : 0.75);
@@ -22,18 +25,22 @@ export function buildSettingsGear(
     bg.strokeRoundedRect(12, 12, size, size, r);
   };
   draw(false);
-  scene.add.text(12 + size / 2, 12 + size / 2, '\u2699', {
+  container.add(bg);
+
+  const text = scene.add.text(12 + size / 2, 12 + size / 2, '\u2699', {
     fontSize: '28px', fontFamily: 'Nunito, sans-serif', color: '#c0c8d0',
-  }).setOrigin(0.5).setDepth(depth + 1);
+  }).setOrigin(0.5);
+  container.add(text);
 
   const hit = scene.add.rectangle(12 + size / 2, 12 + size / 2, size, size, 0x000000, 0)
-    .setInteractive({ useHandCursor: true }).setDepth(depth + 2);
+    .setInteractive({ useHandCursor: true });
+  container.add(hit);
   hit.on('pointerover', () => draw(true));
   hit.on('pointerout', () => draw(false));
   hit.on('pointerdown', () => {
     scene.scene.launch('SettingsScene', { callerKey });
   });
-  return hit;
+  return container;
 }
 
 // ─── Procedural Icons ──────────────────────────────────────────────────────────
@@ -194,7 +201,7 @@ export function showCurrencyPopover(
   const PW = 240, PH = 90, PR = 8;
   const px = Phaser.Math.Clamp(anchorX - PW / 2, 10, GAME_WIDTH - PW - 10);
 
-  const container = scene.add.container(px, anchorY).setDepth(100).setAlpha(0);
+  const container = scene.add.container(px, anchorY).setDepth(100).setAlpha(0).setScrollFactor(0);
   _popovers.set(scene, container);
 
   // Background

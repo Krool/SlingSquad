@@ -28,13 +28,13 @@ import { CombatSystem } from '@/systems/CombatSystem';
 import { ImpactSystem } from '@/systems/ImpactSystem';
 import { TimeoutSystem } from '@/systems/TimeoutSystem';
 import { VFXSystem } from '@/systems/VFXSystem';
-import { SquadUI } from '@/ui/SquadUI';
+import { SquadUI, type CooldownHeroInfo } from '@/ui/SquadUI';
 import { DamageNumber } from '@/ui/DamageNumber';
 import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
 
 import {
   getRunState, hasRunState, completeNode, syncSquadHp, newRun, getRelicModifiers, loadRun,
-  addRelic, ensureActiveHero,
+  addRelic, ensureActiveHero, getHeroesOnCooldown,
   type NodeDef, type RelicDef,
 } from '@/systems/RunState';
 import { AudioSystem } from '@/systems/AudioSystem';
@@ -157,7 +157,6 @@ export class BattleScene extends Phaser.Scene {
     this.vfxSystem = new VFXSystem(this, this.activeNode.difficulty ?? 1, this.zoneTheme);
     this.buildGround();
     this.buildStructure();
-    this.spawnCoins();
     this.buildSquad();
     this.buildSystems();
     this.buildCollisionHandlers();
@@ -501,6 +500,9 @@ export class BattleScene extends Phaser.Scene {
     const diff = this.activeNode.difficulty ?? 1;
     const template = pickTemplate(zone, diff);
 
+    const templateCoins: Array<[number, number, number]> = [];
+    const terrainBodies: Array<{ x: number; y: number; w: number; h: number }> = [];
+
     const ctx: StructureContext = {
       groundY: GAME_HEIGHT - 100,
       block: (x, y, w, h, mat) => {
@@ -512,11 +514,19 @@ export class BattleScene extends Phaser.Scene {
       hazard: (type: HazardType, x: number, y: number) => {
         this.hazards.push(new Hazard(this, type, x, y));
       },
+      coin: (x, y, value) => {
+        templateCoins.push([x, y, value]);
+      },
+      terrain: (x, y, w, h) => {
+        terrainBodies.push({ x, y, w, h });
+      },
       enemySlots: [],
     };
 
     template(ctx);
     this.placeEnemies(ctx.enemySlots);
+    this.spawnTemplateCoins(templateCoins);
+    this.buildTerrain(terrainBodies);
   }
 
   // ─── Place enemies from node data ─────────────────────────────────────────
@@ -617,7 +627,11 @@ export class BattleScene extends Phaser.Scene {
     this.impactSystem = new ImpactSystem(this, this.combatSystem, this.heroes);
     this.timeoutSystem = new TimeoutSystem(this);
     this.launchSystem = new LaunchSystem(this, this.heroes);
-    this.squadUI = new SquadUI(this, this.heroes);
+    const cooldownHeroes: CooldownHeroInfo[] = getHeroesOnCooldown().map(h => ({
+      heroClass: h.heroClass,
+      cooldownRemaining: h.reviveCooldown ?? 0,
+    }));
+    this.squadUI = new SquadUI(this, this.heroes, cooldownHeroes);
 
     // Enemies-remaining counter panel (top-right)
     this.enemyPanel = this.add.graphics().setDepth(49);
@@ -641,7 +655,9 @@ export class BattleScene extends Phaser.Scene {
 
     // Gear / settings button — top-left corner (standardized TopBar)
     // Override default listener with battle-aware one that blocks after battle ends
-    const gearHit = buildSettingsGear(this, 'BattleScene', 55);
+    const gearCt = buildSettingsGear(this, 'BattleScene', 55);
+    // The hit rectangle is the last child in the container — override its listener
+    const gearHit = gearCt.list[gearCt.list.length - 1] as Phaser.GameObjects.Rectangle;
     gearHit.removeAllListeners('pointerdown');
     gearHit.on('pointerdown', () => {
       if (!this.battleEnded) this.scene.launch('SettingsScene', { callerKey: 'BattleScene' });
@@ -692,8 +708,8 @@ export class BattleScene extends Phaser.Scene {
     const other = hero === heroA ? bB : bA;
 
     if (hero && hero.state === 'flying') {
-      // Rogue piercing: if flying through a block with piercing flag, deal damage but don't stop
-      if (hero.piercing && other.label?.startsWith('block_')) {
+      // Rogue piercing: if flying through a block with piercing counter, deal damage but don't stop
+      if (hero.piercing > 0 && other.label?.startsWith('block_')) {
         const block = this.blocks.find(b => b.body === other);
         if (block && !block.destroyed) {
           const v = hero.body?.velocity ?? { x: 0, y: 0 };
@@ -701,7 +717,7 @@ export class BattleScene extends Phaser.Scene {
           const pierceDmg = speed * 15;
           block.applyDamage(pierceDmg); // piercing damage
           hero.battleBlockDamage += pierceDmg;
-          hero.piercing = false; // clear after first pierce
+          hero.piercing--; // decrement pierce counter
         }
         return; // don't trigger normal impact — hero keeps flying
       }
@@ -857,6 +873,14 @@ export class BattleScene extends Phaser.Scene {
       this.combatSystem.killGoldBonus = 0;
       const mods = getRelicModifiers();
       if (mods.goldOnKill > 0) this.coinGoldBonus += mods.goldOnKill;
+      // Heal-on-kill relic: heal all living heroes
+      if (mods.healOnKill > 0) {
+        for (const h of this.heroes) {
+          if (h.state !== 'dead') {
+            h.heal(mods.healOnKill);
+          }
+        }
+      }
       // Encore passive (Bard): if any Bard is alive, next hero launches with +15% power
       const hasBard = this.heroes.some(h => h.heroClass === 'BARD' && h.state !== 'dead');
       if (hasBard) this.launchSystem.encoreActive = true;
@@ -1057,47 +1081,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   // ─── Coins ─────────────────────────────────────────────────────────────────
-  /** Place coins at positions reachable along typical hero flight arcs. */
-  private spawnCoins() {
-    const diff = this.activeNode.difficulty ?? 1;
-    const groundY = GAME_HEIGHT - 100;
-    const BH = diff >= 4 ? 22 : diff === 3 ? 26 : 30;
-    const cy = (r: number) => groundY - BH / 2 - r * BH;
-
-    // Coin layouts per template. Each entry: [x, y, value]
-    // Positions chosen to lie along arc trajectories heroes naturally follow,
-    // but slightly off-centre so there's skill involved.
-    let layout: Array<[number, number, number]>;
-
-    if (diff >= 4) {
-      // The Keep — tall structure, spread wide
-      layout = [
-        [270, 340, 3],   // early arc, low-mid
-        [460, 230, 4],   // high arc above base
-        [660, 260, 4],   // mid-structure approach
-        [860, 250, 5],   // deep, rewarding
-        [1060, 320, 5],  // back wall (high drag required)
-      ];
-    } else if (diff === 3) {
-      // Fortress Wall
-      layout = [
-        [280, 340, 3],   // approach arc
-        [520, 230, 4],   // above wall battlements
-        [710, 260, 4],   // through gate arch area
-        [960, 270, 5],   // above right tower
-      ];
-    } else {
-      // Two Towers
-      layout = [
-        [240, 360, 2],            // easy — early arc
-        [420, 270, 3],            // medium — peak of a high arc
-        [640, 340, 3],            // between hill and left tower
-        [810, cy(7) - 30, 4],    // above the load-bearing cap (tricky angle)
-        [1010, 320, 4],           // approach to right tower
-      ];
-    }
-
-    // Ascension: reduced gold → halve coin count
+  /** Spawn coins from template-provided positions (easy coins first, risky last). */
+  private spawnTemplateCoins(layout: Array<[number, number, number]>) {
+    // Ascension: reduced gold → halve coin count (removes easy coins first)
     const run = getRunState();
     const ascMods = getAscensionModifiers(run.ascensionLevel);
     let coinLayout = layout;
@@ -1107,6 +1093,37 @@ export class BattleScene extends Phaser.Scene {
 
     for (const [x, y, value] of coinLayout) {
       this.coins.push(new Coin(this, x, y, value));
+    }
+  }
+
+  // ─── Terrain ──────────────────────────────────────────────────────────────
+  /** Create static terrain bodies (platforms, berms) and draw them. */
+  private buildTerrain(bodies: Array<{ x: number; y: number; w: number; h: number }>) {
+    if (bodies.length === 0) return;
+
+    const run = getRunState();
+    const isFrozen = run.currentMapId === 'frozen_peaks';
+    const terrainColor = this.zoneTheme.groundColor;
+    const topColor = this.zoneTheme.grassColor;
+
+    const gfx = this.add.graphics();
+    gfx.setDepth(-1); // behind blocks and entities
+
+    for (const { x, y, w, h } of bodies) {
+      // Static physics body
+      this.matter.add.rectangle(x, y, w, h, {
+        isStatic: true,
+        label: 'terrain',
+        friction: isFrozen ? 0.3 : 0.8,
+        restitution: 0.04,
+      });
+
+      // Visual: filled rect with grass top
+      gfx.fillStyle(terrainColor, 1);
+      gfx.fillRect(x - w / 2, y - h / 2, w, h);
+      // Grass/snow/lava crust line on top
+      gfx.fillStyle(topColor, 1);
+      gfx.fillRect(x - w / 2, y - h / 2, w, 3);
     }
   }
 

@@ -468,7 +468,7 @@ export class ImpactSystem {
     }
 
     // Spawn wolf minions — emitted to BattleScene for entity creation
-    const wolfCount = stats.wolfCount;
+    const wolfCount = stats.wolfCount + this.relicMods.druidWolfBonus;
     for (let i = 0; i < wolfCount; i++) {
       const wx = x + Phaser.Math.Between(-40, 40);
       const wy = y - Phaser.Math.Between(10, 30);

@@ -32,6 +32,13 @@ export const iceBridge: TemplateFn = (ctx) => {
     { x: startX + 2.5 * pillarSpacing, y: deckY - 6 - eR },
     { x: startX + 1.5 * pillarSpacing, y: groundY - eR },
   );
+
+  // Coins (~16g total)
+  ctx.coin(430, 350, 2);                                        // approach — early arc
+  ctx.coin(startX + 0.5 * pillarSpacing, deckY - 30, 3);       // structure — on bridge deck
+  ctx.coin(startX + 2.5 * pillarSpacing, deckY - 30, 3);       // structure — far end of bridge
+  ctx.coin(deckCX, deckY - 18, 4);                              // risky — near ice patch on deck
+  ctx.coin(startX + 0.5 * pillarSpacing, groundY - 18, 4);     // risky — near barrel under bridge
 };
 
 // ─── "Glacial Watchtower" — tall ice tower with flanking walls ─────────────
@@ -70,6 +77,13 @@ export const glacialWatchtower: TemplateFn = (ctx) => {
     { x: 480, y: groundY - 40 - eR },
     { x: 870, y: groundY - 40 - eR },
   );
+
+  // Coins (~16g total)
+  ctx.coin(520, 300, 2);                        // approach — arc path
+  ctx.coin(TX + span / 2, f2 - 20, 3);         // structure — mid tower level
+  ctx.coin(870, groundY - 60, 3);              // structure — near far flanking wall
+  ctx.coin(TX + span / 2, groundY - 18, 4);    // risky — near barrel inside tower
+  ctx.coin(480, groundY - 18, 4);              // risky — near barrel at front wall
 };
 
 // ─── "Frozen Camp" — two ice huts flanking barrels ─────────────────────────
@@ -113,6 +127,13 @@ export const frozenCamp: TemplateFn = (ctx) => {
     { x: RX + hutW / 2, y: rBase - 6 - eR },
     { x: RX + hutW / 2, y: rFloor - 6 - eR },
   );
+
+  // Coins (~16g total)
+  ctx.coin(440, 320, 2);                        // approach — arc path
+  ctx.coin(LX + hutW / 2, lFloor - 40, 3);     // structure — above left hut
+  ctx.coin(RX + hutW / 2, rBase - 60, 3);      // structure — near right hut upper
+  ctx.coin(580, groundY - 18, 4);              // risky — near ice patch
+  ctx.coin(CX, groundY - 18, 4);              // risky — near center barrels
 };
 
 // ─── "Avalanche Shelf" — heavy ice on thin wood supports ───────────────────
@@ -155,6 +176,13 @@ export const avalancheShelf: TemplateFn = (ctx) => {
     { x: RX, y: rFloor - 6 - eR },
     { x: RX, y: rFloor - 6 - 28 - eR },
   );
+
+  // Coins (~16g total)
+  ctx.coin(480, 280, 2);                        // approach — arc path
+  ctx.coin(CX - 25, shelf1 - 30, 3);           // structure — above main shelf
+  ctx.coin(RX, rFloor - 30, 3);                // structure — above right platform
+  ctx.coin(CX + 30, shelf1 - 18, 4);           // risky — near barrel on shelf
+  ctx.coin(RX, groundY - 18, 4);               // risky — near right barrel
 };
 
 export const diff2Templates: TemplateFn[] = [

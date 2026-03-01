@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform, treasuryRoom } from '../shared';
 
 // ─── "The Keep" — grand multi-tier (migrated) ──────────────────────────────
 export const theKeep: TemplateFn = (ctx) => {
@@ -54,6 +55,9 @@ export const theKeep: TemplateFn = (ctx) => {
   ctx.barrel(upperRoomCenters[0], lowerFloorY - 6 - 18);
   ctx.barrel(upperRoomCenters[1], upperFloorY - 6 - 18);
 
+  // Spike trap at the gate (between first two rooms)
+  ctx.hazard('SPIKE_TRAP', (roomCenters[0] + roomCenters[1]) / 2, groundY - 5);
+
   const eR = 20;
   ctx.enemySlots.push(
     { x: roomCenters[1], y: lowerFloorY - 6 - 28 - eR },
@@ -61,6 +65,16 @@ export const theKeep: TemplateFn = (ctx) => {
     { x: upperRoomCenters[1], y: upperFloorY - 6 - eR },
     { x: spireX, y: capY - 6 - 28 - eR },
   );
+
+  // Coins (~22g)
+  ctx.coin(430, 280, 3);                                     // approach — arc path
+  ctx.coin(roomCenters[1], lowerFloorY - 40, 4);             // structure — above lower room
+  ctx.coin(spireX, capY - 40, 5);                            // treasury — above spire cap
+  ctx.coin(upperRoomCenters[0], lowerFloorY - 6 - 18, 5);   // risky — near upper barrel
+  ctx.coin(roomCenters[3], groundY - 18, 5);                 // risky — near right barrel
+
+  // Terrain — raised approach to keep entrance
+  raisedPlatform(ctx, 520, groundY, 90, 20);
 };
 
 // ─── "The Bunker" — low wide stone fortification (migrated) ─────────────────
@@ -104,6 +118,13 @@ export const theBunker: TemplateFn = (ctx) => {
     { x: BX - bunkerW / 2 - 70, y: groundY - 65 - 6 - 6 - eR },
     { x: BX + bunkerW / 2 + 70, y: groundY - 65 - 6 - 6 - eR },
   );
+
+  // Coins (~22g)
+  ctx.coin(440, 290, 3);                                       // approach — arc path
+  ctx.coin(BX, roofY - 20, 5);                                // structure — above bunker roof
+  ctx.coin(BX - bunkerW / 2 - 70, groundY - 65 - 6 - 40 - 20, 5); // structure — above left tower
+  ctx.coin(BX, groundY - 18, 4);                              // risky — near center barrel
+  ctx.coin(BX + bunkerW / 2 + 70, groundY - 65 - 6 - 40 - 20, 5); // structure — above right tower
 };
 
 // ─── "The Pendulum" — heavy stone on frame + target tower (migrated) ────────
@@ -155,6 +176,13 @@ export const thePendulum: TemplateFn = (ctx) => {
     { x: TX + tSpan / 2, y: tF3 - 6 - 28 - eR },
     { x: PX, y: beamY - 6 - eR },
   );
+
+  // Coins (~22g)
+  ctx.coin(430, 280, 3);                          // approach — arc path
+  ctx.coin(PX, beamY - 20, 5);                   // structure — above pendulum beam
+  ctx.coin(TX + tSpan / 2, tF3 - 40, 5);         // structure — above tower cap
+  ctx.coin(PX, groundY - 18, 4);                 // risky — near pendulum barrel
+  ctx.coin(670, groundY - 18, 5);                // ground — between structures
 };
 
 // ─── "Warlord's Compound" — large fortified complex ─────────────────────────
@@ -212,6 +240,14 @@ export const warlordsCompound: TemplateFn = (ctx) => {
     { x: RX + rSpan / 2, y: rf3 - 6 - 28 - eR },
     { x: WX + 90, y: groundY - 70 - 6 - 6 - eR },
   );
+
+  // Coins (~24g)
+  ctx.coin(430, 280, 3);                          // approach — arc path
+  ctx.coin(WX + 90, groundY - 70 - 20, 4);       // structure — above gate lintel
+  ctx.coin(RX + rSpan / 2, rf3 - 30, 5);         // treasury — above watchtower top
+  ctx.coin(610, groundY - 18, 5);                // risky — near interior barrel + spikes
+  ctx.coin(RX + rSpan / 2, rf1 - 6 - 18, 4);    // risky — near rear barrel
+  ctx.coin(RX + rSpan / 2, groundY - 18, 3);     // risky — near rear ground barrel
 };
 
 // ─── "Siege Tower" — very tall single tower with ramp ──────────────────────
@@ -257,6 +293,10 @@ export const siegeTower: TemplateFn = (ctx) => {
   ctx.barrel(TX + span / 2, f1 - 6 - 18);
   ctx.barrel(TX + span / 2, f2 - 6 - 18);
 
+  // Spike traps at base approaches
+  ctx.hazard('SPIKE_TRAP', RampX + 60, groundY - 5);
+  ctx.hazard('SPIKE_TRAP', TX + span + 30, groundY - 5);
+
   const eR = 20;
   ctx.enemySlots.push(
     { x: TX + span / 2, y: f1 - 6 - eR },
@@ -265,6 +305,14 @@ export const siegeTower: TemplateFn = (ctx) => {
     { x: TX + span / 2, y: f4 - 6 - 28 - eR },
     { x: RampX + 30, y: groundY - 30 - 6 - 6 - eR },
   );
+
+  // Coins (~24g)
+  ctx.coin(430, 280, 3);                          // approach — arc path
+  ctx.coin(TX + span / 2, f4 - 40, 5);           // treasury — above tower top cap
+  ctx.coin(TX + span / 2, f2 - 10, 5);           // structure — between tower levels
+  ctx.coin(TX + span / 2, groundY - 18, 5);      // risky — near ground barrel
+  ctx.coin(RampX + 30, groundY - 30 - 18, 3);    // structure — above ramp
+  ctx.coin(TX + span / 2, f1 - 6 - 18, 3);       // risky — near level 1 barrel
 };
 
 // ─── "Barrel Fortress" — walls lined with explosive barrels ────────────────
@@ -305,6 +353,16 @@ export const barrelFortress: TemplateFn = (ctx) => {
     { x: CX + wallW / 4, y: roofY - 6 - eR },
     { x: CX, y: upperRoof - 6 - eR },
   );
+
+  // Coins (~22g)
+  ctx.coin(440, 280, 3);                          // approach — arc path
+  ctx.coin(CX, upperRoof - 20, 5);               // structure — above upper battlements
+  ctx.coin(CX - wallW / 4, roofY - 20, 4);       // structure — above roof
+  ctx.coin(CX - wallW / 4 - 20, groundY - 18, 5); // risky — among barrels
+  ctx.coin(CX + wallW / 4 + 20, groundY - 18, 5); // risky — among barrels
+
+  // Terrain — hidden stone chamber
+  treasuryRoom(ctx, 950, groundY, 80, 50, 'STONE', 5);
 };
 
 export const diff4Templates: TemplateFn[] = [

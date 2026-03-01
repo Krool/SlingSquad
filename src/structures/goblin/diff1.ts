@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform, treasuryRoom } from '../shared';
 
 // ─── "Two Towers" — 2-level left tower, 3-level right tower ─────────────────
 export const twoTowers: TemplateFn = (ctx) => {
@@ -58,6 +59,12 @@ export const twoTowers: TemplateFn = (ctx) => {
     { x: RX + span / 2, y: rFloor1 - 6 - eR },
     { x: RX + span / 2, y: rFloor3 - 6 - 28 - eR },
   );
+
+  // Coins (~14g)
+  ctx.coin(430, 300, 3);                          // approach — arc path
+  ctx.coin(LX + span / 2, floor2 - 40, 4);       // structure — above left tower cap
+  ctx.coin(RX + span / 2, rFloor2 - 10, 4);      // structure — between right tower levels
+  ctx.coin(620, groundY - 18, 3);                 // ground — between towers
 };
 
 // ─── "Powder Keg" — tower with barrel-packed ground floor ───────────────────
@@ -99,6 +106,12 @@ export const powderKeg: TemplateFn = (ctx) => {
     { x: TX + span / 2, y: floor2 - 6 - 28 - eR },
     { x: SX + 30, y: groundY - 40 - 6 - 6 - eR },
   );
+
+  // Coins (~14g)
+  ctx.coin(480, 280, 2);                          // approach — arc path
+  ctx.coin(TX + span / 2, floor2 - 40, 4);       // structure — above tower cap
+  ctx.coin(TX + span / 3, groundY - 18, 4);      // risky — among ground barrels
+  ctx.coin(SX + 30, groundY - 40 - 18, 4);       // structure — near side shelf
 };
 
 // ─── "Domino Run" — 5 tall thin pillars + barrel chain ──────────────────────
@@ -125,12 +138,21 @@ export const dominoRun: TemplateFn = (ctx) => {
   b(endX, shelterFloor - 6 - 30 / 2, 14, 30, 'WOOD');
   b(endX, shelterFloor - 6 - 30 - 6, 60, 12, 'STONE');
 
+  // Spike trap between pillars
+  ctx.hazard('SPIKE_TRAP', startX + 2.5 * spacing, groundY - 5);
+
   const eR = 20;
   ctx.enemySlots.push(
     { x: startX + 2 * spacing, y: groundY - eR },
     { x: endX, y: shelterFloor - 6 - eR },
     { x: endX, y: groundY - eR },
   );
+
+  // Coins (~14g)
+  ctx.coin(430, 320, 3);                                        // approach — arc path
+  ctx.coin(startX + 1 * spacing, groundY - pillarH - 30, 3);   // structure — above pillar cap
+  ctx.coin(startX + 3 * spacing, groundY - pillarH - 30, 4);   // structure — above pillar cap
+  ctx.coin(endX, shelterFloor - 30, 4);                         // risky — above shelter
 };
 
 // ─── New: "Goblin Hut" — simple A-frame hut ────────────────────────────────
@@ -167,6 +189,12 @@ export const goblinHut: TemplateFn = (ctx) => {
     { x: SX + 25, y: groundY - 40 - 6 - 6 - eR },
     { x: 720, y: groundY - eR },
   );
+
+  // Coins (~12g)
+  ctx.coin(460, 300, 2);                          // approach — arc path
+  ctx.coin(HX + span / 2, peak - 20, 4);         // structure — above A-frame peak
+  ctx.coin(720, groundY - 18, 3);                 // ground — between huts
+  ctx.coin(SX + 25, groundY - 18, 3);            // risky — near side barrel
 };
 
 // ─── New: "Lookout Post" — tall single watchtower + ground enemies ─────────
@@ -200,6 +228,9 @@ export const lookoutPost: TemplateFn = (ctx) => {
   ctx.barrel(TX + span / 2, groundY - 18);
   ctx.barrel(500, groundY - 18);
 
+  // Spike trap at base of tower
+  ctx.hazard('SPIKE_TRAP', TX + span / 2, groundY - 5);
+
   const eR = 20;
   ctx.enemySlots.push(
     { x: TX + span / 2, y: f1 - 6 - eR },
@@ -207,6 +238,12 @@ export const lookoutPost: TemplateFn = (ctx) => {
     { x: 500, y: groundY - 25 - eR },
     { x: 880, y: groundY - 25 - eR },
   );
+
+  // Coins (~14g)
+  ctx.coin(450, 280, 3);                          // approach — arc path
+  ctx.coin(TX + span / 2, f3 - 20, 4);           // structure — above watchtower top
+  ctx.coin(TX + span / 2, f1 - 10, 4);           // structure — between tower levels
+  ctx.coin(880, groundY - 18, 3);                 // ground — near barricade
 };
 
 // ─── New: "Lumber Pile" — stacked blocks prone to toppling ──────────────────
@@ -242,6 +279,12 @@ export const lumberPile: TemplateFn = (ctx) => {
     { x: LX, y: groundY - 94 - eR },
     { x: RX, y: groundY - 124 - eR },
   );
+
+  // Coins (~13g)
+  ctx.coin(440, 310, 2);                          // approach — arc path
+  ctx.coin(LX, groundY - 104, 4);                // structure — top of left stack
+  ctx.coin(RX, groundY - 134, 4);                // structure — top of right stack
+  ctx.coin(RX, groundY - 18, 3);                 // risky — near right barrel
 };
 
 // ─── New: "Palisade Line" — wooden wall with gaps and ground enemies ────────
@@ -284,6 +327,15 @@ export const palisadeLine: TemplateFn = (ctx) => {
     { x: SX + 30, y: groundY - 45 - 6 - 6 - eR },
     { x: startX + 3 * stakeSpacing, y: groundY - stakeH - 6 - 28 - eR },
   );
+
+  // Coins (~14g)
+  ctx.coin(440, 290, 3);                                                     // approach — arc path
+  ctx.coin(startX + 3 * stakeSpacing, groundY - stakeH - 40, 4);            // structure — above stone cap
+  ctx.coin(startX + 5 * stakeSpacing, groundY - 18, 4);                     // ground — behind wall
+  ctx.coin(SX + 30, groundY - 45 - 18, 3);                                  // structure — near shelter roof
+
+  // Terrain — earthen mound behind palisade wall
+  raisedPlatform(ctx, 750, groundY, 120, 20);
 };
 
 // ─── New: "Barrel Depot" — lots of barrels, flimsy supports ─────────────────
@@ -326,6 +378,15 @@ export const barrelDepot: TemplateFn = (ctx) => {
     { x: CX, y: shelf - 6 - eR },
     { x: SX + 27, y: groundY - 40 - 6 - 6 - eR },
   );
+
+  // Coins (~14g)
+  ctx.coin(470, 300, 2);                          // approach — arc path
+  ctx.coin(CX, shelf2 - 30, 4);                  // structure — above top shelf
+  ctx.coin(CX - span / 4, groundY - 18, 4);      // risky — among ground barrels
+  ctx.coin(SX + 27, groundY - 18, 4);            // risky — near side barrel
+
+  // Terrain — enclosed barrel stash to the right
+  treasuryRoom(ctx, 850, groundY, 80, 50, 'WOOD', 5);
 };
 
 export const diff1Templates: TemplateFn[] = [

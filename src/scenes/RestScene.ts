@@ -1,48 +1,38 @@
 import Phaser from 'phaser';
-import relicsData from '@/data/relics.json';
 import {
-  getRunState, addRelic, removeRelic, upgradeRelic, completeNode,
-  getCurses, getNonCurseRelics,
-  type NodeDef, type RelicDef,
+  getRunState, completeNode, saveRun, getRelicModifiers, getHeroesOnCooldown,
+  type NodeDef,
 } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
-import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
-import { discoverRelic } from '@/systems/DiscoveryLog';
-import { incrementStat } from '@/systems/AchievementSystem';
+import { GAME_WIDTH, GAME_HEIGHT, REVIVE_HP_PERCENT } from '@/config/constants';
 import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar } from '@/ui/TopBar';
 
-const ACCENT = 0xe67e22;
-const ACCENT_HEX = '#e67e22';
-const BG_COLOR = 0x0c0a06;
+const ACCENT = 0x2ecc71;
+const ACCENT_HEX = '#2ecc71';
+const BG_COLOR = 0x0a0e06;
 
-const RARITY_COLOR: Record<string, string> = {
-  common: '#95a5a6',
-  uncommon: '#2ecc71',
-  rare: '#9b59b6',
-};
-
-interface ForgeOption {
+interface RestOption {
   label: string;
   desc: string;
-  action: () => string; // returns result text
+  action: () => string;
   canUse: () => boolean;
 }
 
-export class ForgeScene extends Phaser.Scene {
+export class RestScene extends Phaser.Scene {
   private node!: NodeDef;
 
   constructor() {
-    super({ key: 'ForgeScene' });
+    super({ key: 'RestScene' });
   }
 
   create(data: { node: NodeDef }) {
-    (this.registry.get('music') as MusicSystem | null)?.play('shop');
+    (this.registry.get('music') as MusicSystem | null)?.play('event');
     this.node = data.node;
     completeNode(this.node.id);
 
     this.buildBackground();
-    buildSettingsGear(this, 'ForgeScene');
+    buildSettingsGear(this, 'RestScene');
     buildCurrencyBar(this, 'shard', () => getShards(), 10, 0);
     buildCurrencyBar(this, 'gold', () => getRunState().gold, 10, 1);
     this.buildTitle();
@@ -57,18 +47,40 @@ export class ForgeScene extends Phaser.Scene {
     bg.fillStyle(BG_COLOR, 1);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Ember particles
-    bg.fillStyle(0x663300, 0.4);
-    for (let i = 0; i < 40; i++) {
+    // Warm ember particles
+    bg.fillStyle(0x664400, 0.3);
+    for (let i = 0; i < 50; i++) {
       const x = Phaser.Math.Between(0, GAME_WIDTH);
       const y = Phaser.Math.Between(0, GAME_HEIGHT);
       bg.fillCircle(x, y, Math.random() < 0.2 ? 2 : 1);
     }
 
-    // Top glow (warm)
+    // Campfire glow at center
     const glow = this.add.graphics().setDepth(1).setAlpha(0.5);
-    glow.fillGradientStyle(ACCENT, ACCENT, 0x000000, 0x000000, 0.3, 0.3, 0, 0);
-    glow.fillRect(0, 0, GAME_WIDTH, 220);
+    glow.fillGradientStyle(0xcc6600, 0xcc6600, 0x000000, 0x000000, 0.25, 0.25, 0, 0);
+    glow.fillRect(0, GAME_HEIGHT * 0.4, GAME_WIDTH, GAME_HEIGHT * 0.3);
+
+    // Campfire drawing at center-bottom
+    const fireX = GAME_WIDTH / 2;
+    const fireY = GAME_HEIGHT - 160;
+    const fire = this.add.graphics().setDepth(3);
+    // Log base
+    fire.fillStyle(0x5a3a1a, 1);
+    fire.fillRect(fireX - 30, fireY + 6, 60, 8);
+    fire.fillRect(fireX - 24, fireY + 2, 48, 6);
+    // Flames (layered circles)
+    fire.fillStyle(0xff6600, 0.7);
+    fire.fillCircle(fireX, fireY - 6, 16);
+    fire.fillStyle(0xff9900, 0.5);
+    fire.fillCircle(fireX - 4, fireY - 12, 10);
+    fire.fillCircle(fireX + 6, fireY - 10, 8);
+    fire.fillStyle(0xffcc00, 0.6);
+    fire.fillCircle(fireX, fireY - 16, 6);
+
+    // Animated flicker
+    this.tweens.add({
+      targets: fire, alpha: 0.7, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
 
     // Border
     bg.lineStyle(1, ACCENT, 0.5);
@@ -91,27 +103,27 @@ export class ForgeScene extends Phaser.Scene {
   }
 
   private buildTitle() {
-    // Anvil icon
+    // Heart icon
     const iconBg = this.add.graphics().setDepth(5);
     iconBg.fillStyle(ACCENT, 0.2);
     iconBg.fillCircle(GAME_WIDTH / 2, 72, 30);
     iconBg.lineStyle(1, ACCENT, 0.5);
     iconBg.strokeCircle(GAME_WIDTH / 2, 72, 30);
 
-    this.add.text(GAME_WIDTH / 2, 72, '⚒', {
+    this.add.text(GAME_WIDTH / 2, 72, '\u2665', {
       fontSize: '32px', fontFamily: 'Nunito, sans-serif',
       color: ACCENT_HEX, stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(6);
 
-    this.add.text(GAME_WIDTH / 2, 122, 'The Forge', {
+    this.add.text(GAME_WIDTH / 2, 122, 'Rest Camp', {
       fontSize: '36px', fontFamily: 'Cinzel, Nunito, sans-serif',
-      color: '#f0d8b0', stroke: '#000', strokeThickness: 4,
+      color: '#c0e8c0', stroke: '#000', strokeThickness: 4,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(5);
 
-    this.add.text(GAME_WIDTH / 2, 158, 'Choose one action to improve your arsenal.', {
+    this.add.text(GAME_WIDTH / 2, 158, 'Your squad rests by the campfire. Choose wisely.', {
       fontSize: '17px', fontFamily: 'Nunito, sans-serif',
-      color: '#8a7060', fontStyle: 'italic',
+      color: '#6a8a6a', fontStyle: 'italic',
     }).setOrigin(0.5).setDepth(5);
 
     const rule = this.add.graphics().setDepth(5);
@@ -121,58 +133,62 @@ export class ForgeScene extends Phaser.Scene {
 
   // ── Three option cards ───────────────────────────────────────────────────────
   private buildOptions() {
-    const nonCurseRelics = getNonCurseRelics();
-    const commons = nonCurseRelics.filter(r => (r.rarity ?? 'common') === 'common');
-    const curses = getCurses();
+    const run = getRunState();
+    const cooldownHeroes = getHeroesOnCooldown();
+    const hasCooldowns = cooldownHeroes.length > 0;
 
-    const options: ForgeOption[] = [
+    const options: RestOption[] = [
       {
-        label: 'Upgrade Relic',
-        desc: 'Enhance one relic\'s value by +50%.',
-        canUse: () => nonCurseRelics.length > 0,
+        label: 'Heal All',
+        desc: 'Restore all living heroes to full HP.',
+        canUse: () => run.squad.some(h => (h.reviveCooldown ?? 0) <= 0 && h.currentHp < h.maxHp),
         action: () => {
-          if (nonCurseRelics.length === 0) return 'No relics to upgrade.';
-          const relic = Phaser.Utils.Array.GetRandom(nonCurseRelics);
-          upgradeRelic(relic.id);
-          incrementStat('forge_upgrades');
-          return `Upgraded: ${relic.name} +`;
+          for (const h of run.squad) {
+            if ((h.reviveCooldown ?? 0) <= 0) {
+              h.currentHp = h.maxHp;
+            }
+          }
+          this.applyRestHpBonus();
+          saveRun();
+          return 'All heroes restored to full HP!';
         },
       },
       {
-        label: 'Fuse Relics',
-        desc: 'Sacrifice 2 common relics for 1 random uncommon.',
-        canUse: () => commons.length >= 2,
+        label: 'Rally Fallen',
+        desc: 'Reduce ALL revive cooldowns by 1.',
+        canUse: () => hasCooldowns,
         action: () => {
-          if (commons.length < 2) return 'Need 2 common relics.';
-          // Check pool BEFORE removing commons to avoid losing relics for nothing
-          const owned = new Set(getRunState().relics.map(r => r.id));
-          const pool = (relicsData as RelicDef[]).filter(
-            r => !owned.has(r.id) && (r.rarity ?? 'common') === 'uncommon' && !r.curse,
-          );
-          if (pool.length === 0) return 'No uncommon relics available.';
-          // Remove 2 random commons
-          const shuffled = Phaser.Utils.Array.Shuffle([...commons]);
-          const removed1 = shuffled[0];
-          const removed2 = shuffled[1];
-          removeRelic(removed1.id);
-          removeRelic(removed2.id);
-          // Add random uncommon
-          const gained = { ...Phaser.Utils.Array.GetRandom(pool) };
-          addRelic(gained);
-          discoverRelic(gained.id);
-          incrementStat('forge_upgrades');
-          return `Fused: ${removed1.name} + ${removed2.name}\nGained: ${gained.name}`;
+          for (const h of run.squad) {
+            if ((h.reviveCooldown ?? 0) > 0) {
+              h.reviveCooldown = h.reviveCooldown! - 1;
+              if (h.reviveCooldown === 0) {
+                h.currentHp = Math.round(h.maxHp * REVIVE_HP_PERCENT);
+              }
+            }
+          }
+          this.applyRestHpBonus();
+          saveRun();
+          return 'Revive cooldowns reduced by 1!';
         },
       },
       {
-        label: 'Purge Curse',
-        desc: 'Remove one curse from your collection.',
-        canUse: () => curses.length > 0,
+        label: 'Both (Half Heal)',
+        desc: 'Heal all to 50% HP AND reduce cooldowns by 1.',
+        canUse: () => true,
         action: () => {
-          if (curses.length === 0) return 'No curses to remove.';
-          const curse = Phaser.Utils.Array.GetRandom(curses);
-          removeRelic(curse.id);
-          return `Purged: ${curse.name}`;
+          for (const h of run.squad) {
+            if ((h.reviveCooldown ?? 0) > 0) {
+              h.reviveCooldown = h.reviveCooldown! - 1;
+              if (h.reviveCooldown === 0) {
+                h.currentHp = Math.round(h.maxHp * REVIVE_HP_PERCENT);
+              }
+            } else {
+              h.currentHp = Math.max(h.currentHp, Math.round(h.maxHp * 0.5));
+            }
+          }
+          this.applyRestHpBonus();
+          saveRun();
+          return 'Heroes healed to 50% HP, cooldowns reduced!';
         },
       },
     ];
@@ -191,9 +207,20 @@ export class ForgeScene extends Phaser.Scene {
     this.buildSkipButton();
   }
 
+  private applyRestHpBonus() {
+    const mods = getRelicModifiers();
+    if (mods.restHpBonus > 0) {
+      const run = getRunState();
+      for (const h of run.squad) {
+        h.maxHp += mods.restHpBonus;
+        h.currentHp = Math.min(h.currentHp + mods.restHpBonus, h.maxHp);
+      }
+    }
+  }
+
   private buildOptionCard(
     cx: number, cy: number, w: number, h: number,
-    opt: ForgeOption, idx: number,
+    opt: RestOption, idx: number,
   ) {
     const canUse = opt.canUse();
     const container = this.add.container(cx, cy + 50).setDepth(5).setAlpha(0);
@@ -201,7 +228,7 @@ export class ForgeScene extends Phaser.Scene {
     const bg = this.add.graphics();
     const drawBg = (hovered: boolean) => {
       bg.clear();
-      bg.fillStyle(hovered ? 0x1e1610 : 0x140e08, canUse ? 1 : 0.6);
+      bg.fillStyle(hovered ? 0x10200e : 0x0a160a, canUse ? 1 : 0.6);
       bg.fillRoundedRect(-w / 2, -h / 2, w, h, 12);
       bg.lineStyle(hovered ? 2 : 1, ACCENT, canUse ? (hovered ? 1 : 0.6) : 0.15);
       bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 12);
@@ -227,7 +254,7 @@ export class ForgeScene extends Phaser.Scene {
     container.add(
       this.add.text(0, -h / 2 + 72, opt.label, {
         fontSize: '22px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
-        color: canUse ? '#f0d8b0' : '#8a8a9a',
+        color: canUse ? '#c0e8c0' : '#8a8a9a',
         stroke: '#000', strokeThickness: 3,
       }).setOrigin(0.5),
     );
@@ -236,37 +263,10 @@ export class ForgeScene extends Phaser.Scene {
     container.add(
       this.add.text(0, -h / 2 + 108, opt.desc, {
         fontSize: '16px', fontFamily: 'Nunito, sans-serif',
-        color: canUse ? '#8a7a6a' : '#6a6a7a',
+        color: canUse ? '#6a8a6a' : '#6a6a7a',
         wordWrap: { width: w - 36 }, align: 'center',
       }).setOrigin(0.5),
     );
-
-    // Show relevant relics preview
-    if (canUse) {
-      let previewText = '';
-      if (idx === 0) {
-        // Upgrade: show first 3 non-curse relics
-        const relics = getNonCurseRelics().slice(0, 3);
-        previewText = relics.map(r => r.name).join(', ');
-      } else if (idx === 1) {
-        // Fuse: show commons
-        const commons = getNonCurseRelics().filter(r => (r.rarity ?? 'common') === 'common').slice(0, 3);
-        previewText = commons.map(r => r.name).join(', ');
-      } else {
-        // Purge: show curses
-        const curses = getCurses().slice(0, 3);
-        previewText = curses.map(r => r.name).join(', ');
-      }
-      if (previewText) {
-        container.add(
-          this.add.text(0, -h / 2 + 145, previewText, {
-            fontSize: '15px', fontFamily: 'Nunito, sans-serif',
-            color: '#6a5a4a',
-            wordWrap: { width: w - 30 }, align: 'center',
-          }).setOrigin(0.5),
-        );
-      }
-    }
 
     // Select button
     const btnY = h / 2 - 32;
@@ -327,7 +327,7 @@ export class ForgeScene extends Phaser.Scene {
 
     const panelW = 420, panelH = 180;
     const bg = this.add.graphics();
-    bg.fillStyle(0x140e08, 1);
+    bg.fillStyle(0x0a160a, 1);
     bg.fillRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 12);
     bg.lineStyle(2, ACCENT, 0.7);
     bg.strokeRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 12);
@@ -336,7 +336,7 @@ export class ForgeScene extends Phaser.Scene {
     panel.add(
       this.add.text(0, -30, text, {
         fontSize: '19px', fontFamily: 'Nunito, sans-serif',
-        color: '#f0d8b0', stroke: '#000', strokeThickness: 2,
+        color: '#c0e8c0', stroke: '#000', strokeThickness: 2,
         wordWrap: { width: panelW - 40 }, align: 'center',
       }).setOrigin(0.5),
     );
@@ -345,7 +345,7 @@ export class ForgeScene extends Phaser.Scene {
     const btnGfx = this.add.graphics();
     const drawBtn = (hovered: boolean) => {
       btnGfx.clear();
-      btnGfx.fillStyle(hovered ? 0x2a1e10 : 0x1a1208, 1);
+      btnGfx.fillStyle(hovered ? 0x1a2e1a : 0x0e1e0e, 1);
       btnGfx.fillRoundedRect(-btnW / 2, 40, btnW, btnH, 7);
       btnGfx.lineStyle(1, ACCENT, hovered ? 0.9 : 0.5);
       btnGfx.strokeRoundedRect(-btnW / 2, 40, btnW, btnH, 7);
@@ -354,7 +354,7 @@ export class ForgeScene extends Phaser.Scene {
     panel.add(btnGfx);
 
     panel.add(
-      this.add.text(0, 61, 'Continue  →', {
+      this.add.text(0, 61, 'Continue  \u2192', {
         fontSize: '19px', fontFamily: 'Nunito, sans-serif', color: ACCENT_HEX,
       }).setOrigin(0.5),
     );
@@ -389,7 +389,7 @@ export class ForgeScene extends Phaser.Scene {
     container.add(btnBg);
 
     container.add(
-      this.add.text(0, 0, 'Skip  →', {
+      this.add.text(0, 0, 'Skip  \u2192', {
         fontSize: '19px', fontFamily: 'Nunito, sans-serif', color: '#6a8a7a',
       }).setOrigin(0.5),
     );

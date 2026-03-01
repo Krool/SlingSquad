@@ -45,6 +45,13 @@ export const demonForge: TemplateFn = (ctx) => {
     { x: RX + 45, y: rFloor - 6 - eR },
     { x: RX + 45, y: rFloor2 - 6 - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(460, 320, 3);                           // approach — arc path
+  ctx.coin(FX + frameW / 2, beamY - 30, 3);        // structure — above forge beam
+  ctx.coin(RX + 45, rFloor2 - 30, 3);              // structure — above weapon rack top
+  ctx.coin(FX + frameW / 2, groundY - 40, 4);      // risky — near lava pit inside forge
+  ctx.coin(FX + frameW + 40, groundY - 40, 5);     // risky — near fire geyser
 };
 
 // ─── "Obsidian Castle" — two-tower castle with obsidian walls ───────────────
@@ -98,6 +105,13 @@ export const obsidianCastle: TemplateFn = (ctx) => {
     { x: RX + tSpan / 2, y: rf2 - 6 - 28 - eR },
     { x: bridgeCX, y: groundY - 55 - 6 - 6 - eR },
   );
+
+  // Coins (~19g)
+  ctx.coin(430, 310, 3);                           // approach — arc path
+  ctx.coin(LX + tSpan / 2, lf2 - 40, 3);           // structure — above left tower cap
+  ctx.coin(RX + tSpan / 2, rf2 - 40, 3);           // structure — above right tower cap
+  ctx.coin(bridgeCX - 30, groundY - 40, 5);        // risky — near lava between towers
+  ctx.coin(bridgeCX + 30, groundY - 40, 5);        // risky — near lava between towers
 };
 
 // ─── "Lava Gallery" — long corridor with lava traps between rooms ───────────
@@ -152,6 +166,13 @@ export const lavaGallery: TemplateFn = (ctx) => {
     { x: R3X + 40, y: r3Floor - 6 - eR },
     { x: R3X + 40, y: groundY - eR },
   );
+
+  // Coins (~19g)
+  ctx.coin(430, 330, 3);                              // approach — arc path
+  ctx.coin(R1X + roomW / 2, r1Floor - 30, 3);         // structure — above room 1
+  ctx.coin(R2X + roomW / 2, r2Upper - 30, 3);         // structure — above room 2 upper
+  ctx.coin(R1X + roomW + 40, groundY - 40, 5);        // risky — near lava gap 1
+  ctx.coin(R2X + roomW / 2, groundY - 40, 5);         // risky — near fire geyser
 };
 
 // ─── "Hellfire Corridor" — narrow passage with fire geysers ─────────────────
@@ -194,6 +215,13 @@ export const hellfireCorridor: TemplateFn = (ctx) => {
     { x: WX + corridorLen * 5 / 6, y: roofY - 6 - eR },
     { x: WX + corridorLen * 5 / 6, y: upperY - 6 - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(440, 340, 3);                                  // approach — arc path
+  ctx.coin(WX + corridorLen / 2, roofY - 30, 3);          // structure — above mid corridor
+  ctx.coin(WX + corridorLen * 5 / 6, upperY - 30, 3);     // structure — above upper platform
+  ctx.coin(WX + corridorLen / 4, groundY - 40, 4);        // risky — near fire geyser
+  ctx.coin(WX + corridorLen * 3 / 4, groundY - 40, 5);    // risky — near lava pit
 };
 
 // ─── "Demon Arena" — circular pit with obsidian walls and lava ──────────────
@@ -242,6 +270,14 @@ export const demonArena: TemplateFn = (ctx) => {
     { x: CX, y: overY - 6 - eR },
     { x: CX + 60, y: groundY - eR },
   );
+
+  // Coins (~20g)
+  ctx.coin(460, 310, 3);                   // approach — arc path
+  ctx.coin(CX, overY - 30, 3);             // structure — above overhead plank
+  ctx.coin(RX + 35, rf - 30, 3);           // structure — above right platform
+  ctx.coin(CX - 40, groundY - 40, 5);      // risky — near lava in pit
+  ctx.coin(CX + 40, groundY - 18, 3);      // risky — near lava in pit (ground level)
+  ctx.coin(LX + 35, lf - 30, 3);           // structure — above left platform
 };
 
 // ─── "Volcanic Spire" — very tall single spire with fire geyser ────────────
@@ -292,6 +328,13 @@ export const volcanicSpire: TemplateFn = (ctx) => {
     { x: TX + span / 2, y: f3 - 6 - 24 - eR },
     { x: SX + 30, y: sf - 6 - eR },
   );
+
+  // Coins (~18g)
+  ctx.coin(480, 300, 3);                          // approach — arc path
+  ctx.coin(TX + span / 2, f2 - 30, 3);            // structure — above level 2
+  ctx.coin(SX + 30, sf - 30, 3);                   // structure — above side shelter
+  ctx.coin(TX - 40, groundY - 40, 4);              // risky — near fire geyser
+  ctx.coin(TX + span + 30, groundY - 40, 5);       // risky — near lava pit
 };
 
 // ─── "Obsidian Bunker" — low wide hardened shelter ──────────────────────────
@@ -336,6 +379,13 @@ export const obsidianBunker: TemplateFn = (ctx) => {
     { x: BX + bunkerW / 4, y: roofY - 6 - eR },
     { x: BX, y: upperY - 6 - eR },
   );
+
+  // Coins (~19g)
+  ctx.coin(440, 320, 3);                              // approach — arc path
+  ctx.coin(BX, upperY - 30, 3);                       // structure — above upper battlement
+  ctx.coin(BX, roofY - 30, 3);                        // structure — above bunker roof gap
+  ctx.coin(BX - bunkerW / 2 - 40, groundY - 40, 5);   // risky — near lava pit
+  ctx.coin(BX + bunkerW / 2 + 40, groundY - 40, 5);   // risky — near fire geyser
 };
 
 // ─── "Ash Fortress" — multi-wing compound with obsidian reinforcement ───────
@@ -384,6 +434,14 @@ export const ashFortress: TemplateFn = (ctx) => {
     { x: RX + 50, y: rf2 - 6 - 28 - eR },
     { x: RX + 50, y: groundY - eR },
   );
+
+  // Coins (~20g)
+  ctx.coin(430, 320, 3);                   // approach — arc path
+  ctx.coin(WX + 50, lintel - 30, 3);       // structure — above front gate lintel
+  ctx.coin(RX + 50, rf2 - 40, 3);          // structure — above rear tower cap
+  ctx.coin(WX + 50, groundY - 40, 5);      // risky — near lava pit
+  ctx.coin(IX + 40, groundY - 40, 3);      // risky — near fire geyser
+  ctx.coin(RX + 50, rf1 - 30, 3);          // structure — above rear tower level 1
 };
 
 export const diff3Templates: TemplateFn[] = [

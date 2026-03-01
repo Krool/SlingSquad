@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform } from '../shared';
 
 // ─── "Ice Fortress" — colonnade of ice pillars with flanking towers ────────
 export const iceFortress: TemplateFn = (ctx) => {
@@ -44,6 +45,13 @@ export const iceFortress: TemplateFn = (ctx) => {
     { x: WX + 2.5 * colSpacing, y: row1Y - 6 - eR },
     { x: colRight + 110, y: groundY - 65 - 6 - 6 - eR },
   );
+
+  // Coins (~19g total)
+  ctx.coin(440, 320, 3);                                      // approach — arc path
+  ctx.coin(plankCX, row2Y - 20, 3);                          // structure — on upper colonnade
+  ctx.coin(WX - 110, groundY - 80, 4);                       // structure — near left flanking tower
+  ctx.coin(colRight + 110, groundY - 80, 4);                 // structure — near right flanking tower
+  ctx.coin(WX + 2.5 * colSpacing, groundY - 18, 5);          // risky — near barrel + ice patch
 };
 
 // ─── "Frozen Cage" — 3-tier ice frame ──────────────────────────────────────
@@ -85,6 +93,13 @@ export const frozenCage: TemplateFn = (ctx) => {
     { x: frontL + 50, y: groundY - eR },
     { x: frontR - 50, y: groundY - eR },
   );
+
+  // Coins (~19g total)
+  ctx.coin(520, 300, 3);                        // approach — arc path
+  ctx.coin(cx, midY - 30, 3);                  // structure — above mid floor
+  ctx.coin(cx, upperY - 30, 4);                // structure — above upper floor
+  ctx.coin(frontL + 40, groundY - 18, 4);      // risky — near ground barrel
+  ctx.coin(cx, capY - 30, 5);                  // treasury — top of cage
 };
 
 // ─── "Icicle Gallery" — multi-level ice shelving ───────────────────────────
@@ -133,6 +148,13 @@ export const icicleGallery: TemplateFn = (ctx) => {
     { x: CX, y: floors[2] - 6 - 28 - eR },
     { x: CX + 70, y: groundY - eR },
   );
+
+  // Coins (~19g total)
+  ctx.coin(500, 350, 3);                        // approach — arc path
+  ctx.coin(CX, floors[0] - 30, 3);             // structure — above level 1 shelf
+  ctx.coin(CX, floors[1] - 30, 4);             // structure — above level 2 shelf
+  ctx.coin(CX - 30, groundY - 18, 4);          // risky — near ice patches
+  ctx.coin(CX, floors[2] - 40, 5);             // treasury — top level
 };
 
 // ─── "Twin Glaciers" — two fortified ice structures with bridge ────────────
@@ -181,6 +203,17 @@ export const twinGlaciers: TemplateFn = (ctx) => {
     { x: RX + fortW / 2, y: rf2 - 6 - 28 - eR },
     { x: bridgeCX, y: groundY - 50 - 6 - 6 - eR },
   );
+
+  // Coins (~18g total)
+  ctx.coin(430, 320, 3);                        // approach — arc path
+  ctx.coin(LX + fortW / 2, lf2 - 30, 3);       // structure — left fort upper
+  ctx.coin(bridgeCX, groundY - 70, 3);         // structure — above bridge
+  ctx.coin(RX + fortW / 2, rf2 - 30, 4);       // structure — right fort upper
+  ctx.coin(bridgeCX, groundY - 18, 5);         // risky — near ice patch at bridge
+
+  // Terrain — berms around bridge approach
+  raisedPlatform(ctx, 650, groundY, 90, 16);
+  raisedPlatform(ctx, 850, groundY, 90, 16);
 };
 
 export const diff3Templates: TemplateFn[] = [

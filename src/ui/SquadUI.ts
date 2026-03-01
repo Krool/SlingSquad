@@ -1,6 +1,11 @@
 import Phaser from 'phaser';
 import { Hero } from '@/entities/Hero';
-import { PORTRAIT_SIZE, PORTRAIT_PADDING, HUD_BAR_HEIGHT, GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
+import { PORTRAIT_SIZE, PORTRAIT_PADDING, HUD_BAR_HEIGHT, GAME_WIDTH, GAME_HEIGHT, HERO_STATS, type HeroClass } from '@/config/constants';
+
+export interface CooldownHeroInfo {
+  heroClass: HeroClass;
+  cooldownRemaining: number;
+}
 
 const STATUS_COLOR: Record<string, number> = {
   queued:  0x2ecc71,  // green  — ready to launch
@@ -13,6 +18,7 @@ const STATUS_COLOR: Record<string, number> = {
 export class SquadUI {
   private scene: Phaser.Scene;
   private heroes: Hero[];
+  private cooldownHeroes: CooldownHeroInfo[];
 
   private portraits:      Map<Hero, Phaser.GameObjects.Graphics> = new Map();
   private portraitSprites: Map<Hero, Phaser.GameObjects.Image>   = new Map();
@@ -22,9 +28,13 @@ export class SquadUI {
   private bg: Phaser.GameObjects.Rectangle;
   private sep!: Phaser.GameObjects.Graphics;
 
-  constructor(scene: Phaser.Scene, heroes: Hero[]) {
+  // Cooldown portrait elements (keyed by index since they're not Hero instances)
+  private cdPortraits: Phaser.GameObjects.GameObject[] = [];
+
+  constructor(scene: Phaser.Scene, heroes: Hero[], cooldownHeroes: CooldownHeroInfo[] = []) {
     this.scene = scene;
     this.heroes = heroes;
+    this.cooldownHeroes = cooldownHeroes;
 
     // ── HUD bar background ─────────────────────────────────────────────────
     this.bg = scene.add.rectangle(
@@ -49,7 +59,8 @@ export class SquadUI {
   }
 
   private buildPortraits() {
-    const totalW = this.heroes.length * (PORTRAIT_SIZE + PORTRAIT_PADDING) - PORTRAIT_PADDING;
+    const totalSlots = this.heroes.length + this.cooldownHeroes.length;
+    const totalW = totalSlots * (PORTRAIT_SIZE + PORTRAIT_PADDING) - PORTRAIT_PADDING;
     let startX = (GAME_WIDTH - totalW) / 2 + PORTRAIT_SIZE / 2;
     const cy = GAME_HEIGHT - HUD_BAR_HEIGHT / 2;
 
@@ -101,6 +112,57 @@ export class SquadUI {
 
       startX += PORTRAIT_SIZE + PORTRAIT_PADDING;
     }
+
+    // ── Cooldown hero portraits ───────────────────────────────────────────
+    for (const cd of this.cooldownHeroes) {
+      this.buildCooldownPortrait(cd, startX, cy);
+      startX += PORTRAIT_SIZE + PORTRAIT_PADDING;
+    }
+  }
+
+  private buildCooldownPortrait(cd: CooldownHeroInfo, cx: number, cy: number) {
+    const stats = HERO_STATS[cd.heroClass];
+    const charKey = cd.heroClass.toLowerCase();
+
+    // Dimmed portrait background
+    const g = this.scene.add.graphics().setDepth(41);
+    g.fillStyle(stats.color, 0.15);
+    g.fillRoundedRect(cx - PORTRAIT_SIZE / 2, cy - PORTRAIT_SIZE / 2, PORTRAIT_SIZE, PORTRAIT_SIZE, 7);
+    g.lineStyle(1, 0x555555, 0.4);
+    g.strokeRoundedRect(cx - PORTRAIT_SIZE / 2, cy - PORTRAIT_SIZE / 2, PORTRAIT_SIZE, PORTRAIT_SIZE, 7);
+    this.cdPortraits.push(g);
+
+    // Grayed-out character sprite
+    const sprite = this.scene.add.image(cx, cy - 2, `${charKey}_idle_1`)
+      .setDisplaySize(PORTRAIT_SIZE - 8, PORTRAIT_SIZE - 8)
+      .setDepth(42).setTint(0x444444).setAlpha(0.3);
+    this.cdPortraits.push(sprite);
+
+    // Dark overlay
+    const overlay = this.scene.add.graphics().setDepth(42);
+    overlay.fillStyle(0x000000, 0.45);
+    overlay.fillRoundedRect(cx - PORTRAIT_SIZE / 2, cy - PORTRAIT_SIZE / 2, PORTRAIT_SIZE, PORTRAIT_SIZE, 7);
+    this.cdPortraits.push(overlay);
+
+    // Cooldown number
+    const cdNum = this.scene.add.text(cx, cy - 4, `${cd.cooldownRemaining}`, {
+      fontSize: '22px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+      color: '#e74c3c', stroke: '#000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(43);
+    this.cdPortraits.push(cdNum);
+
+    // "nodes" label
+    const nodesLabel = this.scene.add.text(cx, cy + 12, 'nodes', {
+      fontSize: '9px', fontFamily: 'Nunito, sans-serif',
+      color: '#aa5555',
+    }).setOrigin(0.5).setDepth(43);
+    this.cdPortraits.push(nodesLabel);
+
+    // Class tag at bottom
+    const tag = this.scene.add.text(cx, cy + PORTRAIT_SIZE / 2 - 14, cd.heroClass.slice(0, 3), {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#555',
+    }).setOrigin(0.5).setDepth(43).setAlpha(0.7);
+    this.cdPortraits.push(tag);
   }
 
   private drawStatusDot(
@@ -171,5 +233,6 @@ export class SquadUI {
     this.portraitSprites.forEach(s => s.destroy());
     this.nameLabels.forEach(t => t.destroy());
     this.statusDots.forEach(g => g.destroy());
+    this.cdPortraits.forEach(o => o.destroy());
   }
 }

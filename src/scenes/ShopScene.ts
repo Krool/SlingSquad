@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import relicsData from '@/data/relics.json';
 import { getRunState, addRelic, spendGold, completeNode, type NodeDef, type RelicDef } from '@/systems/RunState';
+import { getAscensionModifiers } from '@/systems/AscensionSystem';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { discoverRelic } from '@/systems/DiscoveryLog';
@@ -52,6 +53,11 @@ const EFFECT_ICON: Record<string, string> = {
   BARD_CHARM_BONUS: '\u266a',
   STONE_DAMAGE_BONUS: '\u25fc',
   LOW_HP_DAMAGE: '\u2694',
+  DRUID_WOLF_BONUS: '\u25cf',
+  ROGUE_PIERCE_BONUS: '\u2694',
+  HEAL_ON_KILL: '\u2665',
+  REST_HP_BONUS: '\u2665',
+  REVIVE_COOLDOWN_REDUCE: '\u231b',
 };
 
 function getEffectPreview(effect: string, value: number): string {
@@ -84,6 +90,11 @@ function getEffectPreview(effect: string, value: number): string {
     case 'GOLD_TAX_PCT': return `-${Math.round(value * 100)}% gold on win`;
     case 'TRAJECTORY_REDUCE': return `-${value} trajectory dots`;
     case 'LAUNCH_POWER_CURSE': return `${Math.round(value * 100)}% launch power`;
+    case 'DRUID_WOLF_BONUS': return `+${value} wolf`;
+    case 'ROGUE_PIERCE_BONUS': return `+${value} pierce`;
+    case 'HEAL_ON_KILL': return `+${value} HP/kill`;
+    case 'REST_HP_BONUS': return `+${value} max HP at REST`;
+    case 'REVIVE_COOLDOWN_REDUCE': return `-${value} revive cooldown`;
     default: return '';
   }
 }
@@ -196,6 +207,15 @@ export class ShopScene extends Phaser.Scene {
     this._goldBar?.updateValue();
   }
 
+  /** Compute relic cost with ascension and poverty modifiers applied. */
+  private getRelicCost(relic: RelicDef): number {
+    if (this.isFree) return 0;
+    const run = getRunState();
+    const ascMods = getAscensionModifiers(run.ascensionLevel);
+    const povertyMult = run.activeModifiers?.includes('poverty') ? 0.5 : 1.0;
+    return Math.round((relic.cost ?? 30) * ascMods.shopCostMult * povertyMult);
+  }
+
   // ── Pick 3 random relics the player doesn't have ───────────────────────────
   private pickRelics() {
     const run = getRunState();
@@ -227,7 +247,7 @@ export class ShopScene extends Phaser.Scene {
     const rarity = relic.rarity ?? 'common';
     const bgColor = RARITY_BG[rarity] ?? 0x111e2e;
     const accentColor = RARITY_COLOR[rarity] ?? 0x95a5a6;
-    const cost = this.isFree ? 0 : (relic.cost ?? 30);
+    const cost = this.getRelicCost(relic);
     const canAfford = this.isFree || run.gold >= cost;
     const baseY = cy;   // remembered for hover correction
 
@@ -429,7 +449,7 @@ export class ShopScene extends Phaser.Scene {
     const run = getRunState();
     this.offeredRelics.forEach((relic, i) => {
       if (this.soldSet.has(i)) return;
-      const cost = relic.cost ?? 30;
+      const cost = this.getRelicCost(relic);
       if (run.gold < cost) {
         this.disableCard(i);
       }

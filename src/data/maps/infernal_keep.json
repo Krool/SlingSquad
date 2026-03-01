@@ -42,7 +42,7 @@
       "enemies": ["FIRE_IMP", "FIRE_IMP", "FIRE_IMP", "RANGED"], "gold": 30, "difficulty": 3
     },
     {
-      "id": 8, "type": "REWARD", "name": "Demon's Hoard",
+      "id": 8, "type": "REST", "name": "Demon's Reprieve",
       "x": 820, "y": 175, "next": [10], "gold": 0, "difficulty": 0
     },
     {

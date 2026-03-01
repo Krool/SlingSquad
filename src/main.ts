@@ -11,6 +11,7 @@ import { CampUpgradesScene } from '@/scenes/CampUpgradesScene';
 import { SettingsScene } from '@/scenes/SettingsScene';
 import { EventScene } from '@/scenes/EventScene';
 import { ForgeScene } from '@/scenes/ForgeScene';
+import { RestScene } from '@/scenes/RestScene';
 import { CodexScene } from '@/scenes/CodexScene';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -37,7 +38,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, MainMenuScene, SquadSelectScene, OverworldScene, BattleScene, ShopScene, ResultScene, CampUpgradesScene, SettingsScene, EventScene, ForgeScene, CodexScene],
+  scene: [BootScene, MainMenuScene, SquadSelectScene, OverworldScene, BattleScene, ShopScene, ResultScene, CampUpgradesScene, SettingsScene, EventScene, ForgeScene, RestScene, CodexScene],
 };
 
 const game = new Phaser.Game(config);

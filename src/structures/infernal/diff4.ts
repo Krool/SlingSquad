@@ -59,6 +59,14 @@ export const demonCitadel: TemplateFn = (ctx) => {
     { x: RX + tSpan / 2, y: rf2 - 6 - eR },
     { x: RX + tSpan / 2, y: rf3 - 6 - 28 - eR },
   );
+
+  // Coins (~23g)
+  ctx.coin(430, 280, 3);                          // approach — arc path
+  ctx.coin(LX + tSpan / 2, lf3 - 30, 4);          // structure — above left tower cap
+  ctx.coin(RX + tSpan / 2, rf3 - 40, 4);          // structure — above right tower cap
+  ctx.coin(bridgeCX - 30, groundY - 40, 5);       // risky — near lava between towers
+  ctx.coin(bridgeCX + 30, groundY - 40, 5);       // risky — near lava between towers
+  ctx.coin(bridgeCX, lf1 - 30, 2);                // structure — above wood bridge
 };
 
 // ─── "Obsidian Keep" — 4-room layered fortress ──────────────────────────────
@@ -121,6 +129,14 @@ export const obsidianKeep: TemplateFn = (ctx) => {
     { x: (roomCenters[2] + roomCenters[3]) / 2, y: upperFloor - 6 - eR },
     { x: spireX, y: capY - 6 - 28 - eR },
   );
+
+  // Coins (~22g)
+  ctx.coin(430, 290, 3);                                     // approach — arc path
+  ctx.coin(spireX, capY - 40, 4);                             // structure — above spire cap
+  ctx.coin(roomCenters[1], lowerFloor - 40, 3);               // structure — above room 2
+  ctx.coin(roomCenters[0] - 30, groundY - 40, 5);             // risky — near lava pit
+  ctx.coin(roomCenters[3] + 30, groundY - 40, 4);             // risky — near fire geyser
+  ctx.coin((roomCenters[0] + roomCenters[1]) / 2, upperFloor - 30, 3); // structure — above upper left
 };
 
 // ─── "Lava Fortress" — central fortress surrounded by lava moat ─────────────
@@ -173,6 +189,14 @@ export const lavaFortress: TemplateFn = (ctx) => {
     { x: CX, y: f3 - 6 - 28 - eR },
     { x: AX + 25, y: groundY - 35 - 6 - 6 - eR },
   );
+
+  // Coins (~23g)
+  ctx.coin(440, 290, 3);                    // approach — arc path near ramp
+  ctx.coin(CX, f3 - 40, 4);                 // structure — above fortress pinnacle
+  ctx.coin(AX + 25, groundY - 50, 3);       // structure — above approach ramp
+  ctx.coin(500, groundY - 40, 5);            // risky — near outer lava moat
+  ctx.coin(850, groundY - 40, 5);            // risky — near right lava moat
+  ctx.coin(CX, groundY - 40, 3);            // risky — near fire geyser
 };
 
 // ─── "Hellfire Complex" — multi-building compound with fire geysers ─────────
@@ -230,6 +254,14 @@ export const hellfireComplex: TemplateFn = (ctx) => {
     { x: CXt + 35, y: cf - 6 - eR },
     { x: CXt + 35, y: cf2 - 6 - eR },
   );
+
+  // Coins (~24g)
+  ctx.coin(430, 300, 3);                               // approach — arc path
+  ctx.coin(BX + hallW / 2, bf2 - 30, 4);               // structure — above center hall upper
+  ctx.coin(CXt + 35, cf2 - 30, 4);                     // structure — above right watchtower top
+  ctx.coin(AX + bunkW + 25, groundY - 40, 5);          // risky — near fire geyser (between A & B)
+  ctx.coin(BX + hallW + 25, groundY - 40, 5);          // risky — near fire geyser (between B & C)
+  ctx.coin(BX + hallW / 2, groundY - 40, 3);           // risky — near lava pit under hall
 };
 
 // ─── "Demon Stronghold" — L-shaped fortress with obsidian walls ─────────────
@@ -275,6 +307,14 @@ export const demonStronghold: TemplateFn = (ctx) => {
     { x: VX + vSpan / 2, y: vf2 - 6 - 28 - eR },
     { x: HX + wingW / 2, y: groundY - eR },
   );
+
+  // Coins (~22g)
+  ctx.coin(430, 300, 3);                               // approach — arc path
+  ctx.coin(VX + vSpan / 2, vf2 - 40, 4);               // structure — above L-tower cap
+  ctx.coin(HX + wingW / 2, hFloor - 30, 3);            // structure — above horizontal wing
+  ctx.coin(HX + wingW / 4, groundY - 40, 5);           // risky — near lava pit
+  ctx.coin(HX + wingW * 3 / 4, groundY - 40, 4);       // risky — near fire geyser
+  ctx.coin(VX + vSpan / 2, vf1 - 30, 3);               // structure — above vertical level 1
 };
 
 // ─── "Volcanic Bastion" — 4-tier pyramid fortress ───────────────────────────
@@ -326,6 +366,14 @@ export const volcanicBastion: TemplateFn = (ctx) => {
     { x: CX, y: f3 - 6 - eR },
     { x: CX, y: f4 - 6 - 24 - eR },
   );
+
+  // Coins (~24g)
+  ctx.coin(470, 280, 3);                            // approach — arc path
+  ctx.coin(CX, f4 - 40, 5);                          // treasury — above pyramid pinnacle
+  ctx.coin(CX - t1W / 4, f1 - 30, 3);                // structure — above tier 1 left
+  ctx.coin(CX + t1W / 4, f2 - 30, 4);                // structure — above tier 2
+  ctx.coin(CX - t1W / 2 - 30, groundY - 40, 5);      // risky — near lava moat left
+  ctx.coin(CX + t1W / 2 + 30, groundY - 40, 4);      // risky — near lava moat right
 };
 
 // ─── "Obsidian Monolith" — single massive pillar with satellite platforms ───
@@ -379,6 +427,14 @@ export const obsidianMonolith: TemplateFn = (ctx) => {
     { x: RX + 40, y: rf2 - 6 - eR },
     { x: MX, y: groundY - 100 - 6 - 28 - eR },
   );
+
+  // Coins (~24g)
+  ctx.coin(440, 290, 3);                       // approach — arc path
+  ctx.coin(MX, groundY - 100 - 50, 5);         // treasury — above monolith top
+  ctx.coin(LX + 35, lf2 - 30, 3);              // structure — above left upper platform
+  ctx.coin(RX + 40, rf2 - 30, 4);              // structure — above right upper platform
+  ctx.coin(MX - 60, groundY - 40, 5);          // risky — near lava left of monolith
+  ctx.coin(LX + 35, groundY - 40, 4);          // risky — near fire geyser at left
 };
 
 // ─── "Inferno Compound" — walled compound with inner structures ─────────────
@@ -437,6 +493,14 @@ export const infernoCompound: TemplateFn = (ctx) => {
     { x: WX + 100, y: lintelY - 6 - eR },
     { x: KX + 55, y: groundY - eR },
   );
+
+  // Coins (~25g)
+  ctx.coin(430, 280, 3);                      // approach — arc path
+  ctx.coin(WX + 100, lintelY - 30, 4);        // structure — above outer gate lintel
+  ctx.coin(KX + 55, kf2 - 40, 5);             // treasury — above rear keep cap
+  ctx.coin(WX + 100, groundY - 40, 5);        // risky — near lava pit
+  ctx.coin(KX + 55, groundY - 40, 5);         // risky — near fire geyser
+  ctx.coin(BX + 35, bf - 30, 3);              // structure — above armory tower
 };
 
 export const diff4Templates: TemplateFn[] = [

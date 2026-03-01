@@ -90,8 +90,8 @@
     },
     {
       "id": 9,
-      "type": "REWARD",
-      "name": "Plundered Vault",
+      "type": "REST",
+      "name": "Campfire",
       "x": 820, "y": 455,
       "next": [10],
       "gold": 0,

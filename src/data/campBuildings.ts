@@ -370,6 +370,36 @@ export const CAMP_STRUCTURES: Record<string, CampBuildingDef> = {
       }
     },
   },
+  // Mid layer — Healer's Tent
+  healers_tent: {
+    x: 260, layer: 'mid',
+    name: "Healer's Tent", desc: 'Reduces hero revive cooldown.',
+    hitW: 54, hitH: 50, maxLevel: 1,
+    buildFn: (g, x, gy, _count) => {
+      // Shadow
+      g.fillStyle(0x000000, 0.12);
+      g.fillEllipse(x, gy, 54, 8);
+      // White canvas tent
+      g.fillStyle(0xd8d0c0, 1);
+      g.fillTriangle(x - 24, gy, x, gy - 42, x + 24, gy);
+      // Canvas edge highlight
+      g.lineStyle(1, 0xe8e0d0, 0.6);
+      g.lineBetween(x - 24, gy, x, gy - 42);
+      // Canvas shadow fold
+      g.fillStyle(0xc8c0b0, 1);
+      g.fillTriangle(x, gy - 42, x + 24, gy, x + 8, gy);
+      // Support pole tip
+      g.fillStyle(0x5a4020, 1);
+      g.fillRect(x - 2, gy - 46, 4, 8);
+      // Red cross symbol
+      g.fillStyle(0xe74c3c, 0.9);
+      g.fillRect(x - 3, gy - 24, 6, 16);
+      g.fillRect(x - 8, gy - 19, 16, 6);
+      // Opening
+      g.fillStyle(0x1a2a1a, 0.5);
+      g.fillTriangle(x - 6, gy, x, gy - 14, x + 6, gy);
+    },
+  },
   // Super foreground — Forge
   damage_bonus: {
     x: 1060, layer: 'superFg',

@@ -214,9 +214,9 @@ export class LaunchSystem {
       this.isFirstLaunch = false;
     }
 
-    // Rogue piercing: set flag before first collision so processCollisionPair can use it
+    // Rogue piercing: set counter before first collision so processCollisionPair can use it
     if (hero.heroClass === 'ROGUE') {
-      hero.piercing = true;
+      hero.piercing = 1 + this.relicMods.roguePierceBonus;
     }
 
     // Ranger triple split: emit event so BattleScene spawns flanking arrow projectiles

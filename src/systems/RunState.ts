@@ -5,7 +5,7 @@ import { getMapById } from '@/data/maps/index';
 import { resetRunFinalized } from '@/systems/RunHistory';
 
 // ─── Node types ───────────────────────────────────────────────────────────────
-export type NodeType = 'BATTLE' | 'ELITE' | 'REWARD' | 'SHOP' | 'BOSS' | 'EVENT' | 'FORGE';
+export type NodeType = 'BATTLE' | 'ELITE' | 'REWARD' | 'SHOP' | 'BOSS' | 'EVENT' | 'FORGE' | 'REST';
 export interface NodeDef {
   id: number;
   type: NodeType;
@@ -62,6 +62,7 @@ export interface RunState {
   metaGoldGainPct: number;
   metaDamagePct: number;
   metaLaunchPowerPct: number;
+  metaReviveCooldownReduction: number;
 }
 
 // ─── Module-level singleton ───────────────────────────────────────────────────
@@ -146,6 +147,7 @@ export function newRun(
     metaGoldGainPct: meta?.goldGainPct ?? 0,
     metaDamagePct: damageMult,
     metaLaunchPowerPct: meta?.launchPowerPct ?? 0,
+    metaReviveCooldownReduction: meta?.reviveCooldownReduction ?? 0,
   };
 
   // Ascension: start with a random curse
@@ -425,7 +427,9 @@ export function syncSquadHp(heroes: Array<{ heroClass: HeroClass; hp: number; ma
     entry.maxHp = h.maxHp;
     if (h.state === 'dead') {
       entry.currentHp = 0;
-      entry.reviveCooldown = REVIVE_COOLDOWN_NODES;
+      const mods = getRelicModifiers();
+      const totalReduction = mods.reviveCooldownReduce + (s.metaReviveCooldownReduction ?? 0);
+      entry.reviveCooldown = Math.max(1, REVIVE_COOLDOWN_NODES - totalReduction);
     } else {
       entry.currentHp = h.maxHp; // full heal after every battle
     }
@@ -474,6 +478,7 @@ export function loadRun(): boolean {
       metaGoldGainPct:   data.metaGoldGainPct   ?? 0,
       metaDamagePct:     data.metaDamagePct      ?? 0,
       metaLaunchPowerPct: data.metaLaunchPowerPct ?? 0,
+      metaReviveCooldownReduction: data.metaReviveCooldownReduction ?? 0,
     };
     // Patch old saves: ensure every squad member has reviveCooldown
     for (const h of _state!.squad) {
@@ -529,6 +534,12 @@ export interface RelicModifiers {
   bardCharmBonus: number;
   stoneDamageBonus: number;
   lowHpDamageMult: number;
+  // New class/content relics
+  druidWolfBonus: number;      // extra wolves spawned by Druid
+  roguePierceBonus: number;    // extra blocks Rogue can pierce through
+  healOnKill: number;          // HP healed per enemy killed
+  restHpBonus: number;         // max HP bonus from REST nodes
+  reviveCooldownReduce: number;// cooldown reduction at run start
   // Curse-specific modifiers
   goldTaxPct: number;          // fraction of gold lost on win
   trajectoryReduce: number;    // dots to remove from trajectory preview
@@ -565,6 +576,11 @@ export function getRelicModifiers(): RelicModifiers {
     bardCharmBonus: 0,
     stoneDamageBonus: 0,
     lowHpDamageMult: 0,
+    druidWolfBonus: 0,
+    roguePierceBonus: 0,
+    healOnKill: 0,
+    restHpBonus: 0,
+    reviveCooldownReduce: 0,
     goldTaxPct: 0,
     trajectoryReduce: 0,
     launchPowerCurse: 0,
@@ -599,6 +615,12 @@ export function getRelicModifiers(): RelicModifiers {
       case 'BARD_CHARM_BONUS':     mods.bardCharmBonus         += r.value; break;
       case 'STONE_DAMAGE_BONUS':   mods.stoneDamageBonus       += r.value; break;
       case 'LOW_HP_DAMAGE':        mods.lowHpDamageMult         = r.value; break;
+      // New class/content relics
+      case 'DRUID_WOLF_BONUS':     mods.druidWolfBonus         += r.value; break;
+      case 'ROGUE_PIERCE_BONUS':   mods.roguePierceBonus       += r.value; break;
+      case 'HEAL_ON_KILL':         mods.healOnKill             += r.value; break;
+      case 'REST_HP_BONUS':        mods.restHpBonus            += r.value; break;
+      case 'REVIVE_COOLDOWN_REDUCE': mods.reviveCooldownReduce += r.value; break;
       // Curse-specific effects
       case 'GOLD_TAX_PCT':         mods.goldTaxPct             += r.value; break;
       case 'TRAJECTORY_REDUCE':    mods.trajectoryReduce       += r.value; break;

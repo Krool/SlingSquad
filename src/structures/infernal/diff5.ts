@@ -60,6 +60,14 @@ export const infernalThrone: TemplateFn = (ctx) => {
     { x: throneX, y: tf - 6 - 28 - eR },
     { x: RX + 40, y: rf1 - 6 - 28 - eR },
   );
+
+  // Coins (~30g)
+  ctx.coin(430, 270, 4);                          // approach — arc path
+  ctx.coin(throneX, tf - 40, 6);                   // treasury — above throne platform
+  ctx.coin(GX + 35, groundY - 85 - 30, 4);        // structure — above front gate
+  ctx.coin(RX + 40, rf1 - 40, 4);                 // structure — above rear tower
+  ctx.coin(GX + 35, groundY - 40, 6);             // risky — near lava pit at gate
+  ctx.coin(HX + hallW + 30, groundY - 40, 6);     // risky — near fire geyser
 };
 
 // ─── "Demon Lord Lair" — 3 connected chambers with increasing difficulty ────
@@ -135,6 +143,15 @@ export const demonLordLair: TemplateFn = (ctx) => {
     { x: C3X + chamberW / 2, y: c3f - 6 - eR },
     { x: C3X + chamberW / 2, y: c3f2 - 6 - 32 - eR },
   );
+
+  // Coins (~32g)
+  ctx.coin(430, 280, 4);                                  // approach — arc path
+  ctx.coin(C1X + chamberW / 2, c1f2 - 30, 4);             // structure — above chamber 1 upper
+  ctx.coin(C2X + chamberW / 2, c2f2 - 30, 5);             // structure — above chamber 2 upper
+  ctx.coin(C3X + chamberW / 2, c3f2 - 40, 6);             // treasury — above boss lair cap
+  ctx.coin(br1X + 25, groundY - 40, 6);                   // risky — near lava bridge 1
+  ctx.coin(C3X + chamberW / 2, groundY - 40, 4);          // risky — near fire geyser
+  ctx.coin(br2X + 25, groundY - 40, 3);                   // risky — near lava bridge 2
 };
 
 // ─── "Obsidian Citadel" — multi-wing palace with obsidian everything ────────
@@ -219,6 +236,14 @@ export const obsidianCitadel: TemplateFn = (ctx) => {
     { x: CX, y: throneF - 6 - 24 - eR },
     { x: LX + span / 2, y: lf3 - 6 - 28 - eR },
   );
+
+  // Coins (~31g)
+  ctx.coin(440, 270, 4);                          // approach — arc path
+  ctx.coin(CX, throneF - 40, 6);                  // treasury — above throne at pinnacle
+  ctx.coin(LX + span / 2, lf3 - 40, 5);           // structure — above left wing cap
+  ctx.coin(RX + span / 2, rf2 - 30, 4);           // structure — above right wing top
+  ctx.coin(LX + span / 2, groundY - 40, 6);       // risky — near lava pit (left)
+  ctx.coin(CX, groundY - 40, 6);                  // risky — near lava pit (center)
 };
 
 // ─── "Hellfire Gauntlet" — progressive walls + fire gauntlet ────────────────
@@ -278,6 +303,14 @@ export const hellfireGauntlet: TemplateFn = (ctx) => {
     { x: FX + 45, y: ff2 - 6 - 28 - eR },
     { x: 790, y: groundY - 80 - 6 - 28 - eR },
   );
+
+  // Coins (~30g)
+  ctx.coin(440, 280, 4);                    // approach — arc path
+  ctx.coin(FX + 45, ff2 - 40, 6);            // treasury — above final compound cap
+  ctx.coin(625, groundY - 55 - 30, 4);       // structure — above mid-wall structure
+  ctx.coin(790, groundY - 80 - 40, 4);       // structure — above last wall battlement
+  ctx.coin(515, groundY - 40, 6);            // risky — near fire geyser
+  ctx.coin(625, groundY - 40, 6);            // risky — near lava pit
 };
 
 // ─── "Volcanic Palace" — grand two-wing palace with lava throughout ─────────
@@ -347,6 +380,15 @@ export const volcanicPalace: TemplateFn = (ctx) => {
     { x: CX + hallW / 2, y: pf - 6 - 28 - eR },
     { x: RX + 35, y: rf1 - 6 - 28 - eR },
   );
+
+  // Coins (~32g)
+  ctx.coin(430, 270, 4);                              // approach — arc path
+  ctx.coin(CX + hallW / 2, pf - 40, 6);                // treasury — above palace pinnacle
+  ctx.coin(LX + wSpan / 2, lf2 - 40, 5);               // structure — above left wing cap
+  ctx.coin(RX + 35, rf1 - 40, 4);                      // structure — above right tower
+  ctx.coin(LX + wSpan / 2, groundY - 40, 6);           // risky — near lava pit (left)
+  ctx.coin(CX + hallW / 2, groundY - 40, 4);           // risky — near lava pit (center)
+  ctx.coin(RX + 35, groundY - 40, 3);                  // risky — near fire geyser
 };
 
 // ─── "Demon King Fortress" — ultimate boss structure with everything ────────
@@ -414,6 +456,15 @@ export const demonKingFortress: TemplateFn = (ctx) => {
     { x: KX + keepW / 2, y: kf3 - 6 - 28 - eR },
     { x: RX + 35, y: rf - 6 - 28 - eR },
   );
+
+  // Coins (~34g)
+  ctx.coin(430, 260, 4);                              // approach — arc path
+  ctx.coin(KX + keepW / 2, kf3 - 40, 6);               // treasury — above keep throne
+  ctx.coin(GX + 40, gateTop - 30, 5);                  // structure — above outer gate
+  ctx.coin(RX + 35, rf - 40, 4);                       // structure — above rear watchtower
+  ctx.coin(GX + 40, groundY - 40, 6);                  // risky — near lava pit at gate
+  ctx.coin(KX + keepW / 2, groundY - 40, 6);           // risky — near lava pit under keep
+  ctx.coin(KX + keepW + 20, groundY - 40, 3);          // risky — near fire geyser
 };
 
 export const diff5Templates: TemplateFn[] = [

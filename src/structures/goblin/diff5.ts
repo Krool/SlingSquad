@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform, tunnel } from '../shared';
 
 // ─── "The Citadel" — multi-wing palace (migrated boss template) ─────────────
 export const theCitadel: TemplateFn = (ctx) => {
@@ -84,6 +85,17 @@ export const theCitadel: TemplateFn = (ctx) => {
     { x: CX, y: throneFloor - 6 - 24 - eR },
     { x: lBridgeX, y: cf1 - 6 - eR },
   );
+
+  // Coins (~30g)
+  ctx.coin(430, 280, 4);                          // approach — arc path
+  ctx.coin(CX, throneFloor - 30, 6);             // treasury — above throne cap stones
+  ctx.coin(LX, lf3 - 30, 5);                     // structure — above left wing cap
+  ctx.coin(RX, rf3 - 30, 5);                     // structure — above right wing cap
+  ctx.coin(CX - hallSpan / 4, groundY - 18, 5);  // risky — near ground barrel
+  ctx.coin(lBridgeX, cf1 - 20, 5);               // structure — above left bridge
+
+  // Terrain — mound in center courtyard
+  raisedPlatform(ctx, 700, groundY, 100, 18);
 };
 
 // ─── "The Gauntlet" — 3 connected chambers (migrated boss template) ─────────
@@ -156,6 +168,10 @@ export const theGauntlet: TemplateFn = (ctx) => {
   ctx.barrel(C2X + chamberW / 2, groundY - 18);
   ctx.barrel(C3X + chamberW / 2, c3Floor - 6 - 18);
 
+  // Spike traps between chambers
+  ctx.hazard('SPIKE_TRAP', bridge1X + bridgeW / 2, groundY - 5);
+  ctx.hazard('SPIKE_TRAP', bridge2X + bridgeW / 2, groundY - 5);
+
   const eR = 20;
   ctx.enemySlots.push(
     { x: C1X + chamberW / 2, y: c1Floor - 6 - eR },
@@ -165,6 +181,14 @@ export const theGauntlet: TemplateFn = (ctx) => {
     { x: C3X + chamberW / 2, y: c3Floor2 - 6 - 32 - eR },
     { x: C1X + chamberW / 2, y: c1Floor2 - 6 - eR },
   );
+
+  // Coins (~30g)
+  ctx.coin(430, 300, 4);                                     // approach — arc path
+  ctx.coin(C1X + chamberW / 2, c1Floor2 - 20, 5);           // structure — above chamber 1 top
+  ctx.coin(C2X + chamberW / 2, c2Floor2 - 20, 5);           // structure — above chamber 2 top
+  ctx.coin(C3X + chamberW / 2, c3Floor2 - 6 - 40, 6);       // treasury — above boss chamber cap
+  ctx.coin(bridge1X + bridgeW / 2, groundY - 18, 5);        // risky — near bridge 1 barrel + spike
+  ctx.coin(C3X + chamberW / 2, c3Floor - 6 - 18, 5);        // risky — near boss barrel
 };
 
 // ─── "Goblin Throne" — massive goblin king lair ─────────────────────────────
@@ -226,6 +250,19 @@ export const goblinThrone: TemplateFn = (ctx) => {
     { x: RX + 35, y: rf1 - 6 - 28 - eR },
     { x: GX + 30, y: groundY - 80 - 6 - 6 - eR },
   );
+
+  // Coins (~32g)
+  ctx.coin(430, 290, 4);                          // approach — arc path
+  ctx.coin(throneX, tf - 30, 6);                  // treasury — above throne platform
+  ctx.coin(GX + 30, groundY - 80 - 20, 5);       // structure — above gate
+  ctx.coin(HX + hallW / 2, hf2 - 20, 5);         // structure — above upper hall
+  ctx.coin(HX + hallW / 3, groundY - 18, 6);     // risky — near hall barrel
+  ctx.coin(RX + 35, groundY - 18, 6);            // risky — near rear tower barrel
+
+  // Terrain — stepped approach to throne hall
+  raisedPlatform(ctx, 600, groundY, 140, 24);
+  // Terrain — front gate tunnel
+  tunnel(ctx, 480, 560, groundY, 50, 'WOOD', 'STONE');
 };
 
 // ─── "Siege Breaker" — multi-wall defense ──────────────────────────────────
@@ -282,6 +319,14 @@ export const siegeBreaker: TemplateFn = (ctx) => {
     { x: 460, y: groundY - 60 - 6 - 28 - eR },
     { x: 750, y: groundY - 80 - 6 - 28 - eR },
   );
+
+  // Coins (~30g)
+  ctx.coin(430, 300, 4);                          // approach — arc path
+  ctx.coin(FX + 50, ff2 - 30, 6);                // treasury — above final compound cap
+  ctx.coin(530, groundY - 50 - 18, 5);           // structure — above first structure
+  ctx.coin(670, groundY - 55 - 18, 5);           // structure — above second structure
+  ctx.coin(530, groundY - 18, 5);                // risky — near barrel + spike trap
+  ctx.coin(FX + 50, ff1 - 6 - 18, 5);            // risky — near compound barrel
 };
 
 export const diff5Templates: TemplateFn[] = [

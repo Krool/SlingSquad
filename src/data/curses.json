@@ -83,7 +83,7 @@
   {
     "id": "faithless",
     "name": "Faithless",
-    "desc": "Priest heal amount -10.",
+    "desc": "Priest heal radius -40px, heal amount -10.",
     "effect": "PRIEST_HEAL_BONUS",
     "value": -40,
     "rarity": "uncommon",
