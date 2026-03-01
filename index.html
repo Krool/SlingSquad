@@ -66,10 +66,69 @@
         height: 100dvh !important;
         object-fit: fill;
       }
+
+      /* ── Portrait orientation overlay ─────────────────────────── */
+      #rotate-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: #0a0a0f;
+        color: #c8ccd4;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        font-family: 'Nunito', sans-serif;
+        text-align: center;
+        padding: 32px;
+      }
+      #rotate-overlay .rotate-icon {
+        width: 64px;
+        height: 64px;
+        animation: rotate-nudge 2s ease-in-out infinite;
+      }
+      #rotate-overlay .rotate-title {
+        font-family: 'Cinzel', serif;
+        font-size: 22px;
+        color: #f0e6d3;
+        letter-spacing: 1px;
+      }
+      #rotate-overlay .rotate-sub {
+        font-size: 15px;
+        opacity: 0.6;
+        max-width: 280px;
+        line-height: 1.5;
+      }
+      @keyframes rotate-nudge {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(90deg); }
+        50%, 75% { transform: rotate(90deg); }
+      }
+      /* hover:none = touch-primary device (phone/tablet) that can actually be rotated.
+         Desktop users with narrow windows or portrait monitors are not blocked. */
+      @media (orientation: portrait) and (hover: none) {
+        #rotate-overlay { display: flex; }
+      }
     </style>
   </head>
   <body>
     <div id="game-container"></div>
+
+    <!-- Portrait orientation overlay — hidden in landscape via CSS -->
+    <div id="rotate-overlay">
+      <svg class="rotate-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Phone in portrait orientation (animation rotates toward landscape) -->
+        <rect x="19" y="8" width="26" height="42" rx="4" stroke="#c8ccd4" stroke-width="2.5"/>
+        <circle cx="32" cy="44" r="2" fill="#c8ccd4"/>
+        <!-- Curved arrow suggesting clockwise rotation -->
+        <path d="M50 18 l5 5 l-5 5" stroke="#f0e6d3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M55 23 Q55 11 43 11" stroke="#f0e6d3" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="rotate-title">Rotate Your Device</div>
+      <div class="rotate-sub">Sling Squad is designed for landscape mode. Please rotate your screen to play.</div>
+    </div>
+
     <!-- Must run before any module to set audio session before AudioContext creation.
          'ambient' = our audio mixes under podcasts/music instead of interrupting them.
          Supported: Safari 17+ / iOS 17+. Silently ignored everywhere else. -->
@@ -77,6 +136,14 @@
       if ('audioSession' in navigator) {
         navigator.audioSession.type = 'ambient';
       }
+    </script>
+    <!-- Try to lock orientation on first user gesture (API requires user activation + fullscreen).
+         Silently fails on browsers/contexts that don't support it. -->
+    <script>
+      document.addEventListener('pointerdown', function tryLock() {
+        document.removeEventListener('pointerdown', tryLock);
+        try { screen.orientation.lock('landscape').catch(function(){}); } catch(e) {}
+      }, { once: true });
     </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
