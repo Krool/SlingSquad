@@ -5,6 +5,8 @@ import {
   HERO_COMBAT_FRICTION_AIR, HERO_COMBAT_FRICTION,
 } from '@/config/constants';
 import type { GameBody } from '@/config/types';
+import { mergeSkillEffects } from '@/data/skills';
+import { hasRunState, getRunState } from '@/systems/RunState';
 
 export type HeroState = 'queued' | 'flying' | 'combat' | 'dead';
 
@@ -44,6 +46,9 @@ export class Hero {
   // Rogue piercing — number of blocks remaining to pierce through
   piercing = 0;
 
+  // Skill tree effect modifiers (merged from selected skills)
+  skillMods: Record<string, number> = {};
+
   // Vanguard passive: true if this hero was the first launched in the battle
   isFirstLaunch = false;
 
@@ -81,6 +86,16 @@ export class Hero {
     this.stats = HERO_STATS[heroClass];
     this._hp = this.stats.hp;
     this.maxHp = this.stats.hp;
+
+    // Load skill tree bonuses from run state
+    if (hasRunState()) {
+      try {
+        const heroData = getRunState().squad.find(h => h.heroClass === heroClass);
+        this.skillMods = mergeSkillEffects(heroData?.selectedSkills ?? []);
+      } catch { /* no run state */ }
+    }
+    if (this.skillMods.maxHpBonus) this.maxHp += this.skillMods.maxHpBonus;
+    if (this.skillMods.damageReduction) this.damageReduction += this.skillMods.damageReduction;
   }
 
   /** Restore the persistent class tint (or clear if none). Call after temporary flash effects. */
@@ -142,7 +157,7 @@ export class Hero {
     if (this.heroClass === 'WARRIOR') {
       (this.body as any).ignoreGravity = true;
       const warriorBody = this.body;
-      const gravScale = HERO_STATS.WARRIOR.gravityScale;
+      const gravScale = HERO_STATS.WARRIOR.gravityScale + (this.skillMods?.gravityScaleBonus ?? 0);
       this._gravityListener = () => {
         if (warriorBody && this.state === 'flying') {
           warriorBody.force.y += warriorBody.mass * 1.08 * 0.001 * gravScale;

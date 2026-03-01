@@ -45,7 +45,7 @@ export class CampUpgradesScene extends Phaser.Scene {
 
     // ── Fixed header ─────────────────────────────────────────────────────
     this.add.text(cx, panelY + 32, 'CAMP UPGRADES', {
-      fontSize: '30px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '30px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#7ec8e3', stroke: '#000', strokeThickness: 3,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(20);

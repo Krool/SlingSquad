@@ -5,6 +5,7 @@ import cursesData from '@/data/curses.json';
 import {
   getRunState, addRelic, spendGold, completeNode, removeRelic, upgradeRelic,
   getCurses, getNonCurseRelics, reduceCooldown, getHeroesOnCooldown, applyAndStoreRegen,
+  getProgressCostMult,
   type NodeDef, type RelicDef,
 } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
@@ -140,7 +141,7 @@ export class EventScene extends Phaser.Scene {
 
     // Event name
     this.add.text(GAME_WIDTH / 2, 122, this.event.name, {
-      fontSize: '36px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '36px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#e8d8f0', stroke: '#000', strokeThickness: 4,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(5);
@@ -167,7 +168,7 @@ export class EventScene extends Phaser.Scene {
       case 'RELIC_AND_CURSE':
         return { text: 'Relic + Curse', color: 0xe67e22 };
       case 'BUY_RELIC':
-        return { text: `${outcome.cost ?? 0}g \u2192 Relic`, color: 0x3498db };
+        return { text: `${Math.round((outcome.cost ?? 0) * getProgressCostMult())}g \u2192 Relic`, color: 0x3498db };
       case 'FREE_RELIC':
         return { text: '\u2726 Free Relic', color: 0x2ecc71 };
       case 'GOLD_AND_CURSE':
@@ -192,7 +193,7 @@ export class EventScene extends Phaser.Scene {
       case 'HEAL_ALL':
         return { text: '\u2665 Full Heal', color: 0x2ecc71 };
       case 'BUY_UPGRADE':
-        return { text: `${outcome.cost ?? 0}g \u2192 Upgrade`, color: 0x3498db };
+        return { text: `${Math.round((outcome.cost ?? 0) * getProgressCostMult())}g \u2192 Upgrade`, color: 0x3498db };
       case 'REDUCE_COOLDOWN':
         return { text: '\u231b Rally Fallen', color: 0x2ecc71 };
       case 'GAIN_SHARDS':
@@ -310,7 +311,8 @@ export class EventScene extends Phaser.Scene {
   private canAffordChoice(choice: EventChoice): boolean {
     const run = getRunState();
     const o = choice.outcome;
-    if (o.cost && o.cost > 0 && run.gold < o.cost) return false;
+    const scaledCost = Math.round((o.cost ?? 0) * getProgressCostMult());
+    if (scaledCost > 0 && run.gold < scaledCost) return false;
     if (o.type === 'REMOVE_CURSE' && getCurses().length === 0) return false;
     if (o.type === 'UPGRADE_RELIC' && getNonCurseRelics().filter(r => (r.rarity ?? 'common') === 'common').length === 0) return false;
     if (o.type === 'TRADE_RELIC' && getNonCurseRelics().filter(r => (r.rarity ?? 'common') === 'common').length === 0) return false;
@@ -340,8 +342,9 @@ export class EventScene extends Phaser.Scene {
       }
 
       case 'BUY_RELIC': {
-        if (outcome.cost && outcome.cost > 0) {
-          if (!spendGold(outcome.cost)) { resultText = 'Not enough gold!'; break; }
+        const scaledCost = Math.round((outcome.cost ?? 0) * getProgressCostMult());
+        if (scaledCost > 0) {
+          if (!spendGold(scaledCost)) { resultText = 'Not enough gold!'; break; }
         }
         const rarity = (outcome.rarity as 'common' | 'uncommon' | 'rare') ?? 'common';
         const relic = this.getRandomRelic(rarity);
@@ -419,7 +422,7 @@ export class EventScene extends Phaser.Scene {
       }
 
       case 'GAMBLE': {
-        const cost = outcome.cost ?? 0;
+        const cost = Math.round((outcome.cost ?? 0) * getProgressCostMult());
         const reward = outcome.reward ?? 0;
         if (!spendGold(cost)) { resultText = 'Not enough gold!'; break; }
         if (Math.random() < 0.5) {
@@ -468,8 +471,9 @@ export class EventScene extends Phaser.Scene {
       }
 
       case 'BUY_UPGRADE': {
-        if (outcome.cost && outcome.cost > 0) {
-          if (!spendGold(outcome.cost)) { resultText = 'Not enough gold!'; break; }
+        const upgradeCost = Math.round((outcome.cost ?? 0) * getProgressCostMult());
+        if (upgradeCost > 0) {
+          if (!spendGold(upgradeCost)) { resultText = 'Not enough gold!'; break; }
         }
         const relics = getNonCurseRelics();
         if (relics.length > 0) {
@@ -588,11 +592,11 @@ export class EventScene extends Phaser.Scene {
       }).setOrigin(0.5),
     );
 
-    // Result text
+    // Result text (colored to match the outcome icon)
     panel.add(
       this.add.text(0, -20, text, {
         fontSize: '19px', fontFamily: 'Nunito, sans-serif',
-        color: '#e8d8f0', stroke: '#000', strokeThickness: 2,
+        color: resultIcon.color, stroke: '#000', strokeThickness: 2,
         wordWrap: { width: panelW - 40 }, align: 'center',
       }).setOrigin(0.5),
     );

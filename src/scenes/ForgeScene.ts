@@ -105,7 +105,7 @@ export class ForgeScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(6);
 
     this.add.text(GAME_WIDTH / 2, 122, 'The Forge', {
-      fontSize: '36px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '36px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#f0d8b0', stroke: '#000', strokeThickness: 4,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(5);

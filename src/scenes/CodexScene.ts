@@ -14,6 +14,8 @@ import { getGlobalStats } from '@/systems/RunHistory';
 import { getMapById } from '@/data/maps/index';
 import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildBackButton, buildCurrencyBar } from '@/ui/TopBar';
+import { Hero } from '@/entities/Hero';
+import { Enemy } from '@/entities/Enemy';
 
 type TabId = 'heroes' | 'bestiary' | 'relics' | 'history';
 
@@ -83,7 +85,7 @@ export class CodexScene extends Phaser.Scene {
 
   private buildTitle() {
     this.add.text(GAME_WIDTH / 2, 32, 'CODEX', {
-      fontSize: '30px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '30px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: ACCENT_HEX, stroke: '#000', strokeThickness: 3,
       letterSpacing: 6,
     }).setOrigin(0.5).setDepth(10);
@@ -218,6 +220,8 @@ export class CodexScene extends Phaser.Scene {
       if (discovered && this.textures.exists(idleFrame)) {
         const sprite = this.add.sprite(cx, cy - 36, idleFrame)
           .setDisplaySize(64, 64);
+        const classTint = Hero.CLASS_TINT[cls];
+        if (classTint) sprite.setTint(classTint);
         const animKey = `${spriteKey}_idle`;
         if (this.anims.exists(animKey)) sprite.play(animKey);
         container.add(sprite);
@@ -253,7 +257,7 @@ export class CodexScene extends Phaser.Scene {
         if (passive) {
           container.add(
             this.add.text(cx, cy + 64, passive.name, {
-              fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
+              fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
             }).setOrigin(0.5),
           );
         }
@@ -261,7 +265,7 @@ export class CodexScene extends Phaser.Scene {
         // Per-hero lifetime stats
         const mastery = getMastery(cls);
         let statY = cy + 80;
-        const statStyle = { fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a' };
+        const statStyle = { fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a' };
 
         if (mastery.runsPlayed > 0) {
           let runLine = `Runs: ${mastery.runsPlayed}`;
@@ -295,7 +299,7 @@ export class CodexScene extends Phaser.Scene {
 
         container.add(
           this.add.text(cx, barY + barH + 8, `Mastery Lv.${level}`, {
-            fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#556060',
+            fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#556060',
           }).setOrigin(0.5),
         );
       }
@@ -349,6 +353,8 @@ export class CodexScene extends Phaser.Scene {
       if (discovered && this.textures.exists(idleFrame)) {
         const sprite = this.add.sprite(cx, cy - 12, idleFrame)
           .setDisplaySize(48, 48).setFlipX(true); // enemies face left
+        const enemyTint = Enemy.CLASS_TINT[cls];
+        if (enemyTint) sprite.setTint(enemyTint);
         const animKey = `${spriteKey}_idle`;
         if (this.anims.exists(animKey)) sprite.play(animKey);
         container.add(sprite);
@@ -467,13 +473,13 @@ export class CodexScene extends Phaser.Scene {
         const count = getRelicDiscoveryCount(relic.id);
         container.add(
           this.add.text(textX, cy + 10, relic.desc, {
-            fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
+            fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
             wordWrap: { width: cardW - 90 },
           }).setOrigin(0, 0.5),
         );
         container.add(
           this.add.text(cx + cardW / 2 - 14, cy, `\u00d7${count}`, {
-            fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#556060',
+            fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#556060',
           }).setOrigin(1, 0.5),
         );
       }
@@ -491,7 +497,7 @@ export class CodexScene extends Phaser.Scene {
 
     // ── Banner: LIFETIME STATISTICS ──
     container.add(this.add.text(scrollW / 2, cy, 'LIFETIME STATISTICS', {
-      fontSize: '20px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '20px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: ACCENT_HEX, stroke: '#000', strokeThickness: 2,
       letterSpacing: 4,
     }).setOrigin(0.5, 0));
@@ -527,7 +533,7 @@ export class CodexScene extends Phaser.Scene {
       container.add(cellBg);
 
       container.add(this.add.text(cx, cellY + 12, item[0], {
-        fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
+        fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
       }).setOrigin(0.5, 0));
 
       container.add(this.add.text(cx, cellY + 30, item[1], {
@@ -547,7 +553,7 @@ export class CodexScene extends Phaser.Scene {
 
     // ── Recent Runs ──
     container.add(this.add.text(scrollW / 2, cy, 'RECENT RUNS', {
-      fontSize: '18px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '18px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: ACCENT_HEX, stroke: '#000', strokeThickness: 2,
       letterSpacing: 3,
     }).setOrigin(0.5, 0));
@@ -585,13 +591,13 @@ export class CodexScene extends Phaser.Scene {
         const mapDef = getMapById(run.mapId);
         const mapName = mapDef?.name ?? run.mapId;
         container.add(this.add.text(rcx - cardW2 / 2 + 14, cy + 32, mapName, {
-          fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#6a7a8a',
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#6a7a8a',
         }).setOrigin(0, 0));
 
         // Date
         const dateStr = new Date(run.timestamp).toLocaleDateString();
         container.add(this.add.text(rcx + cardW2 / 2 - 14, cy + 12, dateStr, {
-          fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#4a5a6a',
+          fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a5a6a',
         }).setOrigin(1, 0));
 
         // Squad dots (colored by class)
@@ -607,14 +613,14 @@ export class CodexScene extends Phaser.Scene {
         // Stats summary
         const summary = `${run.nodesCleared} nodes  |  ${run.gold}g  |  ${run.relicCount} relics`;
         container.add(this.add.text(rcx + cardW2 / 2 - 14, cy + 38, summary, {
-          fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
+          fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
         }).setOrigin(1, 0));
 
         // Floors completed (if present)
         if ((run as { floorsCompleted?: number }).floorsCompleted !== undefined) {
           const floors = (run as { floorsCompleted?: number }).floorsCompleted!;
           container.add(this.add.text(rcx, cy + 50, `Floors: ${floors}/3`, {
-            fontSize: '11px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
+            fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
           }).setOrigin(0.5, 0));
         }
 

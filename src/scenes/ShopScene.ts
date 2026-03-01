@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import relicsData from '@/data/relics.json';
-import { getRunState, addRelic, spendGold, completeNode, applyAndStoreRegen, type NodeDef, type RelicDef } from '@/systems/RunState';
+import { getRunState, addRelic, spendGold, completeNode, applyAndStoreRegen, getProgressCostMult, type NodeDef, type RelicDef } from '@/systems/RunState';
 import { getAscensionModifiers } from '@/systems/AscensionSystem';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
@@ -189,7 +189,7 @@ export class ShopScene extends Phaser.Scene {
       : 'Buy as many as you can afford.';
 
     this.add.text(GAME_WIDTH / 2, 64, title, {
-      fontSize: '40px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '40px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: accentCol, stroke: '#000', strokeThickness: 4,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(5);
@@ -214,7 +214,7 @@ export class ShopScene extends Phaser.Scene {
     const run = getRunState();
     const ascMods = getAscensionModifiers(run.ascensionLevel);
     const povertyMult = run.activeModifiers?.includes('poverty') ? 0.5 : 1.0;
-    return Math.round((relic.cost ?? 30) * ascMods.shopCostMult * povertyMult);
+    return Math.round((relic.cost ?? 30) * ascMods.shopCostMult * povertyMult * getProgressCostMult());
   }
 
   // ── Pick 3 random relics the player doesn't have ───────────────────────────

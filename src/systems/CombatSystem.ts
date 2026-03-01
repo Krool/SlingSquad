@@ -140,7 +140,8 @@ export class CombatSystem {
         hero.walkDir = nearest.x > hx ? 1 : -1;
       }
 
-      const walkVx = hero.walkDir * hero.stats.walkSpeed;
+      const skillWalkMult = 1 + (hero.skillMods?.walkSpeedMult ?? 0);
+      const walkVx = hero.walkDir * hero.stats.walkSpeed * skillWalkMult;
       this.scene.matter.setVelocity(body, walkVx, body.velocity.y);
       hero.sprite?.setFlipX(hero.walkDir < 0);
       this.ensureAnim(hero, 'walk');
@@ -263,9 +264,11 @@ export class CombatSystem {
         if (d <= HERO_STATS.BARD.auraRadius) bardBoost = Math.min(bardBoost, 1 - HERO_STATS.BARD.auraSpeedBoost);
       }
       const slowPenalty = hero.isSlowed ? SLOW_SPEED_PENALTY : 1.0;
-      const effectiveSpeed = hero.stats.combatSpeed * this.relicCombatSpeedMult * bardBoost * slowPenalty;
+      const skillSpeedMult = hero.skillMods?.combatSpeedMult ?? 1;
+      const effectiveSpeed = hero.stats.combatSpeed * this.relicCombatSpeedMult * bardBoost * slowPenalty * skillSpeedMult;
       if (now - hero.lastAttackTime < effectiveSpeed) continue;
-      let heroDmg = (hero.stats.combatDamage + this.relicFlatDmg) * this.metaDamageMult;
+      const skillDmgMult = 1 + (hero.skillMods?.combatDamageMult ?? 0);
+      let heroDmg = (hero.stats.combatDamage + this.relicFlatDmg) * this.metaDamageMult * skillDmgMult;
       // Crit chance
       if (this.relicMods.critChance > 0 && Math.random() < this.relicMods.critChance) heroDmg *= 2;
       // Low HP berserker bonus

@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 import nodesData from '@/data/nodes.json';
 import type { MusicSystem } from '@/systems/MusicSystem';
-import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, advanceFloor, isRunFullyComplete, getCurrentFloorDisplay, getHeroesOnCooldown, consumePendingRegen, type NodeDef, type RelicDef } from '@/systems/RunState';
+import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, advanceFloor, isRunFullyComplete, getCurrentFloorDisplay, getHeroesOnCooldown, consumePendingRegen, applyAndStoreRegen, type NodeDef, type RelicDef } from '@/systems/RunState';
 import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS, SAFE_AREA_LEFT } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
 import { getMapById } from '@/data/maps/index';
 import { finalizeRun } from '@/systems/RunHistory';
 import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
+import { Hero } from '@/entities/Hero';
 
 const MAP_SPREAD = 2.0;       // Horizontal spread factor for node positions
 const MAP_PADDING_X = 200;    // World padding beyond outermost nodes
@@ -97,6 +98,39 @@ export class OverworldScene extends Phaser.Scene {
   private worldWidth = GAME_WIDTH;
   private _scrollDrag: { startX: number; startScroll: number; moved: boolean } | null = null;
 
+  // ── Visual overhaul fields ──────────────────────────────────────────────────
+  // Hero party sprites on map
+  private heroSprites: Phaser.GameObjects.Sprite[] = [];
+  private heroCdLabels: Phaser.GameObjects.Text[] = [];
+
+  // Path flow particles
+  private pathParticles: { gfx: Phaser.GameObjects.Graphics; t: number; fromX: number; fromY: number; toX: number; toY: number; duration: number; color: number; elapsed: number }[] = [];
+  private pathParticleTimer = 0;
+
+  // Themed ambient particles
+  private ambientParticles: { gfx: Phaser.GameObjects.Graphics; x: number; y: number; vx: number; vy: number; life: number; maxLife: number; phase: number }[] = [];
+  private ambientTimer = 0;
+
+  // Twinkling stars
+  private stars: { gfx: Phaser.GameObjects.Graphics; phase: number; speed: number }[] = [];
+
+  // Boss node effects
+  private bossAura: Phaser.GameObjects.Graphics | null = null;
+  private bossRing: Phaser.GameObjects.Graphics | null = null;
+  private bossNodePos: { x: number; y: number } | null = null;
+  private bossParticles: { gfx: Phaser.GameObjects.Graphics; x: number; y: number; vx: number; vy: number; life: number; maxLife: number }[] = [];
+  private bossParticleTimer = 0;
+
+  // Active node beacons
+  private nodeBeacons: Map<number, Phaser.GameObjects.Graphics> = new Map();
+
+  // Completed path segments for particle spawning
+  private completedPathSegments: { fromX: number; fromY: number; toX: number; toY: number }[] = [];
+  private availablePathSegments: { fromX: number; fromY: number; toX: number; toY: number }[] = [];
+
+  // Current map theme (for ambient particles)
+  private currentTheme: { particle: 'firefly' | 'snowflake' | 'ember'; particleColors: number[] } = { particle: 'firefly', particleColors: [0x88ff88] };
+
   constructor() {
     super({ key: 'OverworldScene' });
   }
@@ -105,6 +139,20 @@ export class OverworldScene extends Phaser.Scene {
     (this.registry.get('music') as MusicSystem | null)?.play('map');
     this.nodeContainers.clear();
     this.nodeGlows.clear();
+    this.nodeBeacons.clear();
+    this.heroSprites = [];
+    this.heroCdLabels = [];
+    this.pathParticles = [];
+    this.pathParticleTimer = 0;
+    this.ambientParticles = [];
+    this.ambientTimer = 0;
+    this.stars = [];
+    this.bossAura = null;
+    this.bossRing = null;
+    this.bossNodePos = null;
+    this.bossParticles = [];
+    this.bossParticleTimer = 0;
+    this.pulseTime = 0;
 
     if (!hasRunState()) {
       if (!loadRun()) {
@@ -128,6 +176,7 @@ export class OverworldScene extends Phaser.Scene {
     this.drawPaths();
     this.buildTooltip();
     this.buildNodes();
+    this.buildHeroParty();
     this.buildHUD();
     this.buildSquadPreview();
     buildSettingsGear(this, 'OverworldScene', 30, SAFE_AREA_LEFT).setScrollFactor(0);
@@ -186,6 +235,8 @@ export class OverworldScene extends Phaser.Scene {
     } else if (data?.fromBattle !== undefined) {
       if (data.fromBattle) {
         this.centerCameraOnActiveNode(true); // animated pan after battle
+        // Apply regen on the map so the player sees health bars increase
+        applyAndStoreRegen();
       }
       this.showAvailableGlow();
       // Show regen floating text on squad preview after a short delay
@@ -227,12 +278,13 @@ export class OverworldScene extends Phaser.Scene {
 
     // Map-themed background color
     const run = getRunState();
-    const mapTheme: Record<string, { sky: number; grid: number; star: number }> = {
-      goblin_wastes:  { sky: 0x0e1520, grid: 0x1e2d42, star: 0xc0d0e8 },
-      frozen_peaks:   { sky: 0x0a1a2e, grid: 0x1a3a5a, star: 0xd0e8ff },
-      infernal_keep:  { sky: 0x1a0808, grid: 0x3a1515, star: 0xe8c0c0 },
+    const mapTheme: Record<string, { sky: number; grid: number; star: number; particle: 'firefly' | 'snowflake' | 'ember'; particleColors: number[] }> = {
+      goblin_wastes:  { sky: 0x0e1520, grid: 0x1e2d42, star: 0xc0d0e8, particle: 'firefly',   particleColors: [0x88ff88, 0x66ee66, 0xaaff77] },
+      frozen_peaks:   { sky: 0x0a1a2e, grid: 0x1a3a5a, star: 0xd0e8ff, particle: 'snowflake', particleColors: [0xeeeeff, 0xddeeff, 0xffffff] },
+      infernal_keep:  { sky: 0x1a0808, grid: 0x3a1515, star: 0xe8c0c0, particle: 'ember',     particleColors: [0xff8844, 0xff6622, 0xffaa33] },
     };
     const theme = mapTheme[run.currentMapId] ?? mapTheme.goblin_wastes;
+    this.currentTheme = { particle: theme.particle, particleColors: theme.particleColors };
 
     bg.fillStyle(theme.sky, 1);
     bg.fillRect(0, 0, this.worldWidth, GAME_HEIGHT);
@@ -256,12 +308,21 @@ export class OverworldScene extends Phaser.Scene {
       }
     }
 
+    // Twinkling stars — individual graphics objects for animation
+    this.stars = [];
     for (let i = 0; i < 40; i++) {
       const sx = Phaser.Math.Between(0, this.worldWidth);
       const sy = Phaser.Math.Between(0, GAME_HEIGHT);
-      const bright = Math.random() * 0.35 + 0.08;
-      bg.fillStyle(theme.star, bright);
-      bg.fillCircle(sx, sy, Math.random() < 0.2 ? 2 : 1);
+      const r = Math.random() < 0.2 ? 2 : 1;
+      const starGfx = this.add.graphics().setDepth(0);
+      starGfx.fillStyle(theme.star, 1);
+      starGfx.fillCircle(sx, sy, r);
+      starGfx.setAlpha(Math.random() * 0.35 + 0.08);
+      this.stars.push({
+        gfx: starGfx,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.8 + Math.random() * 1.2,
+      });
     }
 
     const fog = this.add.graphics().setDepth(1).setScrollFactor(0);
@@ -301,6 +362,8 @@ export class OverworldScene extends Phaser.Scene {
   // ── Paths ──────────────────────────────────────────────────────────────────
   private drawPaths() {
     this.pathLayer.clear();
+    this.completedPathSegments = [];
+    this.availablePathSegments = [];
 
     for (const node of this.nodeMap) {
       for (const nextId of node.next) {
@@ -311,34 +374,47 @@ export class OverworldScene extends Phaser.Scene {
         const toState   = this.getNodeState(nextId);
 
         let color: number, alpha: number, thickness: number;
+        let isCompleted = false;
+        let isAvailable = false;
 
         if (fromState === 'locked' || toState === 'locked') {
-          // Path to/from a locked branch — very faint, reddish
           color = 0x3a1a1a; alpha = 0.4; thickness = 1;
         } else if (fromState === 'completed') {
-          // Completed → next: gold trail
           color = 0xf1c40f; alpha = 0.85; thickness = 3;
+          isCompleted = true;
         } else if (fromState === 'available') {
-          // Available → future: bright blue
           color = 0x6b8cba; alpha = 0.55; thickness = 2;
+          isAvailable = true;
         } else {
-          // Future → future: dim blue-gray
           color = 0x2a4060; alpha = 0.4; thickness = 1.5;
         }
 
-        const steps = 20;
         const nx0 = this.worldX(node.x), nx1 = this.worldX(next.x);
-        for (let i = 0; i < steps; i++) {
-          if (i % 2 === 1) continue;
-          const t0 = i / steps;
-          const t1 = (i + 0.7) / steps;
-          const x0 = Phaser.Math.Interpolation.Linear([nx0, nx1], t0);
-          const y0 = Phaser.Math.Interpolation.Linear([node.y, next.y], t0);
-          const x1 = Phaser.Math.Interpolation.Linear([nx0, nx1], t1);
-          const y1 = Phaser.Math.Interpolation.Linear([node.y, next.y], t1);
 
+        if (isCompleted) {
+          // Solid line with glow behind
+          this.pathLayer.lineStyle(7, color, 0.15);
+          this.pathLayer.lineBetween(nx0, node.y, nx1, next.y);
           this.pathLayer.lineStyle(thickness, color, alpha);
-          this.pathLayer.lineBetween(x0, y0, x1, y1);
+          this.pathLayer.lineBetween(nx0, node.y, nx1, next.y);
+          this.completedPathSegments.push({ fromX: nx0, fromY: node.y, toX: nx1, toY: next.y });
+        } else {
+          // Dashed line
+          const steps = 20;
+          for (let i = 0; i < steps; i++) {
+            if (i % 2 === 1) continue;
+            const t0 = i / steps;
+            const t1 = (i + 0.7) / steps;
+            const x0 = Phaser.Math.Interpolation.Linear([nx0, nx1], t0);
+            const y0 = Phaser.Math.Interpolation.Linear([node.y, next.y], t0);
+            const x1 = Phaser.Math.Interpolation.Linear([nx0, nx1], t1);
+            const y1 = Phaser.Math.Interpolation.Linear([node.y, next.y], t1);
+            this.pathLayer.lineStyle(thickness, color, alpha);
+            this.pathLayer.lineBetween(x0, y0, x1, y1);
+          }
+          if (isAvailable) {
+            this.availablePathSegments.push({ fromX: nx0, fromY: node.y, toX: nx1, toY: next.y });
+          }
         }
       }
     }
@@ -346,12 +422,21 @@ export class OverworldScene extends Phaser.Scene {
 
   // ── Nodes ──────────────────────────────────────────────────────────────────
   private buildNodes() {
+    // Build all nodes first
+    const entranceNodes: { container: Phaser.GameObjects.Container; wx: number; targetAlpha: number }[] = [];
+
     for (const node of this.nodeMap) {
       const state = this.getNodeState(node.id);
       const container = this.add.container(this.worldX(node.x), node.y).setDepth(5);
       this.nodeContainers.set(node.id, container);
 
       this.buildNodeVisual(container, node, state);
+
+      // Capture target alpha from buildNodeVisual (locked=0.7, future=0.8, others=1)
+      const targetAlpha = container.alpha;
+      container.setAlpha(0).setScale(0.7);
+
+      entranceNodes.push({ container, wx: this.worldX(node.x), targetAlpha });
 
       // Completed nodes: no interaction
       if (state === 'completed') continue;
@@ -409,6 +494,79 @@ export class OverworldScene extends Phaser.Scene {
         });
       }
     }
+
+    // Entrance stagger animation — left-to-right cascade
+    entranceNodes.sort((a, b) => a.wx - b.wx);
+    this.pathLayer.setAlpha(0);
+    entranceNodes.forEach((entry, index) => {
+      this.tweens.add({
+        targets: entry.container,
+        alpha: entry.targetAlpha, scaleX: 1, scaleY: 1,
+        duration: 280,
+        ease: 'Back.easeOut',
+        delay: index * 50,
+      });
+    });
+    // Fade in paths after last node arrives
+    const pathDelay = entranceNodes.length * 50 + 280;
+    this.tweens.add({
+      targets: this.pathLayer,
+      alpha: 1,
+      duration: 300,
+      delay: pathDelay,
+    });
+  }
+
+  // ── Hero party sprites on map ──────────────────────────────────────────────
+  private buildHeroParty() {
+    // Destroy previous sprites
+    this.heroSprites.forEach(s => s.destroy());
+    this.heroSprites = [];
+    this.heroCdLabels.forEach(t => t.destroy());
+    this.heroCdLabels = [];
+
+    const run = getRunState();
+
+    // Current position node: rightmost completed, or first node
+    let currentNode = this.nodeMap[0];
+    for (const id of run.completedNodeIds) {
+      const n = this.nodeMap.find(nd => nd.id === id);
+      if (n && n.x > currentNode.x) currentNode = n;
+    }
+
+    const baseX = this.worldX(currentNode.x) + 10;
+    const baseY = currentNode.y + 55;
+    const SPACING = 28;
+
+    run.squad.forEach((h, i) => {
+      const hx = baseX + i * SPACING;
+      const hy = baseY;
+      const charKey = h.heroClass.toLowerCase();
+      const onCooldown = (h.reviveCooldown ?? 0) > 0;
+
+      const sprite = this.add.sprite(hx, hy, `${charKey}_idle_1`)
+        .setDisplaySize(44, 44)
+        .setDepth(4);
+
+      // Play idle animation
+      try { sprite.play(`${charKey}_idle`); } catch { /* anim may not exist */ }
+
+      if (onCooldown) {
+        sprite.setTint(0x444444).setAlpha(0.3);
+        // Red cooldown number above
+        const cdLabel = this.add.text(hx, hy - 28, `${h.reviveCooldown}`, {
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+          color: '#e74c3c', stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(4);
+        this.heroCdLabels.push(cdLabel);
+      } else {
+        // Apply class tint
+        const classTint = Hero.CLASS_TINT[h.heroClass as HeroClass];
+        if (classTint) sprite.setTint(classTint);
+      }
+
+      this.heroSprites.push(sprite);
+    });
   }
 
   private clearTouchSelection() {
@@ -428,6 +586,13 @@ export class OverworldScene extends Phaser.Scene {
 
     // ── Available ────────────────────────────────────────────────────────────
     if (state === 'available') {
+      // Vertical light beacon behind node
+      const beacon = this.add.graphics();
+      beacon.fillStyle(baseColor, 0.06);
+      beacon.fillTriangle(-12, 0, 12, 0, 0, -90);
+      container.add(beacon);
+      this.nodeBeacons.set(node.id, beacon);
+
       // Outer glow
       const glow = this.add.graphics();
       glow.fillStyle(baseColor, 0.18);
@@ -435,28 +600,44 @@ export class OverworldScene extends Phaser.Scene {
       container.add(glow);
       this.nodeGlows.set(node.id, glow);
 
-      // Boss gets spiky border
-      const circle = this.add.graphics();
+      // Boss node — dark aura + rotating danger ring
       if (node.type === 'BOSS') {
-        circle.lineStyle(3, 0xff2222, 0.9);
+        // Dark aura (pulsing in update)
+        const aura = this.add.graphics();
+        aura.fillStyle(0x3a0000, 0.25);
+        aura.fillCircle(0, 0, NODE_RADIUS + 22);
+        container.add(aura);
+        this.bossAura = aura;
+
+        // Rotating danger ring (8 spokes)
+        const ring = this.add.graphics();
+        ring.lineStyle(2, 0xff2222, 0.7);
         for (let i = 0; i < 8; i++) {
           const a = (i / 8) * Math.PI * 2;
-          circle.lineBetween(
-            Math.cos(a) * (NODE_RADIUS - 2), Math.sin(a) * (NODE_RADIUS - 2),
-            Math.cos(a) * (NODE_RADIUS + 6), Math.sin(a) * (NODE_RADIUS + 6),
+          ring.lineBetween(
+            Math.cos(a) * (NODE_RADIUS + 4), Math.sin(a) * (NODE_RADIUS + 4),
+            Math.cos(a) * (NODE_RADIUS + 14), Math.sin(a) * (NODE_RADIUS + 14),
           );
         }
+        container.add(ring);
+        this.bossRing = ring;
+        this.bossNodePos = { x: this.worldX(node.x), y: node.y };
+
+        // Spiky border
+        const circle = this.add.graphics();
         circle.fillStyle(baseColor, 1);
         circle.fillCircle(0, 0, NODE_RADIUS);
         circle.lineStyle(2, 0xff2222, 0.9);
         circle.strokeCircle(0, 0, NODE_RADIUS);
+        container.add(circle);
       } else {
+        const circle = this.add.graphics();
         circle.fillStyle(baseColor, 1);
         circle.fillCircle(0, 0, NODE_RADIUS);
         circle.lineStyle(2, 0xffffff, 0.7);
         circle.strokeCircle(0, 0, NODE_RADIUS);
+        container.add(circle);
       }
-      container.add(circle);
 
       // Top shine
       const shine = this.add.graphics();
@@ -500,14 +681,17 @@ export class OverworldScene extends Phaser.Scene {
     // ── Completed ────────────────────────────────────────────────────────────
     if (state === 'completed') {
       const circle = this.add.graphics();
+      // Gold ring behind
+      circle.lineStyle(2, 0xc0a060, 0.3);
+      circle.strokeCircle(0, 0, NODE_RADIUS + 4);
       circle.fillStyle(0x2a3040, 1);
       circle.fillCircle(0, 0, NODE_RADIUS);
       circle.lineStyle(1, 0x556070, 0.5);
       circle.strokeCircle(0, 0, NODE_RADIUS);
       container.add(circle);
 
-      container.add(this.add.text(0, -1, '✓', {
-        fontSize: '18px', color: '#55667a', fontFamily: 'Nunito, sans-serif',
+      container.add(this.add.text(0, -1, '\u2713', {
+        fontSize: '18px', color: '#c0a060', fontFamily: 'Nunito, sans-serif',
       }).setOrigin(0.5));
 
       container.add(this.add.text(0, NODE_RADIUS + 11, node.name, {
@@ -809,7 +993,7 @@ export class OverworldScene extends Phaser.Scene {
       // Hit area for click + hover
       const hitRect = this.add.rectangle(
         badgeX + BADGE / 2, 0, BADGE, BADGE, 0x000000, 0,
-      ).setInteractive({ useHandCursor: true });
+      ).setInteractive({ useHandCursor: true }).setScrollFactor(0);
       this.relicRow.add(hitRect);
 
       hitRect.on('pointerover', () => drawBadge(true));
@@ -871,7 +1055,7 @@ export class OverworldScene extends Phaser.Scene {
     // Close ✕
     const closeBtn = this.add.text(PW - 18, 15, '✕', {
       fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#aaa',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setScrollFactor(0);
     closeBtn.on('pointerover', () => closeBtn.setColor('#ff6666'));
     closeBtn.on('pointerout',  () => closeBtn.setColor('#aaa'));
     closeBtn.on('pointerdown', () => this.closeRelicDetail());
@@ -1015,11 +1199,6 @@ export class OverworldScene extends Phaser.Scene {
     const run = getRunState();
     const panelX = GAME_WIDTH - 188, panelY = GAME_HEIGHT - 102;
     const panelW = 176;
-    const heroColors: Record<string, number> = {
-      WARRIOR: 0xc0392b, RANGER: 0x27ae60, MAGE: 0x8e44ad,
-      PRIEST: 0xf39c12, BARD: 0x1abc9c, ROGUE: 0x2c3e50,
-      PALADIN: 0xf1c40f, DRUID: 0x16a085,
-    };
     const count = run.squad.length;
     const spacing = Math.min(40, (panelW - 20) / Math.max(count, 1));
     const startX = panelX + panelW / 2 - ((count - 1) * spacing) / 2;
@@ -1027,43 +1206,39 @@ export class OverworldScene extends Phaser.Scene {
     run.squad.forEach((h, i) => {
       const hx = startX + i * spacing;
       const hy = panelY + 54;
-      const col = heroColors[h.heroClass] ?? 0x888888;
       const onCooldown = (h.reviveCooldown ?? 0) > 0;
+      const charKey = h.heroClass.toLowerCase();
 
-      const g = this.add.graphics();
+      // Mini animated sprite instead of colored circle
+      const sprite = this.add.sprite(hx, hy, `${charKey}_idle_1`)
+        .setDisplaySize(28, 28).setScrollFactor(0);
+      try { sprite.play(`${charKey}_idle`); } catch { /* */ }
+
       if (onCooldown) {
-        // Grayed-out circle — no HP bar
-        g.lineStyle(1, 0x555555, 0.5);
-        g.strokeCircle(hx, hy, 17);
-        g.fillStyle(0x333333, 0.6);
-        g.fillCircle(hx, hy, 14);
+        sprite.setTint(0x444444).setAlpha(0.4);
       } else {
-        const pct = Math.max(0, h.currentHp / h.maxHp);
-        g.lineStyle(1, col, 0.7);
-        g.strokeCircle(hx, hy, 17);
-        g.fillStyle(col, 0.85);
-        g.fillCircle(hx, hy, 14);
-        g.fillStyle(0x1a2a3a, 1);
-        g.fillRect(hx - 12, hy + 18, 24, 3);
-        g.fillStyle(pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c, 1);
-        g.fillRect(hx - 12, hy + 18, 24 * pct, 3);
+        const classTint = Hero.CLASS_TINT[h.heroClass as HeroClass];
+        if (classTint) sprite.setTint(classTint);
       }
-      this.squadPreviewCt.add(g);
+      this.squadPreviewCt.add(sprite);
+
+      // HP bar under sprite (alive only)
+      if (!onCooldown) {
+        const pct = Math.max(0, h.currentHp / h.maxHp);
+        const g = this.add.graphics().setScrollFactor(0);
+        g.fillStyle(0x1a2a3a, 1);
+        g.fillRect(hx - 12, hy + 16, 24, 3);
+        g.fillStyle(pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c, 1);
+        g.fillRect(hx - 12, hy + 16, 24 * pct, 3);
+        this.squadPreviewCt.add(g);
+      }
 
       if (onCooldown) {
-        // Red cooldown number instead of class initial
         this.squadPreviewCt.add(
-          this.add.text(hx, hy, `${h.reviveCooldown}`, {
+          this.add.text(hx, hy - 18, `${h.reviveCooldown}`, {
             fontSize: '15px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', color: '#e74c3c',
             stroke: '#000', strokeThickness: 2,
-          }).setOrigin(0.5),
-        );
-      } else {
-        this.squadPreviewCt.add(
-          this.add.text(hx, hy, h.heroClass[0], {
-            fontSize: '13px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', color: '#fff',
-            stroke: '#000', strokeThickness: 2,
-          }).setOrigin(0.5),
+          }).setOrigin(0.5).setScrollFactor(0),
         );
       }
     });
@@ -1152,7 +1327,7 @@ export class OverworldScene extends Phaser.Scene {
     // Close ✕
     const closeBtn = this.add.text(PANEL_W - 20, HEADER_H / 2, '✕', {
       fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#556070',
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setScrollFactor(0);
     closeBtn.on('pointerover', () => closeBtn.setColor('#cc4444'));
     closeBtn.on('pointerout',  () => closeBtn.setColor('#556070'));
     closeBtn.on('pointerdown', () => this.closePartyPanel());
@@ -1193,6 +1368,9 @@ export class OverworldScene extends Phaser.Scene {
       if (onCooldown) {
         portrait.setTint(0x444444);
         portrait.setAlpha(0.5);
+      } else {
+        const classTint = Hero.CLASS_TINT[heroData.heroClass as HeroClass];
+        if (classTint) portrait.setTint(classTint);
       }
       panel.add(portrait);
 
@@ -1261,7 +1439,7 @@ export class OverworldScene extends Phaser.Scene {
         panel.add(upBg);
         const upBtn = this.add.text(PANEL_W - 32, cardY + 28, '\u25b2', {
           fontSize: '24px', fontFamily: 'Nunito, sans-serif', color: '#4a6a88',
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setScrollFactor(0);
         upBtn.on('pointerover', () => upBtn.setColor('#c0a060'));
         upBtn.on('pointerout',  () => upBtn.setColor('#4a6a88'));
         upBtn.on('pointerdown', () => this.reorderAndRebuild(idx, idx - 1));
@@ -1274,7 +1452,7 @@ export class OverworldScene extends Phaser.Scene {
         panel.add(dnBg);
         const dnBtn = this.add.text(PANEL_W - 32, cardY + 68, '\u25bc', {
           fontSize: '24px', fontFamily: 'Nunito, sans-serif', color: '#4a6a88',
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setScrollFactor(0);
         dnBtn.on('pointerover', () => dnBtn.setColor('#c0a060'));
         dnBtn.on('pointerout',  () => dnBtn.setColor('#4a6a88'));
         dnBtn.on('pointerdown', () => this.reorderAndRebuild(idx, idx + 1));
@@ -1284,7 +1462,7 @@ export class OverworldScene extends Phaser.Scene {
       // Drag-to-reorder — drag the card row up/down
       const dragHit = this.add.rectangle(
         PANEL_W / 2 - 30, cardY + CARD_H / 2, PANEL_W - 120, CARD_H - 4, 0x000000, 0,
-      ).setInteractive({ useHandCursor: true, draggable: true });
+      ).setInteractive({ useHandCursor: true, draggable: true }).setScrollFactor(0);
       dragHit.setData('heroIdx', idx);
       panel.add(dragHit);
 
@@ -1370,7 +1548,7 @@ export class OverworldScene extends Phaser.Scene {
 
     // Title
     const title = this.add.text(cx, cy - 100, `FLOOR ${run.currentFloor + 1} COMPLETE`, {
-      fontSize: '56px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '56px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#3498db', stroke: '#0a1a30', strokeThickness: 6,
       letterSpacing: 4,
     }).setOrigin(0.5).setDepth(52).setAlpha(0).setScrollFactor(0);
@@ -1395,7 +1573,7 @@ export class OverworldScene extends Phaser.Scene {
 
       // Floor number label
       const numText = this.add.text(dotX, dotY + 18, `${i + 1}`, {
-        fontSize: '12px', fontFamily: 'Nunito, sans-serif',
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif',
         color: done ? '#5ab8e8' : '#3a4a5a',
       }).setOrigin(0.5).setDepth(52).setAlpha(0).setScrollFactor(0);
       this.tweens.add({ targets: numText, alpha: 1, duration: 300, delay: 600 + i * 100 });
@@ -1483,7 +1661,7 @@ export class OverworldScene extends Phaser.Scene {
     // Title
     const title = this.add.text(cx, cy - 120, titleText, {
       fontSize: bossDefeated ? '80px' : '72px',
-      fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#f1c40f', stroke: '#5c3d00', strokeThickness: 7,
       letterSpacing: 4,
     }).setOrigin(0.5).setDepth(52).setAlpha(0).setScrollFactor(0);
@@ -1598,12 +1776,178 @@ export class OverworldScene extends Phaser.Scene {
     this.pulseTime += delta;
     const run = getRunState();
 
+    // ── Node glow + beacon pulse ──────────────────────────────────────────
     const pulseMag = 0.09 * Math.sin(this.pulseTime / 380);
     for (const id of run.availableNodeIds) {
       if (run.completedNodeIds.has(id) || run.lockedNodeIds.has(id)) continue;
       const glow = this.nodeGlows.get(id);
-      if (!glow) continue;
-      glow.setAlpha(0.13 + pulseMag);
+      if (glow) glow.setAlpha(0.13 + pulseMag);
+      const beacon = this.nodeBeacons.get(id);
+      if (beacon) beacon.setAlpha(0.04 + 0.04 * Math.sin(this.pulseTime / 380));
+    }
+
+    // ── Twinkling stars ───────────────────────────────────────────────────
+    for (const star of this.stars) {
+      const a = 0.08 + 0.22 * (Math.sin(this.pulseTime / 1000 * star.speed + star.phase) * 0.5 + 0.5);
+      star.gfx.setAlpha(a); // range: 0.08 – 0.30
+    }
+
+    // ── Boss node effects ─────────────────────────────────────────────────
+    if (this.bossAura) {
+      this.bossAura.setAlpha(0.18 + 0.08 * Math.sin(this.pulseTime / 500));
+    }
+    if (this.bossRing) {
+      this.bossRing.rotation += 0.003 * delta;
+    }
+    // Boss red sparks
+    if (this.bossNodePos) {
+      this.bossParticleTimer += delta;
+      if (this.bossParticleTimer > 1200 && this.bossParticles.length < 6) {
+        this.bossParticleTimer = 0;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.015 + Math.random() * 0.01;
+        const gfx = this.add.graphics().setDepth(4);
+        gfx.fillStyle(0xff3322, 0.9);
+        gfx.fillCircle(0, 0, 1.5);
+        gfx.setPosition(this.bossNodePos.x, this.bossNodePos.y);
+        this.bossParticles.push({
+          gfx, x: this.bossNodePos.x, y: this.bossNodePos.y,
+          vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+          life: 0, maxLife: 1500 + Math.random() * 1000,
+        });
+      }
+      for (let i = this.bossParticles.length - 1; i >= 0; i--) {
+        const p = this.bossParticles[i];
+        p.life += delta;
+        p.x += p.vx * delta;
+        p.y += p.vy * delta;
+        p.gfx.setPosition(p.x, p.y);
+        const lifeRatio = p.life / p.maxLife;
+        p.gfx.setAlpha(lifeRatio > 0.7 ? 1 - (lifeRatio - 0.7) / 0.3 : 0.9);
+        if (p.life >= p.maxLife) {
+          p.gfx.destroy();
+          this.bossParticles.splice(i, 1);
+        }
+      }
+    }
+
+    // ── Path flow particles ───────────────────────────────────────────────
+    this.pathParticleTimer += delta;
+
+    // Spawn gold dots on completed paths
+    if (this.pathParticleTimer > 600 && this.completedPathSegments.length > 0 && this.pathParticles.length < 12) {
+      this.pathParticleTimer = 0;
+      const seg = this.completedPathSegments[Math.floor(Math.random() * this.completedPathSegments.length)];
+      const gfx = this.add.graphics().setDepth(3);
+      gfx.fillStyle(0xf1c40f, 1);
+      gfx.fillCircle(0, 0, 3);
+      gfx.setPosition(seg.fromX, seg.fromY);
+      this.pathParticles.push({
+        gfx, t: 0, fromX: seg.fromX, fromY: seg.fromY, toX: seg.toX, toY: seg.toY,
+        duration: 2000, color: 0xf1c40f, elapsed: 0,
+      });
+    }
+    // Spawn blue dots on available paths (slower)
+    if (this.pathParticleTimer > 400 && this.availablePathSegments.length > 0 && this.pathParticles.length < 12) {
+      if (Math.random() < 0.3) {
+        const seg = this.availablePathSegments[Math.floor(Math.random() * this.availablePathSegments.length)];
+        const gfx = this.add.graphics().setDepth(3);
+        gfx.fillStyle(0x6b8cba, 1);
+        gfx.fillCircle(0, 0, 2.5);
+        gfx.setPosition(seg.fromX, seg.fromY);
+        this.pathParticles.push({
+          gfx, t: 0, fromX: seg.fromX, fromY: seg.fromY, toX: seg.toX, toY: seg.toY,
+          duration: 3000, color: 0x6b8cba, elapsed: 0,
+        });
+      }
+    }
+    // Update path particles
+    for (let i = this.pathParticles.length - 1; i >= 0; i--) {
+      const p = this.pathParticles[i];
+      p.elapsed += delta;
+      p.t = Math.min(1, p.elapsed / p.duration);
+      p.gfx.setPosition(
+        p.fromX + (p.toX - p.fromX) * p.t,
+        p.fromY + (p.toY - p.fromY) * p.t,
+      );
+      // Fade in first 10%, fade out last 20%
+      let alpha = 1;
+      if (p.t < 0.1) alpha = p.t / 0.1;
+      else if (p.t > 0.8) alpha = (1 - p.t) / 0.2;
+      p.gfx.setAlpha(alpha);
+      if (p.t >= 1) {
+        p.gfx.destroy();
+        this.pathParticles.splice(i, 1);
+      }
+    }
+
+    // ── Themed ambient particles ──────────────────────────────────────────
+    this.ambientTimer += delta;
+    if (this.ambientTimer > 400 && this.ambientParticles.length < 20) {
+      this.ambientTimer = 0;
+      const cam = this.cameras.main;
+      const colors = this.currentTheme.particleColors;
+      const col = colors[Math.floor(Math.random() * colors.length)];
+      const pType = this.currentTheme.particle;
+
+      let px: number, py: number, vx: number, vy: number;
+      if (pType === 'snowflake') {
+        px = cam.scrollX + Math.random() * GAME_WIDTH;
+        py = cam.scrollY - 10;
+        vx = (Math.random() - 0.5) * 0.01;
+        vy = 0.02 + Math.random() * 0.015;
+      } else if (pType === 'ember') {
+        px = cam.scrollX + Math.random() * GAME_WIDTH;
+        py = GAME_HEIGHT + 10;
+        vx = (Math.random() - 0.5) * 0.015;
+        vy = -(0.02 + Math.random() * 0.015);
+      } else {
+        // firefly — drift up with sine wave
+        px = cam.scrollX + Math.random() * GAME_WIDTH;
+        py = GAME_HEIGHT * 0.4 + Math.random() * GAME_HEIGHT * 0.5;
+        vx = (Math.random() - 0.5) * 0.008;
+        vy = -(0.008 + Math.random() * 0.01);
+      }
+
+      const maxLife = 4000 + Math.random() * 3000;
+      const gfx = this.add.graphics().setDepth(3);
+      gfx.fillStyle(col, 1);
+      const r = pType === 'snowflake' ? 2 : 1.5;
+      gfx.fillCircle(0, 0, r);
+      gfx.setPosition(px, py).setAlpha(0);
+
+      this.ambientParticles.push({
+        gfx, x: px, y: py, vx, vy,
+        life: 0, maxLife,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+    // Update ambient particles
+    for (let i = this.ambientParticles.length - 1; i >= 0; i--) {
+      const p = this.ambientParticles[i];
+      p.life += delta;
+      const pType = this.currentTheme.particle;
+
+      // Sine wave oscillation
+      const sineOffset = Math.sin(p.life / 800 + p.phase) * 0.3;
+      p.x += (p.vx + (pType === 'firefly' ? sineOffset * 0.02 : 0)) * delta;
+      p.y += p.vy * delta;
+      if (pType === 'snowflake') p.x += sineOffset * 0.015 * delta;
+
+      p.gfx.setPosition(p.x, p.y);
+
+      // Fade: in first 15%, out last 25%
+      const lifeRatio = p.life / p.maxLife;
+      let alpha: number;
+      if (lifeRatio < 0.15) alpha = lifeRatio / 0.15;
+      else if (lifeRatio > 0.75) alpha = (1 - lifeRatio) / 0.25;
+      else alpha = 1;
+      p.gfx.setAlpha(alpha * 0.6);
+
+      if (p.life >= p.maxLife) {
+        p.gfx.destroy();
+        this.ambientParticles.splice(i, 1);
+      }
     }
   }
 }

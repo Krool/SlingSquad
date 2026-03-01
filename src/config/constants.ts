@@ -456,5 +456,9 @@ export const HERO_REGEN_PERCENT = 0.10;   // fraction of maxHp healed after ever
 // ─── Multi-Floor Runs ────────────────────────────────────────────────────────
 export const TOTAL_FLOORS_PER_RUN = 3;
 
+// ─── Skill Tree ────────────────────────────────────────────────────────
+export const SKILL_TIER1_BATTLES = 2;   // battles won to unlock tier 1
+export const SKILL_TIER2_BATTLES = 5;   // battles won to unlock tier 2
+
 // ─── Safe Area (dynamic island / notch buffer) ──────────────────────────
 export const SAFE_AREA_LEFT = 50;

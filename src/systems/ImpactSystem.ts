@@ -88,7 +88,8 @@ export class ImpactSystem {
     const stats = HERO_STATS.WARRIOR;
     // Vanguard passive: +25% impact on first launch
     const vanguardMult = hero.isFirstLaunch ? 1.25 : 1.0;
-    const dmg = this.calcImpact(stats.impactMultiplier) * vanguardMult;
+    const skillImpactBonus = hero.skillMods?.impactMultBonus ?? 0;
+    const dmg = this.calcImpact(stats.impactMultiplier + skillImpactBonus) * vanguardMult;
     const knockbackBonus = this.relicMods.warriorKnockback;
 
     // Extra force applied to nearby blocks
@@ -154,7 +155,7 @@ export class ImpactSystem {
       }
     }
 
-    const totalArrows = stats.arrowCount + this.relicMods.rangerArrowBonus;
+    const totalArrows = stats.arrowCount + this.relicMods.rangerArrowBonus + (hero.skillMods?.arrowCountBonus ?? 0);
     const spreadAngles = totalArrows === 1
       ? [0]
       : Array.from({ length: totalArrows }, (_, i) => -25 + (i / (totalArrows - 1)) * 50);
@@ -187,8 +188,9 @@ export class ImpactSystem {
   private mageImpact(hero: Hero, blocks: Block[], enemies: Enemy[], barrels: Barrel[]) {
     const { x, y } = hero.body!.position;
     const stats = HERO_STATS.MAGE;
-    const r = stats.aoeRadius + this.relicMods.mageAoeRadiusBonus;
-    const mageDmg = this.calcImpact(stats.impactMultiplier);
+    const r = stats.aoeRadius + this.relicMods.mageAoeRadiusBonus + (hero.skillMods?.aoeRadiusBonus ?? 0);
+    const skillImpactBonus = hero.skillMods?.impactMultBonus ?? 0;
+    const mageDmg = this.calcImpact(stats.impactMultiplier + skillImpactBonus);
 
     // Damage blocks in radius
     for (const b of blocks) {
@@ -221,9 +223,10 @@ export class ImpactSystem {
       if (d < r) barrel.explode();
     }
 
-    // Chain Lightning relic: chain to additional enemies outside the AoE
-    if (this.relicMods.mageChainTargets > 0) {
-      let chains = this.relicMods.mageChainTargets;
+    // Chain Lightning relic + skill: chain to additional enemies outside the AoE
+    const totalChainTargets = this.relicMods.mageChainTargets + (hero.skillMods?.chainTargetBonus ?? 0);
+    if (totalChainTargets > 0) {
+      let chains = totalChainTargets;
       const chainDmg = mageDmg * CHAIN_LIGHTNING_DAMAGE_MULT;
       for (const e of enemies) {
         if (chains <= 0) break;
@@ -255,7 +258,7 @@ export class ImpactSystem {
     const stats = HERO_STATS.PRIEST;
 
     // Small landing impact
-    const crashDmg = this.calcImpact(stats.impactMultiplier);
+    const crashDmg = this.calcImpact(stats.impactMultiplier + (hero.skillMods?.impactMultBonus ?? 0));
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < IMPACT_RADIUS_PRIEST) {
@@ -277,8 +280,8 @@ export class ImpactSystem {
     }
     this.spawnImpactParticles(x, y, 0xffe066, 8);  // gold particles
 
-    const healRadius = stats.healRadius + this.relicMods.priestHealRadiusBonus;
-    const healAmount = stats.healAmount + this.relicMods.priestHealBonus;
+    const healRadius = stats.healRadius + this.relicMods.priestHealRadiusBonus + (hero.skillMods?.healRadiusBonus ?? 0);
+    const healAmount = stats.healAmount + this.relicMods.priestHealBonus + (hero.skillMods?.healAmountBonus ?? 0);
     this.scene.events.emit('priestHealAura', x, y, healRadius, healAmount, hero);
     this.spawnHealAura(x, y, healRadius);
 
@@ -301,8 +304,8 @@ export class ImpactSystem {
   private bardImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
     const { x, y } = hero.body!.position;
     const bardStats = HERO_STATS.BARD;
-    const charmRadius = bardStats.charmRadius + this.relicMods.bardCharmBonus;
-    const charmDuration = bardStats.charmDurationMs;
+    const charmRadius = bardStats.charmRadius + this.relicMods.bardCharmBonus + (hero.skillMods?.charmRadiusBonus ?? 0);
+    const charmDuration = bardStats.charmDurationMs + (hero.skillMods?.charmDurationBonus ?? 0);
 
     // Small landing damage (0.8x base, 80px radius)
     const crashDmg = this.calcImpact(bardStats.impactMultiplier);
@@ -388,7 +391,7 @@ export class ImpactSystem {
         // Backstab passive: 2x damage if Rogue lands behind the enemy.
         // Enemies face left (flipX=true) by default. "Behind" = Rogue is to the enemy's right.
         const isBehind = x > e.x;
-        const backstab = isBehind ? 2.0 : 1.0;
+        const backstab = isBehind ? (2.0 + (hero.skillMods?.backstabMult ?? 0)) : 1.0;
         const dealt = crashDmg * (1 - d / IMPACT_RADIUS_ROGUE) * backstab;
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
@@ -403,7 +406,7 @@ export class ImpactSystem {
   private paladinImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
     const { x, y } = hero.body!.position;
     const stats = HERO_STATS.PALADIN;
-    const crashDmg = this.calcImpact(stats.impactMultiplier);
+    const crashDmg = this.calcImpact(stats.impactMultiplier + (hero.skillMods?.impactMultBonus ?? 0));
 
     // Heavy impact
     for (const b of blocks) {
@@ -426,8 +429,8 @@ export class ImpactSystem {
       }
     }
 
-    // Spawn temporary shield wall (3 blocks in front)
-    const wallCount = stats.shieldWallBlocks;
+    // Spawn temporary shield wall (blocks in front)
+    const wallCount = stats.shieldWallBlocks + (hero.skillMods?.shieldWallBonus ?? 0);
     for (let i = 0; i < wallCount; i++) {
       const wx = x + 30 + i * 28;
       const wy = y - 20;
@@ -443,7 +446,7 @@ export class ImpactSystem {
   private druidImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
     const { x, y } = hero.body!.position;
     const stats = HERO_STATS.DRUID;
-    const crashDmg = this.calcImpact(stats.impactMultiplier);
+    const crashDmg = this.calcImpact(stats.impactMultiplier + (hero.skillMods?.impactMultBonus ?? 0));
 
     // Landing damage — Nature's Wrath passive: +30% to wood blocks
     for (const b of blocks) {
@@ -468,11 +471,12 @@ export class ImpactSystem {
     }
 
     // Spawn wolf minions — emitted to BattleScene for entity creation
-    const wolfCount = stats.wolfCount + this.relicMods.druidWolfBonus;
+    const wolfCount = stats.wolfCount + this.relicMods.druidWolfBonus + (hero.skillMods?.wolfCountBonus ?? 0);
+    const wolfDmg = stats.wolfDamage + (hero.skillMods?.wolfDamageBonus ?? 0);
     for (let i = 0; i < wolfCount; i++) {
       const wx = x + Phaser.Math.Between(-40, 40);
       const wy = y - Phaser.Math.Between(10, 30);
-      this.scene.events.emit('spawnWolf', wx, wy, stats.wolfDamage, stats.wolfHp, hero);
+      this.scene.events.emit('spawnWolf', wx, wy, wolfDmg, stats.wolfHp, hero);
     }
 
     this.spawnImpactParticles(x, y, 0x16a085, 10);

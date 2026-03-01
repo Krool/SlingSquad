@@ -657,7 +657,7 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5, 0));
 
     container.add(this.add.text(0, 30, desc, {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
+      fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
       wordWrap: { width: pw - 24 }, align: 'center',
     }).setOrigin(0.5, 0));
 
@@ -708,12 +708,12 @@ export class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5, 0));
 
     container.add(this.add.text(0, 32, lines[0], {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
     }).setOrigin(0.5, 0));
 
     if (lines[1]) {
       container.add(this.add.text(0, 50, lines[1], {
-        fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
+        fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
         wordWrap: { width: pw - 20 }, align: 'center',
       }).setOrigin(0.5, 0));
     }
@@ -762,7 +762,7 @@ export class MainMenuScene extends Phaser.Scene {
     // ── Title text (the "projectile") ──
     const startX = postX - 30;
     const title = this.add.text(startX, finalY, 'SLING SQUAD', {
-      fontSize: '52px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '52px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#c8a840', stroke: '#000', strokeThickness: 5,
       letterSpacing: 6,
     }).setOrigin(0.5).setDepth(10).setScale(0.9, 1);
@@ -883,7 +883,7 @@ export class MainMenuScene extends Phaser.Scene {
     const px = GAME_WIDTH - 126 + 55; // center of currency bar
     const py = 12;
     const badge = this.add.text(px, py + 8, `+${earned}`, {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif',
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif',
       color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(12).setAlpha(0).setScale(1.4);
     this.tweens.add({

@@ -37,7 +37,7 @@ export class SettingsScene extends Phaser.Scene {
 
     // ── Title ──────────────────────────────────────────────────────────────
     this.add.text(cx, cy - 190, '\u2699  SETTINGS', {
-      fontSize: '30px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '30px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 3,
       letterSpacing: 2,
     }).setOrigin(0.5).setDepth(2);
@@ -47,7 +47,7 @@ export class SettingsScene extends Phaser.Scene {
 
     // ── AUDIO section ──────────────────────────────────────────────────────
     this.add.text(cx - 220, cy - 145, 'AUDIO', {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a',
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a',
       letterSpacing: 3,
     }).setDepth(2);
 
@@ -97,7 +97,7 @@ export class SettingsScene extends Phaser.Scene {
 
     // ── GAMEPLAY section ───────────────────────────────────────────────────
     this.add.text(cx - 220, cy + 65, 'GAMEPLAY', {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a',
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a',
       letterSpacing: 3,
     }).setDepth(2);
 

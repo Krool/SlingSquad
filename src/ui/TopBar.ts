@@ -4,7 +4,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 // ─── Settings Gear ─────────────────────────────────────────────────────────────
 
 /**
- * Standardized 52x52 settings gear button at top-left (12,12).
+ * Standardized 52x52 settings gear button at top-left (20,20).
  * Returns a container wrapping bg, text, and hit area so callers can
  * apply setScrollFactor(0) on the whole group.
  */
@@ -15,27 +15,27 @@ export function buildSettingsGear(
   leftInset = 0,
 ): Phaser.GameObjects.Container {
   const size = 52, r = 10;
-  const gx = 12 + leftInset;
+  const gx = 20 + leftInset, gy = 20;
   const container = scene.add.container(0, 0).setDepth(depth);
 
   const bg = scene.add.graphics();
   const draw = (hovered: boolean) => {
     bg.clear();
     bg.fillStyle(0x060b12, hovered ? 1 : 0.75);
-    bg.fillRoundedRect(gx, 12, size, size, r);
+    bg.fillRoundedRect(gx, gy, size, size, r);
     bg.lineStyle(1, 0x3a5070, hovered ? 1 : 0.5);
-    bg.strokeRoundedRect(gx, 12, size, size, r);
+    bg.strokeRoundedRect(gx, gy, size, size, r);
   };
   draw(false);
   container.add(bg);
 
-  const text = scene.add.text(gx + size / 2, 12 + size / 2, '\u2699', {
+  const text = scene.add.text(gx + size / 2, gy + size / 2, '\u2699', {
     fontSize: '28px', fontFamily: 'Nunito, sans-serif', color: '#c0c8d0',
   }).setOrigin(0.5);
   container.add(text);
 
-  const hit = scene.add.rectangle(gx + size / 2, 12 + size / 2, size, size, 0x000000, 0)
-    .setInteractive({ useHandCursor: true });
+  const hit = scene.add.rectangle(gx + size / 2, gy + size / 2, size, size, 0x000000, 0)
+    .setInteractive({ useHandCursor: true }).setScrollFactor(0);
   container.add(hit);
   hit.on('pointerover', () => draw(true));
   hit.on('pointerout', () => draw(false));
@@ -115,7 +115,7 @@ export function buildCurrencyBar(
 ): CurrencyBarResult {
   const W = 110, H = 40, R = 7;
   const px = GAME_WIDTH - 126 - slot * (W + 6);
-  const py = 12;
+  const py = 20;
 
   const container = scene.add.container(px, py).setDepth(depth);
 
@@ -155,7 +155,7 @@ export function buildCurrencyBar(
 
   // Clickable hit area for popover
   const hit = scene.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0)
-    .setInteractive({ useHandCursor: true });
+    .setInteractive({ useHandCursor: true }).setScrollFactor(0);
   container.add(hit);
   hit.on('pointerdown', () => {
     showCurrencyPopover(scene, type, px + W / 2, py + H + 6);
@@ -236,7 +236,7 @@ export function showCurrencyPopover(
     ? 'Earned from battles.\nSpent at shops.'
     : 'Earned at end of runs.\nSpent on camp upgrades.';
   container.add(scene.add.text(PW / 2, 56, desc, {
-    fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
+    fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
     align: 'center', lineSpacing: 2,
   }).setOrigin(0.5, 0.5));
 
@@ -297,13 +297,13 @@ export function buildBackButton(
   const accentHex = '#' + color.toString(16).padStart(6, '0');
   container.add(
     scene.add.text(0, 0, label, {
-      fontSize: '17px', fontFamily: 'Nunito, sans-serif',
+      fontSize: '18px', fontFamily: 'Nunito, sans-serif',
       color: accentHex, stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5),
   );
 
   const hit = scene.add.rectangle(0, 0, w, h, 0, 0)
-    .setInteractive({ useHandCursor: true });
+    .setInteractive({ useHandCursor: true }).setScrollFactor(0);
   container.add(hit);
   hit.on('pointerover', () => drawBg(true));
   hit.on('pointerout', () => drawBg(false));

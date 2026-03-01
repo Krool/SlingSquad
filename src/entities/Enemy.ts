@@ -6,6 +6,20 @@ import type { Hero } from './Hero';
 export type EnemyState = 'idle' | 'combat' | 'dead';
 
 export class Enemy {
+  /** Persistent tint for enemies that reuse another class's sprite folder */
+  static readonly CLASS_TINT: Partial<Record<EnemyClass, number>> = {
+    SHIELD:        0x5588cc,
+    BOMBER:        0xbb66dd,
+    HEALER:        0x55cc88,
+    BOSS_GRUNT:    0xff4444,
+    ICE_MAGE:      0x74b9ff,
+    YETI:          0xdfe6e9,
+    FROST_ARCHER:  0xa29bfe,
+    FIRE_IMP:      0xfd79a8,
+    DEMON_KNIGHT:  0xd63031,
+    INFERNAL_BOSS: 0x6c5ce7,
+  };
+
   readonly scene: Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
   readonly enemyClass: EnemyClass;
   readonly stats: typeof ENEMY_STATS[EnemyClass];
@@ -65,21 +79,10 @@ export class Enemy {
     this.sprite.play(`${charKey}_idle`);
 
     // Visual differentiation for reused sprite folders
-    if (enemyClass === 'SHIELD') this.sprite.setTint(0x5588cc);
-    if (enemyClass === 'BOMBER') this.sprite.setTint(0xbb66dd);
-    if (enemyClass === 'HEALER') this.sprite.setTint(0x55cc88);
-    if (enemyClass === 'ICE_MAGE') this.sprite.setTint(0x74b9ff);
-    if (enemyClass === 'YETI') this.sprite.setTint(0xdfe6e9);
-    if (enemyClass === 'FROST_ARCHER') this.sprite.setTint(0xa29bfe);
-    if (enemyClass === 'FIRE_IMP') this.sprite.setTint(0xfd79a8);
-    if (enemyClass === 'DEMON_KNIGHT') this.sprite.setTint(0xd63031);
-    if (enemyClass === 'INFERNAL_BOSS') {
-      this.sprite.setTint(0x6c5ce7);
+    const classTint = Enemy.CLASS_TINT[enemyClass];
+    if (classTint) this.sprite.setTint(classTint);
+    if (enemyClass === 'INFERNAL_BOSS' || enemyClass === 'BOSS_GRUNT') {
       this.sprite.setDisplaySize(r * 2.8, r * 2.8);
-    }
-    if (enemyClass === 'BOSS_GRUNT') {
-      this.sprite.setTint(0xff4444);
-      this.sprite.setDisplaySize(r * 2.8, r * 2.8); // bigger sprite for boss variant
     }
 
     this.hpBarBg   = scene.add.graphics();
@@ -136,12 +139,7 @@ export class Enemy {
 
   /** Restore the class-specific tint after hit flash */
   restoreTint() {
-    const tintMap: Partial<Record<EnemyClass, number>> = {
-      SHIELD: 0x5588cc, BOMBER: 0xbb66dd, HEALER: 0x55cc88, BOSS_GRUNT: 0xff4444,
-      ICE_MAGE: 0x74b9ff, YETI: 0xdfe6e9, FROST_ARCHER: 0xa29bfe,
-      FIRE_IMP: 0xfd79a8, DEMON_KNIGHT: 0xd63031, INFERNAL_BOSS: 0x6c5ce7,
-    };
-    const tint = tintMap[this.enemyClass];
+    const tint = Enemy.CLASS_TINT[this.enemyClass];
     if (tint) this.sprite?.setTint(tint);
     else this.sprite?.clearTint();
   }

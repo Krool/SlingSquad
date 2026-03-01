@@ -428,7 +428,7 @@ export class SquadSelectScene extends Phaser.Scene {
       // "In Squad" label if slotted
       if (isSlotted) {
         const inSquad = this.add.text(0, cardH / 2 - 12, 'In Squad', {
-          fontSize: '12px', fontFamily: 'Nunito, sans-serif',
+          fontSize: '13px', fontFamily: 'Nunito, sans-serif',
           color: '#4a5a6a',
         }).setOrigin(0.5);
         container.add(inSquad);
@@ -634,7 +634,7 @@ export class SquadSelectScene extends Phaser.Scene {
     // ── Map selection (left column) ──
     const mapCX = cx - 200;
     this.add.text(mapCX, panelY + 6, 'MAP', {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const maps = getAllMaps();
@@ -663,7 +663,7 @@ export class SquadSelectScene extends Phaser.Scene {
     // ── Ascension (center column) ──
     const ascCX = cx;
     this.add.text(ascCX, panelY + 6, 'ASCENSION', {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const maxAsc = getUnlockedAscension();
@@ -690,7 +690,7 @@ export class SquadSelectScene extends Phaser.Scene {
     // ── Modifier toggles (right column) ──
     const modCX = cx + 200;
     this.add.text(modCX, panelY + 6, 'MODIFIERS', {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
     const modDefs = [
@@ -820,7 +820,7 @@ export class SquadSelectScene extends Phaser.Scene {
     let nextY = 58;
     if (passive) {
       const passiveText = this.add.text(0, nextY, `${passive.name} — ${passive.desc}`, {
-        fontSize: '13px', fontFamily: 'Nunito, sans-serif', fontStyle: 'italic',
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif', fontStyle: 'italic',
         color: '#8a8a7a', wordWrap: { width: PW - 24 }, align: 'center',
       }).setOrigin(0.5, 0);
       contentItems.push(passiveText);
@@ -844,13 +844,13 @@ export class SquadSelectScene extends Phaser.Scene {
       const shards = getShards();
       const costText = `${unlockUpgrade.name} — ${unlockUpgrade.shardCost} \u25c6`;
       contentItems.push(this.add.text(0, nextY, costText, {
-        fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
       }).setOrigin(0.5, 0));
 
       if (shards < unlockUpgrade.shardCost) {
         const need = unlockUpgrade.shardCost - shards;
         contentItems.push(this.add.text(0, nextY + 18, `(need ${need} more)`, {
-          fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#8a4040',
+          fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#8a4040',
         }).setOrigin(0.5, 0));
         nextY += 18;
       }

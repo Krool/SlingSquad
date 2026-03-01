@@ -1,4 +1,4 @@
-import { HERO_STATS, MAX_SQUAD_SIZE, TOTAL_FLOORS_PER_RUN, REVIVE_COOLDOWN_NODES, REVIVE_HP_PERCENT, HERO_REGEN_PERCENT, type HeroClass } from '@/config/constants';
+import { HERO_STATS, MAX_SQUAD_SIZE, TOTAL_FLOORS_PER_RUN, REVIVE_COOLDOWN_NODES, REVIVE_HP_PERCENT, HERO_REGEN_PERCENT, SKILL_TIER1_BATTLES, SKILL_TIER2_BATTLES, type HeroClass } from '@/config/constants';
 import type { MetaBonuses } from '@/systems/MetaState';
 import { getAscensionModifiers } from '@/systems/AscensionSystem';
 import { getMapById } from '@/data/maps/index';
@@ -38,6 +38,8 @@ export interface HeroRunData {
   maxHp: number;
   reviveCooldown?: number; // 0/undefined = alive, >0 = nodes until auto-revive
   deathCount?: number;     // times this hero has died this run (escalates cooldown)
+  battlesCompleted?: number;   // battles won this run (for skill tree leveling)
+  selectedSkills?: string[];   // chosen skill IDs, e.g. ['warrior_t1a']
 }
 
 // ─── The run ─────────────────────────────────────────────────────────────────
@@ -129,6 +131,8 @@ export function newRun(
         maxHp,
         reviveCooldown: 0,
         deathCount: 0,
+        battlesCompleted: 0,
+        selectedSkills: [],
       };
     }),
     gold: startingGold,
@@ -435,6 +439,55 @@ export function ensureActiveHero() {
   saveRun();
 }
 
+// ─── Skill Tree / Battle XP API ─────────────────────────────────────────────
+
+/** Increment battlesCompleted for all non-cooldown squad heroes. */
+export function addHeroBattleXP() {
+  const s = getRunState();
+  for (const h of s.squad) {
+    if ((h.reviveCooldown ?? 0) > 0) continue;
+    h.battlesCompleted = (h.battlesCompleted ?? 0) + 1;
+  }
+  saveRun();
+}
+
+/** Choose a skill for a hero class. Pushes the skill ID onto selectedSkills. */
+export function selectHeroSkill(heroClass: HeroClass, skillId: string) {
+  const s = getRunState();
+  const h = s.squad.find(e => e.heroClass === heroClass);
+  if (!h) return;
+  if (!h.selectedSkills) h.selectedSkills = [];
+  h.selectedSkills.push(skillId);
+  saveRun();
+}
+
+/** Return list of heroes who crossed a battle threshold but haven't picked a skill for that tier. */
+export function getPendingLevelUps(): Array<{ heroClass: HeroClass; tier: 1 | 2 }> {
+  const s = getRunState();
+  const pending: Array<{ heroClass: HeroClass; tier: 1 | 2 }> = [];
+  for (const h of s.squad) {
+    const battles = h.battlesCompleted ?? 0;
+    const skills = h.selectedSkills ?? [];
+    const hasTier1 = skills.some(id => id.includes('_t1'));
+    const hasTier2 = skills.some(id => id.includes('_t2'));
+    if (battles >= SKILL_TIER1_BATTLES && !hasTier1) {
+      pending.push({ heroClass: h.heroClass, tier: 1 });
+    }
+    if (battles >= SKILL_TIER2_BATTLES && !hasTier2) {
+      pending.push({ heroClass: h.heroClass, tier: 2 });
+    }
+  }
+  return pending;
+}
+
+// ─── Cost Scaling ────────────────────────────────────────────────────────────
+
+/** Progressive cost multiplier: +8% per completed node. */
+export function getProgressCostMult(): number {
+  const completed = getRunState().completedNodeIds.size;
+  return 1 + completed * 0.08;
+}
+
 /** Apply regen to all alive (non-cooldown) heroes. Returns array of { heroClass, healed } for visual feedback. */
 export function applyRegen(): Array<{ heroClass: HeroClass; healed: number }> {
   const s = getRunState();
@@ -452,7 +505,8 @@ export function applyRegen(): Array<{ heroClass: HeroClass; healed: number }> {
 }
 
 /** Persist hero HP after a victory.
- *  Living heroes fully heal. Dead heroes go on revive cooldown.
+ *  Living heroes keep their battle-damaged HP. Dead heroes go on revive cooldown.
+ *  Regen is applied separately on the overworld map (visible health bar increase).
  *  Heroes already on cooldown (not in this battle) are left untouched. */
 export function syncSquadHp(heroes: Array<{ heroClass: HeroClass; hp: number; maxHp: number; state: string }>) {
   const s = getRunState();
@@ -469,7 +523,7 @@ export function syncSquadHp(heroes: Array<{ heroClass: HeroClass; hp: number; ma
       const baseCooldown = REVIVE_COOLDOWN_NODES + (entry.deathCount - 1);
       entry.reviveCooldown = Math.max(1, baseCooldown - totalReduction);
     } else {
-      entry.currentHp = h.maxHp; // full heal after every battle
+      entry.currentHp = h.hp; // preserve battle-damaged HP
     }
   }
   saveRun();
@@ -518,10 +572,12 @@ export function loadRun(): boolean {
       metaLaunchPowerPct: data.metaLaunchPowerPct ?? 0,
       metaReviveCooldownReduction: data.metaReviveCooldownReduction ?? 0,
     };
-    // Patch old saves: ensure every squad member has reviveCooldown and deathCount
+    // Patch old saves: ensure every squad member has reviveCooldown, deathCount, and skill fields
     for (const h of _state!.squad) {
       if (h.reviveCooldown === undefined) h.reviveCooldown = 0;
       if (h.deathCount === undefined) h.deathCount = 0;
+      if (h.battlesCompleted === undefined) h.battlesCompleted = 0;
+      if (h.selectedSkills === undefined) h.selectedSkills = [];
     }
     return true;
   } catch {

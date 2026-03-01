@@ -1,13 +1,15 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, type HeroClass } from '@/config/constants';
-import { getRunState, type NodeDef } from '@/systems/RunState';
+import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS, type HeroClass } from '@/config/constants';
+import { getRunState, selectHeroSkill, type NodeDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { calcShardsEarned } from '@/systems/MetaState';
 import { addXP, addMVP } from '@/systems/MasterySystem';
 import { finalizeRun } from '@/systems/RunHistory';
 import { checkAchievements } from '@/systems/AchievementSystem';
 import { recordDailyScore, getTodayString } from '@/systems/DailyChallenge';
+import { getSkillOptions, type SkillDef } from '@/data/skills';
 import nodesData from '@/data/nodes.json';
+import { Hero } from '@/entities/Hero';
 
 interface HeroBattleStats {
   heroClass: string;
@@ -17,12 +19,18 @@ interface HeroBattleStats {
   healingDone: number;
 }
 
+interface LevelUpEntry {
+  heroClass: HeroClass;
+  tier: 1 | 2;
+}
+
 interface ResultData {
   victory: boolean;
   reason?: string;
   gold?: number;
   nodeId?: number;
   heroStats?: HeroBattleStats[];
+  pendingLevelUps?: LevelUpEntry[];
 }
 
 function mvpScore(s: HeroBattleStats): number {
@@ -42,15 +50,23 @@ function findMVP(heroStats: HeroBattleStats[] | undefined): number {
 }
 
 export class ResultScene extends Phaser.Scene {
+  // Level-up state
+  private levelUpQueue: LevelUpEntry[] = [];
+  private levelUpIndex = 0;
+  private levelUpPanel: Phaser.GameObjects.Container | null = null;
+
   constructor() {
     super({ key: 'ResultScene' });
   }
 
   create(data: ResultData) {
-    const { victory, reason, gold = 0, nodeId, heroStats } = data;
+    const { victory, reason, gold = 0, nodeId, heroStats, pendingLevelUps } = data;
     (this.registry.get('music') as MusicSystem | null)?.play(victory ? 'victory' : 'defeat');
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
+
+    this.levelUpQueue = pendingLevelUps ?? [];
+    this.levelUpIndex = 0;
 
     // Calculate shards earned this run
     let shardsEarned = 0;
@@ -136,7 +152,7 @@ export class ResultScene extends Phaser.Scene {
 
     // VICTORY — slides down from above
     const title = this.add.text(cx, 30, 'VICTORY', {
-      fontSize: '56px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '56px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#f1c40f', stroke: '#5c3d00', strokeThickness: 6,
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
     this.tweens.add({
@@ -154,31 +170,217 @@ export class ResultScene extends Phaser.Scene {
       this.tweens.add({ targets: rt, alpha: 1, duration: 350, delay: 780 });
     }
 
-    // Gold + shards on one compact row
-    const parts: string[] = [];
-    if (gold > 0) parts.push(`+\u25c6${gold} gold`);
-    if (shards > 0) parts.push(`\u25c6 +${shards} shards`);
-    if (parts.length > 0) {
+    // Gold + shards on one compact row (each in its own color)
+    if (gold > 0 || shards > 0) {
       const rewardY = reason ? 130 : 110;
-      const rt = this.add.text(cx, rewardY, parts.join('    '), {
-        fontSize: '22px', fontFamily: 'Nunito, sans-serif', color: '#ffe070',
-        stroke: '#000', strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(15).setAlpha(0).setScale(1.2);
+      const rc = this.add.container(cx, rewardY).setDepth(15).setAlpha(0).setScale(1.2);
+      const items: Phaser.GameObjects.Text[] = [];
+      if (gold > 0) {
+        items.push(this.add.text(0, 0, `+\u25c6${gold} gold`, {
+          fontSize: '22px', fontFamily: 'Nunito, sans-serif', color: '#f1c40f',
+          stroke: '#000', strokeThickness: 3,
+        }));
+      }
+      if (shards > 0) {
+        items.push(this.add.text(0, 0, `\u25c6 +${shards} shards`, {
+          fontSize: '22px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
+          stroke: '#000', strokeThickness: 3,
+        }));
+      }
+      const gap = 24;
+      const totalW = items.reduce((s, t) => s + t.width, 0) + (items.length - 1) * gap;
+      let rx = -totalW / 2;
+      for (const item of items) {
+        item.setPosition(rx, 0).setOrigin(0, 0.5);
+        rc.add(item);
+        rx += item.width + gap;
+      }
       this.tweens.add({
-        targets: rt, alpha: 1, scaleX: 1, scaleY: 1,
+        targets: rc, alpha: 1, scaleX: 1, scaleY: 1,
         duration: 450, ease: 'Back.easeOut', delay: 920,
       });
     }
 
     this.buildStatsTable(cx, 175, 880, heroStats, true);
 
-    this.time.delayedCall(1100, () =>
-      this.buildButton(cx, GAME_HEIGHT - 56, 'Continue to Map  \u2192', 0x3a2800, 0xf1c40f, () => {
-        this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
-          if (p === 1) this.scene.start('OverworldScene', { fromBattle: true });
-        });
-      }),
-    );
+    // If there are pending level-ups, show them before the continue button
+    if (this.levelUpQueue.length > 0) {
+      this.time.delayedCall(1100, () => this.showNextLevelUp());
+    } else {
+      this.time.delayedCall(1100, () => this.showContinueButton());
+    }
+  }
+
+  // ── Continue button (shown after all level-ups or if none) ──────────────
+  private showContinueButton() {
+    const cx = GAME_WIDTH / 2;
+    this.buildButton(cx, GAME_HEIGHT - 56, 'Continue to Map  \u2192', 0x3a2800, 0xf1c40f, () => {
+      this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
+        if (p === 1) this.scene.start('OverworldScene', { fromBattle: true });
+      });
+    });
+  }
+
+  // ── Level-up flow ──────────────────────────────────────────────────────────
+
+  private showNextLevelUp() {
+    // Destroy previous panel
+    if (this.levelUpPanel) {
+      this.levelUpPanel.destroy();
+      this.levelUpPanel = null;
+    }
+
+    if (this.levelUpIndex >= this.levelUpQueue.length) {
+      // All done — show continue button
+      this.showContinueButton();
+      return;
+    }
+
+    const entry = this.levelUpQueue[this.levelUpIndex];
+    this.buildSkillPanel(entry.heroClass, entry.tier, this.levelUpIndex, this.levelUpQueue.length);
+  }
+
+  private buildSkillPanel(heroClass: HeroClass, tier: 1 | 2, index: number, total: number) {
+    const cx = GAME_WIDTH / 2;
+    const panelY = 440;
+    const panelW = 520;
+    const panelH = 160;
+
+    const panel = this.add.container(cx, panelY).setDepth(25).setAlpha(0);
+    this.levelUpPanel = panel;
+
+    // Dark background with gold border
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0d1520, 0.92);
+    bg.fillRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 12);
+    bg.lineStyle(2, 0xf1c40f, 0.6);
+    bg.strokeRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 12);
+    panel.add(bg);
+
+    // Hero portrait + name + level badge
+    const charKey = heroClass.toLowerCase();
+    const portrait = this.add.image(-panelW / 2 + 50, -20, `${charKey}_idle_1`)
+      .setDisplaySize(52, 52);
+    const classTint = Hero.CLASS_TINT[heroClass];
+    if (classTint) portrait.setTint(classTint);
+    panel.add(portrait);
+
+    const stats = HERO_STATS[heroClass];
+    const tierLabel = tier === 1 ? 'Level 1' : 'Level 2';
+    const heroLabel = this.add.text(-panelW / 2 + 50, -panelH / 2 + 14, `${stats.label} \u2014 ${tierLabel}!`, {
+      fontSize: '18px', fontFamily: 'Nunito, sans-serif',
+      color: '#f1c40f', stroke: '#000', strokeThickness: 3,
+    }).setOrigin(0.5, 0);
+    panel.add(heroLabel);
+
+    // Two skill cards side by side
+    const [skillA, skillB] = getSkillOptions(heroClass, tier);
+    const cardGap = 16;
+    const cardW = 200;
+    const cardX1 = -cardW / 2 - cardGap / 2;
+    const cardX2 = cardW / 2 + cardGap / 2;
+
+    this.buildSkillCard(panel, cardX1 + 30, 10, cardW, skillA, heroClass);
+    this.buildSkillCard(panel, cardX2 + 30, 10, cardW, skillB, heroClass);
+
+    // Hero counter
+    if (total > 1) {
+      const counter = this.add.text(0, panelH / 2 - 14, `${index + 1} / ${total} heroes`, {
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif',
+        color: '#6a7a8a', stroke: '#000', strokeThickness: 1,
+      }).setOrigin(0.5);
+      panel.add(counter);
+    }
+
+    // Slide-up entrance
+    this.tweens.add({
+      targets: panel,
+      alpha: 1,
+      y: panelY,
+      duration: 350,
+      ease: 'Back.easeOut',
+    });
+  }
+
+  private buildSkillCard(
+    panel: Phaser.GameObjects.Container,
+    x: number, y: number, w: number,
+    skill: SkillDef, heroClass: HeroClass,
+  ) {
+    const h = 100;
+    const card = this.add.container(x, y);
+
+    const cardBg = this.add.graphics();
+    const drawCardBg = (hovered: boolean) => {
+      cardBg.clear();
+      cardBg.fillStyle(hovered ? 0x2a1e40 : 0x161020, 1);
+      cardBg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
+      cardBg.lineStyle(hovered ? 2 : 1, 0xf1c40f, hovered ? 0.9 : 0.35);
+      cardBg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
+    };
+    drawCardBg(false);
+    card.add(cardBg);
+
+    // Icon + name
+    card.add(this.add.text(0, -h / 2 + 14, `${skill.icon} ${skill.name}`, {
+      fontSize: '16px', fontFamily: 'Nunito, sans-serif',
+      color: '#f1c40f', stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5, 0));
+
+    // Description
+    card.add(this.add.text(0, -h / 2 + 38, skill.desc, {
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif',
+      color: '#b0c0d0', stroke: '#000', strokeThickness: 1,
+      wordWrap: { width: w - 20 },
+      align: 'center',
+    }).setOrigin(0.5, 0));
+
+    // Effect list
+    const effectLines = Object.entries(skill.effects).map(([key, val]) => {
+      const sign = val >= 0 ? '+' : '';
+      return `${sign}${val} ${formatEffectKey(key)}`;
+    });
+    card.add(this.add.text(0, h / 2 - 14, effectLines.join('  '), {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif',
+      color: '#6a8a6a',
+    }).setOrigin(0.5, 1));
+
+    // Interactivity
+    const hitArea = this.add.rectangle(0, 0, w, h).setAlpha(0.001);
+    card.add(hitArea);
+    hitArea.setInteractive({ useHandCursor: true });
+
+    hitArea.on('pointerover', () => {
+      drawCardBg(true);
+      this.tweens.killTweensOf(card);
+      this.tweens.add({ targets: card, scaleX: 1.04, scaleY: 1.04, duration: 80 });
+    });
+    hitArea.on('pointerout', () => {
+      drawCardBg(false);
+      this.tweens.killTweensOf(card);
+      this.tweens.add({ targets: card, scaleX: 1, scaleY: 1, duration: 80 });
+    });
+    hitArea.on('pointerdown', () => {
+      hitArea.disableInteractive();
+      selectHeroSkill(heroClass, skill.id);
+
+      // Gold flash on chosen card
+      cardBg.clear();
+      cardBg.fillStyle(0xf1c40f, 0.3);
+      cardBg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
+      cardBg.lineStyle(2, 0xf1c40f, 1);
+      cardBg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
+
+      this.tweens.add({
+        targets: card, scaleX: 1.08, scaleY: 1.08,
+        duration: 150, yoyo: true, ease: 'Power2',
+      });
+
+      this.levelUpIndex++;
+      this.time.delayedCall(600, () => this.showNextLevelUp());
+    });
+
+    panel.add(card);
   }
 
   // ── Defeat layout ─────────────────────────────────────────────────────────
@@ -194,7 +396,7 @@ export class ResultScene extends Phaser.Scene {
 
     // DEFEAT — bleeds in
     const title = this.add.text(cx, 50, 'DEFEAT', {
-      fontSize: '56px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '56px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#e74c3c', stroke: '#5a0000', strokeThickness: 6,
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
     this.tweens.add({ targets: title, alpha: 1, duration: 650, ease: 'Power3', delay: 200 });
@@ -350,21 +552,26 @@ export class ResultScene extends Phaser.Scene {
         // Portrait
         const portrait = this.add.image(colCx, tableY + 28, `${h.heroClass.toLowerCase()}_idle_1`)
           .setDisplaySize(44, 44);
-        if (onCooldown || !alive) portrait.setAlpha(0.3).setTint(0x555555);
+        if (onCooldown || !alive) {
+          portrait.setAlpha(0.3).setTint(0x555555);
+        } else {
+          const classTint = Hero.CLASS_TINT[h.heroClass as HeroClass];
+          if (classTint) portrait.setTint(classTint);
+        }
         headerContainer.add(portrait);
 
         // Badge line: MVP or cooldown
         if (h.heroClass === mvpClass) {
           headerContainer.add(
             this.add.text(colCx, tableY + 56, '\u2605 MVP', {
-              fontSize: '11px', fontFamily: 'Nunito, sans-serif',
+              fontSize: '14px', fontFamily: 'Nunito, sans-serif',
               color: '#ffd700', stroke: '#5c3d00', strokeThickness: 2,
             }).setOrigin(0.5),
           );
         } else if (onCooldown) {
           headerContainer.add(
             this.add.text(colCx, tableY + 56, `\u23f3 ${h.reviveCooldown}`, {
-              fontSize: '11px', fontFamily: 'Nunito, sans-serif',
+              fontSize: '14px', fontFamily: 'Nunito, sans-serif',
               color: '#e74c3c', stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5),
           );
@@ -394,7 +601,7 @@ export class ResultScene extends Phaser.Scene {
         // Row label
         rowContainer.add(
           this.add.text(left + labelColW / 2, rowY, `${stat.icon} ${stat.label}`, {
-            fontSize: '13px', fontFamily: 'Nunito, sans-serif',
+            fontSize: '16px', fontFamily: 'Nunito, sans-serif',
             color: '#6a7a8a', stroke: '#000', strokeThickness: 1,
           }).setOrigin(0.5),
         );
@@ -405,13 +612,13 @@ export class ResultScene extends Phaser.Scene {
         // Per-hero values
         squad.forEach((h, i) => {
           const colCx = left + labelColW + heroColW * i + heroColW / 2;
-          const onCooldown = (h.reviveCooldown ?? 0) > 0;
           const entry = heroStatEntries[i];
 
-          if (onCooldown || !entry) {
+          if (!entry) {
+            // Hero wasn't in this battle (already on cooldown) — show dash
             rowContainer.add(
               this.add.text(colCx, rowY, '\u2014', {
-                fontSize: '15px', fontFamily: 'Nunito, sans-serif',
+                fontSize: '18px', fontFamily: 'Nunito, sans-serif',
                 color: '#2a3040',
               }).setOrigin(0.5),
             );
@@ -420,7 +627,7 @@ export class ResultScene extends Phaser.Scene {
             const color = rankColor(val, rowValues);
             rowContainer.add(
               this.add.text(colCx, rowY, `${val}`, {
-                fontSize: '15px', fontFamily: 'Nunito, sans-serif',
+                fontSize: '18px', fontFamily: 'Nunito, sans-serif',
                 color, stroke: '#000', strokeThickness: 1,
               }).setOrigin(0.5),
             );
@@ -492,4 +699,32 @@ export class ResultScene extends Phaser.Scene {
     // Slide-up entrance
     this.tweens.add({ targets: container, alpha: 1, y, duration: 320, ease: 'Back.easeOut' });
   }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatEffectKey(key: string): string {
+  const map: Record<string, string> = {
+    maxHpBonus: 'HP',
+    combatDamageMult: 'melee',
+    combatSpeedMult: 'atk speed',
+    walkSpeedMult: 'walk speed',
+    impactMultBonus: 'impact',
+    damageReduction: 'DR',
+    arrowCountBonus: 'arrows',
+    aoeRadiusBonus: 'AoE px',
+    chainTargetBonus: 'chain',
+    clusterCountBonus: 'bomblets',
+    healAmountBonus: 'heal',
+    healRadiusBonus: 'heal radius',
+    charmRadiusBonus: 'charm radius',
+    charmDurationBonus: 'charm ms',
+    piercingBonus: 'pierce',
+    backstabMult: 'backstab',
+    shieldWallBonus: 'blocks',
+    wolfCountBonus: 'wolves',
+    wolfDamageBonus: 'wolf dmg',
+    gravityScaleBonus: 'gravity',
+  };
+  return map[key] ?? key;
 }

@@ -216,7 +216,7 @@ export class LaunchSystem {
 
     // Rogue piercing: set counter before first collision so processCollisionPair can use it
     if (hero.heroClass === 'ROGUE') {
-      hero.piercing = 1 + this.relicMods.roguePierceBonus;
+      hero.piercing = 1 + this.relicMods.roguePierceBonus + (hero.skillMods?.piercingBonus ?? 0);
     }
 
     // Ranger triple split: emit event so BattleScene spawns flanking arrow projectiles
@@ -252,8 +252,10 @@ export class LaunchSystem {
     );
 
     // ── Frame-by-frame simulation (matches actual physics exactly) ──
-    // Warrior gravityScale: nearly flat trajectory
-    const gravScale = this.currentHero?.heroClass === 'WARRIOR' ? HERO_STATS.WARRIOR.gravityScale : 1.0;
+    // Warrior gravityScale: nearly flat trajectory (+ skill tree bonus)
+    const gravScale = this.currentHero?.heroClass === 'WARRIOR'
+      ? HERO_STATS.WARRIOR.gravityScale + (this.currentHero.skillMods?.gravityScaleBonus ?? 0)
+      : 1.0;
     // Use effective frictionAir (accounts for AIR_FRICTION_REDUCE relic)
     const simFrictionAir = this.airFrictionReduce > 0
       ? Math.max(0.0005, HERO_FRICTION_AIR - this.airFrictionReduce)
