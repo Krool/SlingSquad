@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { loadAudioSettings, saveAudioSettings, type AudioSystem } from '@/systems/AudioSystem';
 import { loadMusicSettings, type MusicSystem } from '@/systems/MusicSystem';
 import { loadGameplaySettings, saveGameplaySettings } from '@/systems/GameplaySettings';
+import { finalizeRun } from '@/systems/RunHistory';
 
 export class SettingsScene extends Phaser.Scene {
   private callerKey = '';
@@ -23,8 +24,9 @@ export class SettingsScene extends Phaser.Scene {
     this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.72)
       .setDepth(0).setInteractive();
 
-    // ── Panel 520×440 ──────────────────────────────────────────────────────
-    const pw = 520, ph = 440, pr = 14;
+    // ── Panel ─────────────────────────────────────────────────────────────
+    const showQuit = this.callerKey === 'OverworldScene';
+    const pw = 520, ph = showQuit ? 500 : 440, pr = 14;
     const panel = this.add.graphics().setDepth(1);
     panel.fillStyle(0x0a1220, 0.97);
     panel.fillRoundedRect(cx - pw / 2, cy - ph / 2, pw, ph, pr);
@@ -105,8 +107,14 @@ export class SettingsScene extends Phaser.Scene {
     // ── Section divider ────────────────────────────────────────────────────
     this.drawDivider(cx, cy + 140, 210, 0xf1c40f, 0.12);
 
+    // ── Quit Run button (only from OverworldScene) ───────────────────────
+    if (showQuit) {
+      this.buildQuitButton(cx, cy + 168);
+      this.drawDivider(cx, cy + 196, 210, 0xf1c40f, 0.12);
+    }
+
     // ── Close button (bottom center) ───────────────────────────────────────
-    this.buildCloseButton(cx, cy + 175);
+    this.buildCloseButton(cx, cy + (showQuit ? 224 : 175));
 
     // ── X button (top-right corner of panel) ───────────────────────────────
     this.buildCornerClose(cx + pw / 2 - 20, cy - ph / 2 + 20);
@@ -272,6 +280,58 @@ export class SettingsScene extends Phaser.Scene {
     });
     hit.on('pointerover', () => { bg.setAlpha(0.8); });
     hit.on('pointerout', () => { bg.setAlpha(1); });
+  }
+
+  // ── Quit Run button (confirm-on-tap) ────────────────────────────────────
+  private buildQuitButton(cx: number, cy: number) {
+    const w = 220, h = 40, r = 8;
+    let confirmPending = false;
+
+    const bg = this.add.graphics().setDepth(3);
+    const lbl = this.add.text(cx, cy, '\u2190  Quit Run', {
+      fontSize: '17px', fontFamily: 'Nunito, sans-serif', color: '#e74c3c',
+    }).setOrigin(0.5).setDepth(4);
+
+    const draw = (hovered: boolean) => {
+      bg.clear();
+      bg.fillStyle(confirmPending ? 0x4a1010 : (hovered ? 0x2a1010 : 0x1a0a0a), 1);
+      bg.fillRoundedRect(cx - w / 2, cy - h / 2, w, h, r);
+      bg.lineStyle(confirmPending ? 2 : 1, 0xe74c3c, confirmPending ? 1 : (hovered ? 0.8 : 0.45));
+      bg.strokeRoundedRect(cx - w / 2, cy - h / 2, w, h, r);
+    };
+    draw(false);
+
+    const hit = this.add.rectangle(cx, cy, w, h, 0x000000, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(5);
+    hit.on('pointerover', () => draw(true));
+    hit.on('pointerout', () => { if (!confirmPending) draw(false); });
+    hit.on('pointerdown', () => {
+      if (!confirmPending) {
+        confirmPending = true;
+        lbl.setText('Tap to confirm');
+        draw(false);
+        // Auto-reset after 3 seconds
+        this.time.delayedCall(3000, () => {
+          if (confirmPending) {
+            confirmPending = false;
+            lbl.setText('\u2190  Quit Run');
+            draw(false);
+          }
+        });
+      } else {
+        // Confirmed — quit the run
+        finalizeRun(false);
+        const callerKey = this.callerKey;
+        if (callerKey) this.scene.resume(callerKey);
+        this.scene.stop();
+        const caller = this.scene.get(callerKey);
+        if (caller) {
+          caller.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
+            if (p === 1) caller.scene.start('MainMenuScene');
+          });
+        }
+      }
+    });
   }
 
   // ── Close button (bottom center) ────────────────────────────────────────

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS, ENEMY_STATS, HERO_PASSIVES } from '@/config/constants';
+import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS, ENEMY_STATS, HERO_PASSIVES, SAFE_AREA_LEFT } from '@/config/constants';
 import relicsData from '@/data/relics.json';
 import cursesData from '@/data/curses.json';
 import type { RelicDef } from '@/systems/RunState';
@@ -53,7 +53,7 @@ export class CodexScene extends Phaser.Scene {
     this.callerKey = data?.callerKey ?? 'MainMenuScene';
     this.tabButtons.clear();
     this.buildBackground();
-    buildSettingsGear(this, 'CodexScene');
+    buildSettingsGear(this, 'CodexScene', 20, SAFE_AREA_LEFT);
     buildCurrencyBar(this, 'shard', () => getShards());
     this.buildTitle();
     this.buildTabs();
@@ -159,9 +159,9 @@ export class CodexScene extends Phaser.Scene {
     }
 
     // Create scroll panel for content
-    const scrollX = 24;
+    const scrollX = 24 + SAFE_AREA_LEFT;
     const scrollY = this.HEADER_BOTTOM;
-    const scrollW = GAME_WIDTH - 48;
+    const scrollW = GAME_WIDTH - 48 - SAFE_AREA_LEFT;
     const scrollH = this.FOOTER_TOP - this.HEADER_BOTTOM;
     this._scrollPanel = new ScrollablePanel(this, scrollX, scrollY, scrollW, scrollH, 5);
 
@@ -648,6 +648,6 @@ export class CodexScene extends Phaser.Scene {
       this.cameras.main.fadeOut(200, 0, 0, 0, (_: unknown, p: number) => {
         if (p === 1) this.scene.start(this.callerKey);
       });
-    }, 20);
+    }, 20, SAFE_AREA_LEFT);
   }
 }

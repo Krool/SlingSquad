@@ -455,3 +455,6 @@ export const HERO_REGEN_PERCENT = 0.10;   // fraction of maxHp healed after ever
 
 // ─── Multi-Floor Runs ────────────────────────────────────────────────────────
 export const TOTAL_FLOORS_PER_RUN = 3;
+
+// ─── Safe Area (dynamic island / notch buffer) ──────────────────────────
+export const SAFE_AREA_LEFT = 50;

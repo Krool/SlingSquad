@@ -12,27 +12,29 @@ export function buildSettingsGear(
   scene: Phaser.Scene,
   callerKey: string,
   depth = 20,
+  leftInset = 0,
 ): Phaser.GameObjects.Container {
   const size = 52, r = 10;
+  const gx = 12 + leftInset;
   const container = scene.add.container(0, 0).setDepth(depth);
 
   const bg = scene.add.graphics();
   const draw = (hovered: boolean) => {
     bg.clear();
     bg.fillStyle(0x060b12, hovered ? 1 : 0.75);
-    bg.fillRoundedRect(12, 12, size, size, r);
+    bg.fillRoundedRect(gx, 12, size, size, r);
     bg.lineStyle(1, 0x3a5070, hovered ? 1 : 0.5);
-    bg.strokeRoundedRect(12, 12, size, size, r);
+    bg.strokeRoundedRect(gx, 12, size, size, r);
   };
   draw(false);
   container.add(bg);
 
-  const text = scene.add.text(12 + size / 2, 12 + size / 2, '\u2699', {
+  const text = scene.add.text(gx + size / 2, 12 + size / 2, '\u2699', {
     fontSize: '28px', fontFamily: 'Nunito, sans-serif', color: '#c0c8d0',
   }).setOrigin(0.5);
   container.add(text);
 
-  const hit = scene.add.rectangle(12 + size / 2, 12 + size / 2, size, size, 0x000000, 0)
+  const hit = scene.add.rectangle(gx + size / 2, 12 + size / 2, size, size, 0x000000, 0)
     .setInteractive({ useHandCursor: true });
   container.add(hit);
   hit.on('pointerover', () => draw(true));
@@ -267,9 +269,10 @@ export function buildBackButton(
   color: number,
   onClick: () => void,
   depth = 15,
+  leftInset = 0,
 ): Phaser.GameObjects.Container {
   const w = 150, h = 44, r = 8;
-  const bx = 90, by = GAME_HEIGHT - 52;
+  const bx = 90 + leftInset, by = GAME_HEIGHT - 52;
 
   const container = scene.add.container(bx, by).setDepth(depth);
 

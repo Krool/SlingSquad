@@ -2,12 +2,12 @@ import Phaser from 'phaser';
 import nodesData from '@/data/nodes.json';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { newRun, getRunState, hasRunState, selectNode, loadRun, clearSave, reorderSquad, advanceFloor, isRunFullyComplete, getCurrentFloorDisplay, getHeroesOnCooldown, consumePendingRegen, type NodeDef, type RelicDef } from '@/systems/RunState';
-import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS } from '@/config/constants';
+import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS, SAFE_AREA_LEFT } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
 import { getMapById } from '@/data/maps/index';
 import { finalizeRun } from '@/systems/RunHistory';
 import { getShards } from '@/systems/MetaState';
-import { buildSettingsGear, buildCurrencyBar, buildBackButton, type CurrencyBarResult } from '@/ui/TopBar';
+import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
 
 const MAP_SPREAD = 2.0;       // Horizontal spread factor for node positions
 const MAP_PADDING_X = 200;    // World padding beyond outermost nodes
@@ -130,8 +130,7 @@ export class OverworldScene extends Phaser.Scene {
     this.buildNodes();
     this.buildHUD();
     this.buildSquadPreview();
-    buildSettingsGear(this, 'OverworldScene', 30).setScrollFactor(0);
-    this.buildQuitRunButton();
+    buildSettingsGear(this, 'OverworldScene', 30, SAFE_AREA_LEFT).setScrollFactor(0);
 
     // Camera bounds + initial scroll position
     this.cameras.main.setBounds(0, 0, this.worldWidth, GAME_HEIGHT);
@@ -291,6 +290,12 @@ export class OverworldScene extends Phaser.Scene {
       fontSize: '20px', fontFamily: 'Nunito, sans-serif',
       color: '#c0a060', stroke: '#000', strokeThickness: 3, letterSpacing: 6,
     }).setOrigin(0.5).setDepth(10).setScrollFactor(0);
+
+    // Floor label (right side of title bar)
+    const floorLabel = run.totalFloors > 1 ? getCurrentFloorDisplay() : 'RUN 1';
+    this.add.text(GAME_WIDTH - 20, 26, floorLabel, {
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
+    }).setOrigin(1, 0.5).setDepth(10).setScrollFactor(0);
   }
 
   // ── Paths ──────────────────────────────────────────────────────────────────
@@ -750,26 +755,13 @@ export class OverworldScene extends Phaser.Scene {
 
   // ── HUD ─────────────────────────────────────────────────────────────────────
   private buildHUD() {
-    const run = getRunState();
-
     // Currency bars (top-right): shards rightmost, gold to its left
     const shardBar = buildCurrencyBar(this, 'shard', () => getShards(), 20, 0);
     shardBar.container.setScrollFactor(0);
     this._goldBar = buildCurrencyBar(this, 'gold', () => getRunState().gold, 20, 1);
     this._goldBar.container.setScrollFactor(0);
 
-    // Floor indicator (below the map title bar)
-    const floorLabel = run.totalFloors > 1 ? getCurrentFloorDisplay() : 'RUN 1';
-    const floorPanel = this.add.graphics().setDepth(20).setScrollFactor(0);
-    floorPanel.fillStyle(0x060b12, 0.88);
-    floorPanel.fillRoundedRect(12, 58, 120, 40, 7);
-    floorPanel.lineStyle(1, 0x5a7a9a, 0.35);
-    floorPanel.strokeRoundedRect(12, 58, 120, 40, 7);
-    this.add.text(72, 78, floorLabel, {
-      fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
-    }).setOrigin(0.5).setDepth(21).setScrollFactor(0);
-
-    this.relicRow = this.add.container(14, GAME_HEIGHT - 96).setDepth(21).setScrollFactor(0);
+    this.relicRow = this.add.container(SAFE_AREA_LEFT, GAME_HEIGHT - 56).setDepth(21).setScrollFactor(0);
     this.refreshRelicRow();
   }
 
@@ -784,9 +776,9 @@ export class OverworldScene extends Phaser.Scene {
     }).setOrigin(0, 0.5);
     this.relicRow.add(label);
 
-    const BADGE = 34;
-    const GAP = 6;
-    let xOff = 56;
+    const BADGE = 42;
+    const GAP = 8;
+    let xOff = 62;
 
     for (const relic of run.relics) {
       const badgeX = xOff;  // capture per-iteration value for closures
@@ -809,7 +801,7 @@ export class OverworldScene extends Phaser.Scene {
 
       // Icon symbol
       const iconText = this.add.text(badgeX + BADGE / 2, 0, iconChar, {
-        fontSize: '16px', fontFamily: 'Nunito, sans-serif',
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif',
         color: colHex, stroke: '#000', strokeThickness: 1,
       }).setOrigin(0.5);
       this.relicRow.add(iconText);
@@ -1341,16 +1333,6 @@ export class OverworldScene extends Phaser.Scene {
     this.closePartyPanel(false); // skip preview refresh — openPartyPanel will do it after close
     this.openPartyPanel();
     this.refreshSquadPreview();  // update the mini-preview too
-  }
-
-  // ── Quit Run button (bottom-left) ──────────────────────────────────────────
-  private buildQuitRunButton() {
-    buildBackButton(this, '\u2190 Quit Run', 0xe74c3c, () => {
-      finalizeRun(false);
-      this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
-        if (p === 1) this.scene.start('MainMenuScene');
-      });
-    }, 20).setScrollFactor(0);
   }
 
   private showAvailableGlow() {

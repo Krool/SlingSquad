@@ -12,7 +12,7 @@ import {
   HAZARD,
   type MaterialType,
 } from '@/config/constants';
-import { getZoneTheme, type ZoneTheme } from '@/config/zoneThemes';
+import { getZoneTheme, type ZoneTheme, type BgElementDef } from '@/config/zoneThemes';
 
 import { Hero } from '@/entities/Hero';
 import { Enemy } from '@/entities/Enemy';
@@ -296,41 +296,139 @@ export class BattleScene extends Phaser.Scene {
     const skyColor = this.darkenColor(theme.skyColor, darken);
 
     this.bg = this.add.graphics().setDepth(0);
-    this.bg.fillStyle(skyColor, 1);
-    this.bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT * 0.65);
-    this.bg.fillStyle(theme.skyLowerColor, 1);
-    this.bg.fillRect(0, GAME_HEIGHT * 0.65, GAME_WIDTH, GAME_HEIGHT * 0.35);
 
-    // Celestial body
+    // ── Multi-stop sky gradient ──────────────────────────────────────────────
+    if (theme.skyGradient && theme.skyGradient.length >= 2) {
+      const stops = theme.skyGradient;
+      for (let i = 0; i < stops.length - 1; i++) {
+        const y0 = Math.round(stops[i].stop * GAME_HEIGHT);
+        const y1 = Math.round(stops[i + 1].stop * GAME_HEIGHT);
+        const c0 = this.darkenColor(stops[i].color, darken);
+        const c1 = this.darkenColor(stops[i + 1].color, darken);
+        this.bg.fillGradientStyle(c0, c0, c1, c1, 1);
+        this.bg.fillRect(0, y0, GAME_WIDTH, y1 - y0);
+      }
+    } else {
+      // Fallback: old 2-band sky
+      this.bg.fillStyle(skyColor, 1);
+      this.bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT * 0.65);
+      this.bg.fillStyle(theme.skyLowerColor, 1);
+      this.bg.fillRect(0, GAME_HEIGHT * 0.65, GAME_WIDTH, GAME_HEIGHT * 0.35);
+    }
+
+    // ── Celestial body with glow ─────────────────────────────────────────────
+    const moonX = GAME_WIDTH - 120;
+    const moonY = 80;
+
+    // Outer glow
+    if (theme.celestialGlow) {
+      const g = theme.celestialGlow;
+      this.bg.fillStyle(g.color, g.alpha);
+      this.bg.fillCircle(moonX, moonY, g.radius);
+      // Second softer glow ring
+      this.bg.fillStyle(g.color, g.alpha * 0.4);
+      this.bg.fillCircle(moonX, moonY, g.radius * 1.4);
+    }
+
     if (theme.celestial === 'blood_moon') {
+      // Corona rays (dark ring behind)
+      if (theme.celestialGlow?.rays) {
+        this.bg.lineStyle(2, theme.celestialColor, 0.15);
+        for (let i = 0; i < theme.celestialGlow.rays; i++) {
+          const angle = (i / theme.celestialGlow.rays) * Math.PI * 2;
+          const r1 = 42;
+          const r2 = 60;
+          this.bg.beginPath();
+          this.bg.moveTo(moonX + Math.cos(angle) * r1, moonY + Math.sin(angle) * r1);
+          this.bg.lineTo(moonX + Math.cos(angle) * r2, moonY + Math.sin(angle) * r2);
+          this.bg.strokePath();
+        }
+      }
       this.bg.fillStyle(theme.celestialColor, 0.8);
-      this.bg.fillCircle(GAME_WIDTH - 120, 80, 38);
+      this.bg.fillCircle(moonX, moonY, 38);
     } else if (theme.celestial === 'pale_moon') {
+      // Corona rays
+      if (theme.celestialGlow?.rays) {
+        this.bg.lineStyle(1.5, theme.celestialColor, 0.12);
+        for (let i = 0; i < theme.celestialGlow.rays; i++) {
+          const angle = (i / theme.celestialGlow.rays) * Math.PI * 2;
+          const r1 = 38;
+          const r2 = 55;
+          this.bg.beginPath();
+          this.bg.moveTo(moonX + Math.cos(angle) * r1, moonY + Math.sin(angle) * r1);
+          this.bg.lineTo(moonX + Math.cos(angle) * r2, moonY + Math.sin(angle) * r2);
+          this.bg.strokePath();
+        }
+      }
       this.bg.fillStyle(theme.celestialColor, 0.9);
-      this.bg.fillCircle(GAME_WIDTH - 120, 80, 34);
-      // Subtle glow
-      this.bg.fillStyle(theme.celestialColor, 0.1);
-      this.bg.fillCircle(GAME_WIDTH - 120, 80, 50);
+      this.bg.fillCircle(moonX, moonY, 34);
     } else {
       // Crescent moon
       this.bg.fillStyle(theme.celestialColor, 1);
-      this.bg.fillCircle(GAME_WIDTH - 120, 80, 36);
-      this.bg.fillStyle(skyColor, 1);
-      this.bg.fillCircle(GAME_WIDTH - 108, 72, 30);
+      this.bg.fillCircle(moonX, moonY, 36);
+      this.bg.fillStyle(
+        theme.skyGradient ? this.darkenColor(theme.skyGradient[0].color, darken) : skyColor,
+        1,
+      );
+      this.bg.fillCircle(moonX + 12, moonY - 8, 30);
     }
 
     // Stars — handled by VFXSystem (twinkling)
 
-    // Ground
-    this.bg.fillStyle(theme.groundColor, 1);
-    this.bg.fillRect(0, GAME_HEIGHT - 100, GAME_WIDTH, 100);
+    // ── Horizon haze ─────────────────────────────────────────────────────────
+    if (theme.horizonHaze) {
+      const hz = theme.horizonHaze;
+      const hzH = hz.yEnd - hz.yStart;
+      const mid = hz.yStart + hzH * 0.5;
+      // Fade in (transparent → peak)
+      this.bg.fillGradientStyle(hz.color, hz.color, hz.color, hz.color, 0, 0, hz.peakAlpha, hz.peakAlpha);
+      this.bg.fillRect(0, hz.yStart, GAME_WIDTH, mid - hz.yStart);
+      // Fade out (peak → transparent)
+      this.bg.fillGradientStyle(hz.color, hz.color, hz.color, hz.color, hz.peakAlpha, hz.peakAlpha, 0, 0);
+      this.bg.fillRect(0, mid, GAME_WIDTH, hz.yEnd - mid);
+    }
+
+    // ── Ground with gradient + detail ────────────────────────────────────────
+    const groundTop = GAME_HEIGHT - 100;
+    this.bg.fillGradientStyle(theme.grassColor, theme.grassColor, theme.groundColor, theme.groundColor, 1);
+    this.bg.fillRect(0, groundTop, GAME_WIDTH, 100);
+    // Grass strip highlight
     this.bg.fillStyle(theme.grassColor, 1);
-    this.bg.fillRect(0, GAME_HEIGHT - 100, GAME_WIDTH, 14);
+    this.bg.fillRect(0, groundTop, GAME_WIDTH, 10);
+
+    // Ground tufts
+    if (theme.groundDetail) {
+      const seed = theme.skyColor & 0xffff; // deterministic per theme
+      for (const tuft of theme.groundDetail.tufts) {
+        for (let i = 0; i < tuft.count; i++) {
+          const hash = ((seed + i * 7919 + tuft.color) * 2654435761) >>> 0;
+          const tx = (hash % GAME_WIDTH);
+          const th = tuft.height + (hash % 4) - 2;
+          this.bg.fillStyle(tuft.color, 0.6);
+          this.bg.fillRect(tx, groundTop - th + 2, tuft.width, th);
+        }
+      }
+      // Lava cracks on ground
+      if (theme.groundDetail.cracks) {
+        const c = theme.groundDetail.cracks;
+        for (let i = 0; i < c.count; i++) {
+          const hash = ((seed + i * 6271) * 2654435761) >>> 0;
+          const cx = hash % GAME_WIDTH;
+          const cw = 30 + (hash % 40);
+          // Glow behind
+          this.bg.fillStyle(c.glowColor, 0.15);
+          this.bg.fillRect(cx - 2, groundTop + 2, cw + 4, 6);
+          // Crack line
+          this.bg.fillStyle(c.color, 0.5);
+          this.bg.fillRect(cx, groundTop + 3, cw, 2);
+        }
+      }
+    }
 
     // ── Background decorative elements ───────────────────────────────────────
     this.drawBgElements(theme);
 
-    // ── Hill mound ───────────────────────────────────────────────────────────
+    // ── Hill mound (unchanged) ───────────────────────────────────────────────
     const groundY  = GAME_HEIGHT - 100;
     const peakY    = 545;
     const moundL   = 170;
@@ -357,112 +455,374 @@ export class BattleScene extends Phaser.Scene {
     );
   }
 
-  /** Draw background decorative elements based on zone theme */
+  /** Draw background decorative elements based on zone theme, using 3 depth layers */
   private drawBgElements(theme: ZoneTheme) {
-    const bgGfx = this.add.graphics().setDepth(1);
+    const farGfx  = this.add.graphics().setDepth(0.5);
+    const midGfx  = this.add.graphics().setDepth(1);
+    const nearGfx = this.add.graphics().setDepth(1.5);
+
     for (const el of theme.bgElements) {
-      const s = el.scale ?? 1.0;
-      const col = el.color ?? 0x111111;
-      switch (el.type) {
-        case 'tree_silhouette': {
-          bgGfx.fillStyle(col, 0.6);
-          // Trunk
-          bgGfx.fillRect(el.x - 4 * s, el.y - 30 * s, 8 * s, 60 * s);
-          // Canopy (3 overlapping circles)
-          bgGfx.fillCircle(el.x, el.y - 40 * s, 25 * s);
-          bgGfx.fillCircle(el.x - 15 * s, el.y - 25 * s, 20 * s);
-          bgGfx.fillCircle(el.x + 15 * s, el.y - 25 * s, 20 * s);
-          break;
-        }
-        case 'pine_silhouette': {
-          bgGfx.fillStyle(col, 0.6);
-          bgGfx.fillRect(el.x - 3 * s, el.y - 20 * s, 6 * s, 50 * s);
-          // Triangle canopy
-          bgGfx.fillTriangle(
-            el.x, el.y - 70 * s,
-            el.x - 20 * s, el.y - 10 * s,
-            el.x + 20 * s, el.y - 10 * s,
-          );
-          break;
-        }
-        case 'mountain_peak': {
-          bgGfx.fillStyle(col, 0.5);
-          bgGfx.fillTriangle(
-            el.x, el.y - 100 * s,
-            el.x - 80 * s, el.y + 80 * s,
-            el.x + 80 * s, el.y + 80 * s,
-          );
-          // Snow cap
-          bgGfx.fillStyle(0xddddff, 0.3);
-          bgGfx.fillTriangle(
-            el.x, el.y - 100 * s,
-            el.x - 20 * s, el.y - 60 * s,
-            el.x + 20 * s, el.y - 60 * s,
-          );
-          break;
-        }
-        case 'volcanic_peak': {
-          bgGfx.fillStyle(col, 0.6);
-          bgGfx.fillTriangle(
-            el.x, el.y - 120 * s,
-            el.x - 90 * s, el.y + 100 * s,
-            el.x + 90 * s, el.y + 100 * s,
-          );
-          // Glowing tip
-          bgGfx.fillStyle(0xff4400, 0.3);
-          bgGfx.fillCircle(el.x, el.y - 110 * s, 10 * s);
-          break;
-        }
-        case 'aurora': {
-          // Wavy colored bands across the sky
-          bgGfx.lineStyle(3, col, 0.15);
-          for (let band = 0; band < 3; band++) {
-            const by = el.y + band * 25;
-            bgGfx.beginPath();
-            bgGfx.moveTo(200, by);
-            for (let px = 200; px < GAME_WIDTH - 200; px += 10) {
-              const wave = Math.sin(px * 0.008 + band * 1.5) * 20;
-              bgGfx.lineTo(px, by + wave);
-            }
-            bgGfx.strokePath();
+      const layer = el.layer ?? 'mid';
+      const gfx = layer === 'far' ? farGfx : layer === 'near' ? nearGfx : midGfx;
+      this.drawBgElement(gfx, el);
+    }
+  }
+
+  /** Render a single background element onto the given Graphics object */
+  private drawBgElement(gfx: Phaser.GameObjects.Graphics, el: BgElementDef) {
+    const s = el.scale ?? 1.0;
+    const col = el.color ?? 0x111111;
+    const a = el.alpha ?? 0.6;
+
+    switch (el.type) {
+      // ── Existing element types (enhanced) ──────────────────────────────────
+      case 'tree_silhouette': {
+        gfx.fillStyle(col, a);
+        gfx.fillRect(el.x - 4 * s, el.y - 30 * s, 8 * s, 60 * s);
+        gfx.fillCircle(el.x, el.y - 40 * s, 25 * s);
+        gfx.fillCircle(el.x - 15 * s, el.y - 25 * s, 20 * s);
+        gfx.fillCircle(el.x + 15 * s, el.y - 25 * s, 20 * s);
+        // Extra foliage for depth
+        gfx.fillCircle(el.x + 8 * s, el.y - 35 * s, 18 * s);
+        break;
+      }
+      case 'pine_silhouette': {
+        gfx.fillStyle(col, a);
+        gfx.fillRect(el.x - 3 * s, el.y - 20 * s, 6 * s, 50 * s);
+        // Two-tier canopy
+        gfx.fillTriangle(
+          el.x, el.y - 70 * s,
+          el.x - 18 * s, el.y - 20 * s,
+          el.x + 18 * s, el.y - 20 * s,
+        );
+        gfx.fillTriangle(
+          el.x, el.y - 55 * s,
+          el.x - 24 * s, el.y - 5 * s,
+          el.x + 24 * s, el.y - 5 * s,
+        );
+        break;
+      }
+      case 'mountain_peak': {
+        gfx.fillStyle(col, 0.5);
+        gfx.fillTriangle(
+          el.x, el.y - 100 * s,
+          el.x - 80 * s, el.y + 80 * s,
+          el.x + 80 * s, el.y + 80 * s,
+        );
+        // Snow cap
+        gfx.fillStyle(0xddddff, 0.3);
+        gfx.fillTriangle(
+          el.x, el.y - 100 * s,
+          el.x - 20 * s, el.y - 60 * s,
+          el.x + 20 * s, el.y - 60 * s,
+        );
+        break;
+      }
+      case 'volcanic_peak': {
+        gfx.fillStyle(col, a);
+        gfx.fillTriangle(
+          el.x, el.y - 120 * s,
+          el.x - 90 * s, el.y + 100 * s,
+          el.x + 90 * s, el.y + 100 * s,
+        );
+        // Glowing tip
+        gfx.fillStyle(0xff4400, 0.3);
+        gfx.fillCircle(el.x, el.y - 110 * s, 10 * s);
+        // Lava glow at crater
+        gfx.fillStyle(0xff6600, 0.15);
+        gfx.fillCircle(el.x, el.y - 115 * s, 18 * s);
+        break;
+      }
+      case 'aurora': {
+        // Enhanced: 6 bands, gradient green→purple, thicker + wider amplitude
+        const colors = [0x44ffaa, 0x55ffbb, 0x66eebb, 0x88ccdd, 0xaa88ee, 0xcc66ff];
+        for (let band = 0; band < 6; band++) {
+          const bandColor = colors[band];
+          gfx.lineStyle(4, bandColor, 0.12);
+          const by = el.y + band * 18;
+          gfx.beginPath();
+          gfx.moveTo(120, by);
+          for (let px = 120; px < GAME_WIDTH - 120; px += 8) {
+            const wave = Math.sin(px * 0.006 + band * 1.2) * 28
+              + Math.sin(px * 0.012 + band * 0.7) * 10;
+            gfx.lineTo(px, by + wave);
           }
-          break;
+          gfx.strokePath();
         }
-        case 'lava_flow': {
-          bgGfx.fillStyle(col, 0.3);
-          bgGfx.fillRect(el.x - 8, el.y, 16, GAME_HEIGHT - el.y);
-          bgGfx.fillStyle(0xffaa00, 0.15);
-          bgGfx.fillRect(el.x - 4, el.y + 10, 8, GAME_HEIGHT - el.y - 10);
-          break;
+        break;
+      }
+      case 'lava_flow': {
+        gfx.fillStyle(col, 0.3);
+        gfx.fillRect(el.x - 8, el.y, 16, GAME_HEIGHT - el.y);
+        gfx.fillStyle(0xffaa00, 0.15);
+        gfx.fillRect(el.x - 4, el.y + 10, 8, GAME_HEIGHT - el.y - 10);
+        break;
+      }
+      case 'smoke_column': {
+        for (let i = 0; i < 5; i++) {
+          gfx.fillStyle(col, 0.1 - i * 0.015);
+          gfx.fillCircle(el.x + i * 6, el.y - i * 28 * s, (15 + i * 9) * s);
         }
-        case 'smoke_column': {
-          for (let i = 0; i < 4; i++) {
-            bgGfx.fillStyle(col, 0.1 - i * 0.02);
-            bgGfx.fillCircle(el.x + i * 5, el.y - i * 30 * s, (15 + i * 8) * s);
-          }
-          break;
+        break;
+      }
+      case 'stake_fence': {
+        gfx.fillStyle(col, 0.4);
+        for (let i = 0; i < 5; i++) {
+          gfx.fillRect(el.x + i * 15, el.y - 20, 6, 30);
         }
-        case 'stake_fence': {
-          bgGfx.fillStyle(col, 0.4);
-          for (let i = 0; i < 5; i++) {
-            bgGfx.fillRect(el.x + i * 15, el.y - 20, 6, 30);
-          }
-          // Crossbar
-          bgGfx.fillRect(el.x - 2, el.y - 10, 75, 4);
-          break;
+        gfx.fillRect(el.x - 2, el.y - 10, 75, 4);
+        break;
+      }
+      case 'campfire': {
+        gfx.fillStyle(col, 0.4);
+        gfx.fillCircle(el.x, el.y, 6);
+        gfx.fillStyle(0xffcc00, 0.25);
+        gfx.fillCircle(el.x, el.y - 4, 4);
+        // Glow
+        gfx.fillStyle(0xff8844, 0.06);
+        gfx.fillCircle(el.x, el.y - 2, 18);
+        break;
+      }
+      case 'ice_sheen': {
+        gfx.fillStyle(col, 0.08);
+        gfx.fillRect(0, el.y, GAME_WIDTH, 8);
+        break;
+      }
+
+      // ── New element types ──────────────────────────────────────────────────
+      case 'ridgeline': {
+        const w = el.width ?? GAME_WIDTH;
+        const segments = 12;
+        const seed = (el.x * 137 + el.y * 251) >>> 0;
+        const pts: { x: number; y: number }[] = [];
+        for (let i = 0; i <= segments; i++) {
+          const t = i / segments;
+          const px = el.x + t * w;
+          const hash = ((seed + i * 7919) * 2654435761) >>> 0;
+          const variation = ((hash % 100) / 100) * 40 * s - 20 * s;
+          const wave = Math.sin(t * Math.PI * 2.5 + seed * 0.001) * 25 * s;
+          pts.push({ x: px, y: el.y + wave + variation });
         }
-        case 'campfire': {
-          bgGfx.fillStyle(col, 0.4);
-          bgGfx.fillCircle(el.x, el.y, 6);
-          bgGfx.fillStyle(0xffcc00, 0.2);
-          bgGfx.fillCircle(el.x, el.y - 4, 4);
-          break;
+        gfx.fillStyle(col, a);
+        gfx.fillPoints(
+          [...pts, { x: el.x + w, y: GAME_HEIGHT }, { x: el.x, y: GAME_HEIGHT }],
+          true,
+        );
+        break;
+      }
+      case 'treeline': {
+        const w = el.width ?? 400;
+        gfx.fillStyle(col, a);
+        // Row of overlapping circle canopies along baseline
+        const count = Math.floor(w / 30);
+        for (let i = 0; i < count; i++) {
+          const tx = el.x + i * 30 + (i % 3) * 5;
+          const r = (14 + (i % 4) * 4) * s;
+          gfx.fillCircle(tx, el.y - r * 0.5, r);
         }
-        case 'ice_sheen': {
-          bgGfx.fillStyle(col, 0.08);
-          bgGfx.fillRect(0, el.y, GAME_WIDTH, 8);
-          break;
+        // Solid fill below tree line
+        gfx.fillRect(el.x, el.y, w, GAME_HEIGHT - el.y);
+        break;
+      }
+      case 'ruined_tower': {
+        gfx.fillStyle(col, a);
+        const tw = 22 * s;
+        const th = 80 * s;
+        // Main body
+        gfx.fillRect(el.x - tw / 2, el.y - th, tw, th);
+        // Jagged top (broken)
+        gfx.fillTriangle(
+          el.x - tw / 2, el.y - th,
+          el.x - tw * 0.3, el.y - th - 15 * s,
+          el.x, el.y - th,
+        );
+        gfx.fillTriangle(
+          el.x, el.y - th,
+          el.x + tw * 0.2, el.y - th - 10 * s,
+          el.x + tw / 2, el.y - th,
+        );
+        break;
+      }
+      case 'broken_wall': {
+        gfx.fillStyle(col, a);
+        const segW = 18 * s;
+        const segH = 22 * s;
+        // 4 wall segments with gaps
+        for (let i = 0; i < 4; i++) {
+          const sx = el.x + i * (segW + 8 * s);
+          const sh = segH - (i % 2) * 6 * s; // varying heights
+          gfx.fillRect(sx, el.y - sh, segW, sh);
         }
+        break;
+      }
+      case 'jagged_crag': {
+        gfx.fillStyle(col, a);
+        const seed2 = (el.x * 173 + el.y * 311) >>> 0;
+        const pts2: { x: number; y: number }[] = [];
+        const numPoints = 7;
+        // Build irregular spiky polygon
+        for (let i = 0; i < numPoints; i++) {
+          const hash = ((seed2 + i * 4937) * 2654435761) >>> 0;
+          const angle = (i / numPoints) * Math.PI - Math.PI * 0.1;
+          const r = (30 + (hash % 30)) * s;
+          pts2.push({
+            x: el.x + Math.cos(angle) * r,
+            y: el.y - Math.sin(angle) * r,
+          });
+        }
+        // Close at base
+        pts2.push({ x: el.x + 40 * s, y: el.y + 10 });
+        pts2.push({ x: el.x - 40 * s, y: el.y + 10 });
+        gfx.fillPoints(pts2, true);
+        break;
+      }
+      case 'ruined_citadel': {
+        gfx.fillStyle(col, a);
+        const cw = 60 * s;
+        // Left tower
+        gfx.fillRect(el.x - cw, el.y - 70 * s, 20 * s, 70 * s);
+        gfx.fillTriangle(
+          el.x - cw, el.y - 70 * s,
+          el.x - cw + 10 * s, el.y - 85 * s,
+          el.x - cw + 20 * s, el.y - 70 * s,
+        );
+        // Right tower (shorter, broken)
+        gfx.fillRect(el.x + cw - 20 * s, el.y - 55 * s, 20 * s, 55 * s);
+        gfx.fillTriangle(
+          el.x + cw - 20 * s, el.y - 55 * s,
+          el.x + cw - 8 * s, el.y - 65 * s,
+          el.x + cw, el.y - 55 * s,
+        );
+        // Broken wall between
+        for (let i = 0; i < 3; i++) {
+          const wx = el.x - cw + 25 * s + i * 28 * s;
+          const wh = (25 - i * 5) * s;
+          gfx.fillRect(wx, el.y - wh, 20 * s, wh);
+        }
+        break;
+      }
+      case 'fog_wisp': {
+        const wispA = a * 0.7;
+        // Overlapping semi-transparent ellipses along sine wave
+        for (let i = 0; i < 6; i++) {
+          const wx = el.x + i * 30 * s;
+          const wy = el.y + Math.sin(i * 1.2) * 8;
+          gfx.fillStyle(col, wispA - i * 0.01);
+          gfx.fillEllipse(wx, wy, 35 * s, 10 * s);
+        }
+        break;
+      }
+      case 'ice_formation': {
+        gfx.fillStyle(col, a);
+        // 4 tall thin triangles at varied angles
+        for (let i = 0; i < 4; i++) {
+          const ix = el.x + (i - 1.5) * 12 * s;
+          const ih = (35 + i * 8) * s;
+          const lean = (i - 1.5) * 3 * s;
+          gfx.fillTriangle(
+            ix + lean, el.y - ih,
+            ix - 5 * s, el.y,
+            ix + 5 * s, el.y,
+          );
+        }
+        break;
+      }
+      case 'glacier_cliff': {
+        gfx.fillStyle(col, a);
+        // 5-point angular polygon
+        const gcw = 50 * s;
+        const gch = 60 * s;
+        gfx.fillPoints([
+          { x: el.x - gcw, y: el.y },
+          { x: el.x - gcw * 0.6, y: el.y - gch * 0.7 },
+          { x: el.x, y: el.y - gch },
+          { x: el.x + gcw * 0.4, y: el.y - gch * 0.5 },
+          { x: el.x + gcw, y: el.y },
+        ], true);
+        // Ice highlight edge
+        gfx.lineStyle(1, 0x88aacc, a * 0.5);
+        gfx.beginPath();
+        gfx.moveTo(el.x - gcw * 0.6, el.y - gch * 0.7);
+        gfx.lineTo(el.x, el.y - gch);
+        gfx.lineTo(el.x + gcw * 0.4, el.y - gch * 0.5);
+        gfx.strokePath();
+        break;
+      }
+      case 'ground_mushroom': {
+        gfx.fillStyle(col, a);
+        // Thin stem
+        gfx.fillRect(el.x - 2 * s, el.y - 12 * s, 4 * s, 12 * s);
+        // Half-circle cap
+        gfx.fillCircle(el.x, el.y - 12 * s, 8 * s);
+        // Cut the bottom half of the cap with ground color
+        gfx.fillStyle(col, a);
+        gfx.fillRect(el.x - 9 * s, el.y - 12 * s, 18 * s, 8 * s);
+        // Redraw actual cap shape
+        gfx.fillStyle(col, a * 1.2);
+        gfx.fillEllipse(el.x, el.y - 14 * s, 16 * s, 8 * s);
+        break;
+      }
+      case 'snow_drift': {
+        const dw = el.width ?? 400;
+        gfx.fillStyle(col, a);
+        // Sine-undulating filled band
+        const driftPts: { x: number; y: number }[] = [];
+        for (let px = 0; px <= dw; px += 8) {
+          const wave = Math.sin(px * 0.015 + el.x * 0.01) * 6
+            + Math.sin(px * 0.03) * 3;
+          driftPts.push({ x: el.x + px, y: el.y + wave });
+        }
+        // Close at bottom
+        driftPts.push({ x: el.x + dw, y: el.y + 15 });
+        driftPts.push({ x: el.x, y: el.y + 15 });
+        gfx.fillPoints(driftPts, true);
+        break;
+      }
+      case 'icicle_edge': {
+        const iw = el.width ?? 400;
+        gfx.fillStyle(col, a);
+        const icicleCount = Math.floor(iw / 20);
+        for (let i = 0; i < icicleCount; i++) {
+          const ix = el.x + i * 20 + (i % 3) * 4;
+          const ih = 8 + (i % 4) * 4;
+          gfx.fillTriangle(
+            ix - 3, el.y,
+            ix + 3, el.y,
+            ix, el.y + ih,
+          );
+        }
+        break;
+      }
+      case 'ash_cloud': {
+        // 8 overlapping circles at scattered positions
+        const seed3 = (el.x * 199 + el.y * 337) >>> 0;
+        for (let i = 0; i < 8; i++) {
+          const hash = ((seed3 + i * 5471) * 2654435761) >>> 0;
+          const ox = ((hash % 80) - 40) * s;
+          const oy = ((hash >> 8) % 40 - 20) * s;
+          const r = (12 + (hash >> 16) % 15) * s;
+          gfx.fillStyle(col, a);
+          gfx.fillCircle(el.x + ox, el.y + oy, r);
+        }
+        break;
+      }
+      case 'lava_crack': {
+        const lcw = el.width ?? 80;
+        // Glow behind
+        gfx.fillStyle(col, a * 0.4);
+        gfx.fillRect(el.x, el.y - 3, lcw, 8);
+        // Jagged crack line
+        gfx.lineStyle(2, col, a);
+        gfx.beginPath();
+        gfx.moveTo(el.x, el.y);
+        const segments = 6;
+        for (let i = 1; i <= segments; i++) {
+          const lx = el.x + (i / segments) * lcw;
+          const ly = el.y + ((i % 2) * 2 - 1) * 3;
+          gfx.lineTo(lx, ly);
+        }
+        gfx.strokePath();
+        break;
       }
     }
   }

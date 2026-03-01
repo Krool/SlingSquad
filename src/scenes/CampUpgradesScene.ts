@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
+import { GAME_WIDTH, GAME_HEIGHT, SAFE_AREA_LEFT } from '@/config/constants';
 import {
   getShards, purchaseUpgrade, canPurchase, getPurchaseCount,
   getAllUpgrades, type UpgradeDef,
@@ -33,7 +33,7 @@ export class CampUpgradesScene extends Phaser.Scene {
 
     // ── Panel ────────────────────────────────────────────────────────────
     const pw = GAME_WIDTH - 80, ph = GAME_HEIGHT - 60, pr = 14;
-    const panelX = cx - pw / 2, panelY = cy - ph / 2;
+    const panelX = (GAME_WIDTH - pw) / 2 + SAFE_AREA_LEFT / 2, panelY = cy - ph / 2;
 
     const panel = this.add.graphics().setDepth(1);
     panel.fillStyle(0x0a1220, 0.97);

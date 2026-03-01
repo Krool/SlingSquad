@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BARREL_HP, BARREL_EXPLOSION_RADIUS, BARREL_EXPLOSION_DAMAGE } from '@/config/constants';
+import { BARREL_HP, BARREL_EXPLOSION_DAMAGE, BARREL_EXPLOSION_RADIUS } from '@/config/constants';
 import type { GameBody } from '@/config/types';
 
 export class Barrel {
@@ -8,9 +8,6 @@ export class Barrel {
   readonly graphics: Phaser.GameObjects.Graphics;
   private _hp = BARREL_HP;
   exploded = false;
-
-  // Danger glow radius indicator
-  private glowCircle: Phaser.GameObjects.Graphics;
 
   constructor(
     scene: Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics },
@@ -29,13 +26,6 @@ export class Barrel {
       isSleeping: true,  // start asleep — wakes on collision (prevents jitter)
     } as Phaser.Types.Physics.Matter.MatterBodyConfig) as GameBody;
     this.body.__barrel = this;
-
-    // Danger glow
-    this.glowCircle = scene.add.graphics();
-    this.glowCircle.fillStyle(0xe74c3c, 0.12);
-    this.glowCircle.fillCircle(0, 0, BARREL_EXPLOSION_RADIUS);
-    this.glowCircle.lineStyle(1, 0xe74c3c, 0.4);
-    this.glowCircle.strokeCircle(0, 0, BARREL_EXPLOSION_RADIUS);
 
     this.graphics = scene.add.graphics();
     this.drawBarrel();
@@ -71,7 +61,6 @@ export class Barrel {
     this.scene.events.emit('barrelExploded', x, y, BARREL_EXPLOSION_RADIUS, BARREL_EXPLOSION_DAMAGE);
     this.scene.matter.world.remove(this.body);
     this.graphics.destroy();
-    this.glowCircle.destroy();
   }
 
   update() {
@@ -80,6 +69,5 @@ export class Barrel {
     const angle = this.body.angle;
     this.graphics.setPosition(x, y);
     this.graphics.setRotation(angle);
-    this.glowCircle.setPosition(x, y);
   }
 }

@@ -113,77 +113,67 @@ export class ResultScene extends Phaser.Scene {
 
     if (victory) {
       this.spawnGoldParticles();
-      this.buildVictoryContent(cx, cy, reason, gold, shardsEarned, heroStats);
+      this.buildVictoryContent(cx, reason, gold, shardsEarned, heroStats);
     } else {
-      this.buildDefeatContent(cx, cy, reason, shardsEarned, heroStats);
+      this.buildDefeatContent(cx, reason, shardsEarned, heroStats);
     }
   }
 
   // ── Victory layout ────────────────────────────────────────────────────────
-  private buildVictoryContent(cx: number, cy: number, reason?: string, gold = 0, shards = 0, heroStats?: HeroBattleStats[]) {
-    // Thin decorative rules that appear after title
-    const divY1 = cy - 70, divY2 = cy + 30;
+  private buildVictoryContent(cx: number, reason?: string, gold = 0, shards = 0, heroStats?: HeroBattleStats[]) {
+    // Thin decorative rule
+    const ruleY = 88;
     const rules = this.add.graphics().setDepth(12).setAlpha(0);
     rules.lineStyle(1, 0xf1c40f, 0.35);
-    rules.lineBetween(cx - 300, divY1, cx + 300, divY1);
-    rules.lineBetween(cx - 300, divY2, cx + 300, divY2);
-    // Small corner diamonds on the rules
+    rules.lineBetween(cx - 200, ruleY, cx + 200, ruleY);
     const drawDiamond = (gfx: Phaser.GameObjects.Graphics, dx: number, dy: number) => {
       gfx.fillStyle(0xf1c40f, 0.5);
       gfx.fillTriangle(dx - 5, dy, dx, dy - 5, dx + 5, dy);
       gfx.fillTriangle(dx - 5, dy, dx, dy + 5, dx + 5, dy);
     };
-    for (const dy of [divY1, divY2]) {
-      drawDiamond(rules, cx - 300, dy);
-      drawDiamond(rules, cx + 300, dy);
-    }
+    drawDiamond(rules, cx - 200, ruleY);
+    drawDiamond(rules, cx + 200, ruleY);
 
     // VICTORY — slides down from above
-    const title = this.add.text(cx, cy - 110, 'VICTORY', {
-      fontSize: '86px', fontFamily: 'Cinzel, Nunito, sans-serif',
-      color: '#f1c40f', stroke: '#5c3d00', strokeThickness: 7,
+    const title = this.add.text(cx, 30, 'VICTORY', {
+      fontSize: '56px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      color: '#f1c40f', stroke: '#5c3d00', strokeThickness: 6,
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
     this.tweens.add({
-      targets: title, y: cy - 140, alpha: 1,
+      targets: title, y: 50, alpha: 1,
       duration: 600, ease: 'Back.easeOut', delay: 200,
       onComplete: () => this.tweens.add({ targets: rules, alpha: 1, duration: 350 }),
     });
 
     // Reason sub-text
     if (reason) {
-      const rt = this.add.text(cx, cy - 42, reason, {
-        fontSize: '22px', fontFamily: 'Nunito, sans-serif', color: '#c8a840',
+      const rt = this.add.text(cx, 100, reason, {
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif', color: '#c8a840',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);
       this.tweens.add({ targets: rt, alpha: 1, duration: 350, delay: 780 });
     }
 
-    // Gold reward — pops in with scale
-    if (gold > 0) {
-      const goldY = reason ? cy - 6 : cy - 28;
-      const gt = this.add.text(cx, goldY, `✦  +◆${gold}  ✦`, {
-        fontSize: '32px', fontFamily: 'Nunito, sans-serif', color: '#ffe070',
+    // Gold + shards on one compact row
+    const parts: string[] = [];
+    if (gold > 0) parts.push(`+\u25c6${gold} gold`);
+    if (shards > 0) parts.push(`\u25c6 +${shards} shards`);
+    if (parts.length > 0) {
+      const rewardY = reason ? 130 : 110;
+      const rt = this.add.text(cx, rewardY, parts.join('    '), {
+        fontSize: '22px', fontFamily: 'Nunito, sans-serif', color: '#ffe070',
         stroke: '#000', strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(15).setAlpha(0).setScale(1.4);
+      }).setOrigin(0.5).setDepth(15).setAlpha(0).setScale(1.2);
       this.tweens.add({
-        targets: gt, alpha: 1, scaleX: 1, scaleY: 1,
+        targets: rt, alpha: 1, scaleX: 1, scaleY: 1,
         duration: 450, ease: 'Back.easeOut', delay: 920,
       });
     }
 
-    // Shard earn display
-    if (shards > 0) {
-      const st = this.add.text(cx, cy + 74, `◆ +${shards}`, {
-        fontSize: '18px', fontFamily: 'Nunito, sans-serif',
-        color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
-      }).setOrigin(0.5).setDepth(15).setAlpha(0);
-      this.tweens.add({ targets: st, alpha: 1, duration: 350, delay: 1020 });
-    }
-
-    this.buildSquadSummary(cx, cy + (shards > 0 ? 108 : 92), 880, heroStats);
+    this.buildStatsTable(cx, 175, 880, heroStats, true);
 
     this.time.delayedCall(1100, () =>
-      this.buildButton(cx, cy + 200, 'Continue to Map  →', 0x3a2800, 0xf1c40f, () => {
+      this.buildButton(cx, GAME_HEIGHT - 56, 'Continue to Map  \u2192', 0x3a2800, 0xf1c40f, () => {
         this.cameras.main.fadeOut(350, 0, 0, 0, (_: unknown, p: number) => {
           if (p === 1) this.scene.start('OverworldScene', { fromBattle: true });
         });
@@ -192,26 +182,26 @@ export class ResultScene extends Phaser.Scene {
   }
 
   // ── Defeat layout ─────────────────────────────────────────────────────────
-  private buildDefeatContent(cx: number, cy: number, reason?: string, shards = 0, heroStats?: HeroBattleStats[]) {
+  private buildDefeatContent(cx: number, reason?: string, shards = 0, heroStats?: HeroBattleStats[]) {
     // Pulsing blood glow behind title
     const glow = this.add.graphics().setDepth(9).setAlpha(0);
     glow.fillStyle(0x8b0000, 0.22);
-    glow.fillEllipse(cx, cy - 128, 740, 140);
+    glow.fillEllipse(cx, 50, 600, 100);
     this.tweens.add({
       targets: glow, alpha: 1, duration: 600, delay: 200,
       yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
     // DEFEAT — bleeds in
-    const title = this.add.text(cx, cy - 130, 'DEFEAT', {
-      fontSize: '86px', fontFamily: 'Cinzel, Nunito, sans-serif',
-      color: '#e74c3c', stroke: '#5a0000', strokeThickness: 7,
+    const title = this.add.text(cx, 50, 'DEFEAT', {
+      fontSize: '56px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      color: '#e74c3c', stroke: '#5a0000', strokeThickness: 6,
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
     this.tweens.add({ targets: title, alpha: 1, duration: 650, ease: 'Power3', delay: 200 });
 
     if (reason) {
-      const rt = this.add.text(cx, cy - 55, reason, {
-        fontSize: '22px', fontFamily: 'Nunito, sans-serif', color: '#c06860',
+      const rt = this.add.text(cx, 100, reason, {
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif', color: '#c06860',
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);
       this.tweens.add({ targets: rt, alpha: 1, duration: 350, delay: 760 });
@@ -219,22 +209,23 @@ export class ResultScene extends Phaser.Scene {
 
     // Shard earn display
     if (shards > 0) {
-      const st = this.add.text(cx, cy - 15, `◆ +${shards}`, {
+      const shardY = reason ? 130 : 110;
+      const st = this.add.text(cx, shardY, `\u25c6 +${shards} shards`, {
         fontSize: '18px', fontFamily: 'Nunito, sans-serif',
         color: '#7ec8e3', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);
       this.tweens.add({ targets: st, alpha: 1, duration: 350, delay: 820 });
     }
 
-    this.buildSquadSummary(cx, cy + (shards > 0 ? 60 : 42), 720, heroStats);
+    this.buildStatsTable(cx, 165, 720, heroStats, false);
 
     this.time.delayedCall(880, () => {
-      this.buildButton(cx - 115, cy + 178, 'Retry', 0x3a1010, 0xe74c3c, () => {
+      this.buildButton(cx - 115, GAME_HEIGHT - 56, 'Retry', 0x3a1010, 0xe74c3c, () => {
         this.cameras.main.fadeOut(300, 0, 0, 0, (_: unknown, p: number) => {
           if (p === 1) this.scene.start('BattleScene');
         });
       });
-      this.buildButton(cx + 115, cy + 178, 'To Camp  ◆', 0x0d1a2e, 0x7ec8e3, () => {
+      this.buildButton(cx + 115, GAME_HEIGHT - 56, 'To Camp  \u25c6', 0x0d1a2e, 0x7ec8e3, () => {
         finalizeRun(false);
         this.cameras.main.fadeOut(300, 0, 0, 0, (_: unknown, p: number) => {
           if (p === 1) this.scene.start('MainMenuScene', { shardsEarned: shards, fromDefeat: true });
@@ -282,111 +273,163 @@ export class ResultScene extends Phaser.Scene {
     });
   }
 
-  // ── Squad summary ─────────────────────────────────────────────────────────
-  private buildSquadSummary(cx: number, cy: number, introDelay: number, heroStats?: HeroBattleStats[]) {
+  // ── Stats table ─────────────────────────────────────────────────────────
+  private buildStatsTable(cx: number, tableY: number, introDelay: number, heroStats?: HeroBattleStats[], isVictory = true) {
     try {
       const run = getRunState();
-      const heroColors: Record<string, number> = {
-        WARRIOR: 0xc0392b, RANGER: 0x27ae60, MAGE: 0x8e44ad, PRIEST: 0xf39c12,
-        BARD: 0x1abc9c, ROGUE: 0x2c3e50, PALADIN: 0xf1c40f, DRUID: 0x16a085,
-      };
+      const squad = run.squad;
+      const count = squad.length;
 
-      // Determine MVP (highest composite score; skip if solo hero or all zeros)
+      const tableW = 720;
+      const labelColW = 80;
+      const heroColW = (tableW - labelColW) / count;
+      const headerH = 90;
+      const rowH = 34;
+      const statRowCount = 4;
+      const tableH = headerH + rowH * statRowCount;
+      const left = cx - tableW / 2;
+
       const mvpIndex = findMVP(heroStats);
       const mvpClass = mvpIndex >= 0 ? heroStats![mvpIndex].heroClass : null;
 
-      const count = run.squad.length;
-      const spacing = 110;
-      const startX = cx - ((count - 1) * spacing) / 2;
+      // Comparative colors
+      const bright = isVictory ? '#f1c40f' : '#e07060';
+      const medium = '#8ca0b8';
+      const dim = '#5a6a7a';
+      const zero = '#2a3040';
 
-      run.squad.forEach((h, i) => {
-        const hx = startX + i * spacing;
-        const col = heroColors[h.heroClass] ?? 0x888888;
-        const pct = Math.max(0, h.currentHp / h.maxHp);
-        const alive = h.currentHp > 0;
-        // Match stats by heroClass (not index) since cooldown heroes are absent from heroStats
-        const stats = heroStats?.find(s => s.heroClass === h.heroClass);
+      function rankColor(value: number, allValues: number[]): string {
+        if (value === 0) return zero;
+        const sorted = [...new Set(allValues.filter(v => v > 0))].sort((a, b) => b - a);
+        if (sorted.length === 0) return zero;
+        if (value === sorted[0]) return bright;
+        if (sorted.length > 1 && value === sorted[1]) return medium;
+        return dim;
+      }
 
-        const container = this.add.container(hx, cy + 16).setDepth(15).setAlpha(0);
+      // ── Dark panel background ───────────────────────────────────────
+      const panel = this.add.graphics().setDepth(12).setAlpha(0);
+      panel.fillStyle(0x0d1520, 0.85);
+      panel.fillRoundedRect(left, tableY, tableW, tableH, 10);
+      panel.lineStyle(1, isVictory ? 0xf1c40f : 0xe74c3c, 0.25);
+      panel.strokeRoundedRect(left, tableY, tableW, tableH, 10);
 
-        // MVP badge
+      // Header separator
+      panel.lineStyle(1, 0xffffff, 0.08);
+      panel.lineBetween(left + 8, tableY + headerH, left + tableW - 8, tableY + headerH);
+
+      // Alternating row shading
+      for (let r = 0; r < statRowCount; r++) {
+        if (r % 2 === 0) {
+          panel.fillStyle(0xffffff, 0.03);
+          panel.fillRect(left + 4, tableY + headerH + r * rowH, tableW - 8, rowH);
+        }
+      }
+
+      this.tweens.add({ targets: panel, alpha: 1, duration: 400, delay: introDelay });
+
+      // ── Per-hero stat entries for comparative coloring ──────────────
+      const heroStatEntries = squad.map(h => heroStats?.find(s => s.heroClass === h.heroClass));
+      type StatKey = 'damageDealt' | 'blockDamage' | 'enemiesKilled' | 'healingDone';
+      const statKeys: { key: StatKey; label: string; icon: string }[] = [
+        { key: 'damageDealt', label: 'Dmg', icon: '\u2694' },
+        { key: 'blockDamage', label: 'Struct', icon: '\u25fc' },
+        { key: 'enemiesKilled', label: 'Kills', icon: '\u2726' },
+        { key: 'healingDone', label: 'Healed', icon: '\u2665' },
+      ];
+
+      // ── Header row (portraits, MVP badge, HP bars) ─────────────────
+      const headerContainer = this.add.container(0, 0).setDepth(15).setAlpha(0);
+
+      squad.forEach((h, i) => {
+        const colCx = left + labelColW + heroColW * i + heroColW / 2;
+        const onCooldown = (h.reviveCooldown ?? 0) > 0;
+        const alive = h.currentHp > 0 && !onCooldown;
+        const pct = onCooldown ? 0 : Math.max(0, h.currentHp / h.maxHp);
+
+        // Portrait
+        const portrait = this.add.image(colCx, tableY + 28, `${h.heroClass.toLowerCase()}_idle_1`)
+          .setDisplaySize(44, 44);
+        if (onCooldown || !alive) portrait.setAlpha(0.3).setTint(0x555555);
+        headerContainer.add(portrait);
+
+        // Badge line: MVP or cooldown
         if (h.heroClass === mvpClass) {
-          container.add(
-            this.add.text(0, -46, '\u2605 MVP', {
-              fontSize: '15px', fontFamily: 'Nunito, sans-serif',
+          headerContainer.add(
+            this.add.text(colCx, tableY + 56, '\u2605 MVP', {
+              fontSize: '11px', fontFamily: 'Nunito, sans-serif',
               color: '#ffd700', stroke: '#5c3d00', strokeThickness: 2,
             }).setOrigin(0.5),
           );
-        }
-
-        // Outer ring + filled circle background
-        const g = this.add.graphics();
-        g.fillStyle(col, alive ? 0.35 : 0.10);
-        g.fillCircle(0, 0, 24);
-        g.lineStyle(2, alive ? col : 0x3a3a3a, 1);
-        g.strokeCircle(0, 0, 24);
-        container.add(g);
-
-        // Character portrait sprite
-        const charImg = this.add.image(0, -2, `${h.heroClass.toLowerCase()}_idle_1`)
-          .setDisplaySize(38, 38)
-          .setAlpha(alive ? 1 : 0.28);
-        container.add(charImg);
-
-        // HP bar track + fill
-        const bar = this.add.graphics();
-        bar.fillStyle(0x1a2235, 1);
-        bar.fillRoundedRect(-20, 28, 40, 5, 2);
-        if (pct > 0) {
-          bar.fillStyle(pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c, 1);
-          bar.fillRoundedRect(-20, 28, Math.max(4, 40 * pct), 5, 2);
-        }
-        container.add(bar);
-
-        // Stat lines (below portrait)
-        if (stats) {
-          const lineStyle = { fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#8ca0b8', stroke: '#000', strokeThickness: 1 };
-          let ly = 40;
-          if (stats.damageDealt > 0) {
-            container.add(this.add.text(0, ly, `\u2694 ${stats.damageDealt} dmg`, lineStyle).setOrigin(0.5));
-            ly += 12;
-          }
-          if (stats.blockDamage > 0) {
-            container.add(this.add.text(0, ly, `\u25FC ${stats.blockDamage} struct`, lineStyle).setOrigin(0.5));
-            ly += 12;
-          }
-          if (stats.enemiesKilled > 0) {
-            container.add(this.add.text(0, ly, `\u2726 ${stats.enemiesKilled} kills`, lineStyle).setOrigin(0.5));
-            ly += 12;
-          }
-          if (stats.healingDone > 0) {
-            container.add(this.add.text(0, ly, `\u2665 ${stats.healingDone} healed`, { ...lineStyle, color: '#55cc88' }).setOrigin(0.5));
-          }
-        } else {
-          // Fallback: show HP / fallen label
-          container.add(
-            this.add.text(0, 40, alive ? `${Math.round(h.currentHp)} hp` : 'fallen', {
-              fontSize: '14px', color: alive ? '#8ca0b8' : '#4a2a2a',
-              fontFamily: 'Nunito, sans-serif',
-            }).setOrigin(0.5),
-          );
-        }
-
-        // Cooldown indicator for heroes on revive cooldown
-        if ((h.reviveCooldown ?? 0) > 0) {
-          container.add(
-            this.add.text(0, stats ? 80 : 56, `\u231b ${h.reviveCooldown}`, {
-              fontSize: '13px', fontFamily: 'Nunito, sans-serif',
+        } else if (onCooldown) {
+          headerContainer.add(
+            this.add.text(colCx, tableY + 56, `\u23f3 ${h.reviveCooldown}`, {
+              fontSize: '11px', fontFamily: 'Nunito, sans-serif',
               color: '#e74c3c', stroke: '#000', strokeThickness: 1,
             }).setOrigin(0.5),
           );
         }
 
-        // Staggered slide-up reveal
+        // HP bar
+        const barW = Math.min(heroColW - 16, 56);
+        const barX = colCx - barW / 2;
+        const barY = tableY + 72;
+        const barG = this.add.graphics();
+        barG.fillStyle(0x1a2235, 1);
+        barG.fillRoundedRect(barX, barY, barW, 5, 2);
+        if (pct > 0) {
+          barG.fillStyle(pct > 0.5 ? 0x2ecc71 : pct > 0.25 ? 0xf39c12 : 0xe74c3c, 1);
+          barG.fillRoundedRect(barX, barY, Math.max(4, barW * pct), 5, 2);
+        }
+        headerContainer.add(barG);
+      });
+
+      this.tweens.add({ targets: headerContainer, alpha: 1, duration: 380, delay: introDelay });
+
+      // ── Stat rows (staggered reveal) ────────────────────────────────
+      statKeys.forEach((stat, rowIdx) => {
+        const rowY = tableY + headerH + rowIdx * rowH + rowH / 2;
+        const rowContainer = this.add.container(0, 0).setDepth(15).setAlpha(0);
+
+        // Row label
+        rowContainer.add(
+          this.add.text(left + labelColW / 2, rowY, `${stat.icon} ${stat.label}`, {
+            fontSize: '13px', fontFamily: 'Nunito, sans-serif',
+            color: '#6a7a8a', stroke: '#000', strokeThickness: 1,
+          }).setOrigin(0.5),
+        );
+
+        // Gather values for comparative coloring
+        const rowValues = heroStatEntries.map(e => (e ? e[stat.key] : 0));
+
+        // Per-hero values
+        squad.forEach((h, i) => {
+          const colCx = left + labelColW + heroColW * i + heroColW / 2;
+          const onCooldown = (h.reviveCooldown ?? 0) > 0;
+          const entry = heroStatEntries[i];
+
+          if (onCooldown || !entry) {
+            rowContainer.add(
+              this.add.text(colCx, rowY, '\u2014', {
+                fontSize: '15px', fontFamily: 'Nunito, sans-serif',
+                color: '#2a3040',
+              }).setOrigin(0.5),
+            );
+          } else {
+            const val = entry[stat.key];
+            const color = rankColor(val, rowValues);
+            rowContainer.add(
+              this.add.text(colCx, rowY, `${val}`, {
+                fontSize: '15px', fontFamily: 'Nunito, sans-serif',
+                color, stroke: '#000', strokeThickness: 1,
+              }).setOrigin(0.5),
+            );
+          }
+        });
+
         this.tweens.add({
-          targets: container, alpha: 1, y: cy,
-          duration: 380, ease: 'Back.easeOut',
-          delay: introDelay + i * 80,
+          targets: rowContainer, alpha: 1,
+          duration: 300, delay: introDelay + 60 * (rowIdx + 1),
         });
       });
     } catch {
