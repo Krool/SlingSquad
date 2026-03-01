@@ -1,5 +1,4 @@
 import type { HeroClass } from '@/config/constants';
-import { SKILL_TIER1_BATTLES, SKILL_TIER2_BATTLES } from '@/config/constants';
 
 export interface SkillDef {
   id: string;
@@ -158,9 +157,3 @@ export function mergeSkillEffects(selectedSkills: string[]): Record<string, numb
   return merged;
 }
 
-/** Returns the tier that a given battle count unlocks (0 = none, 1 = tier 1, 2 = tier 2). */
-export function getTierForBattleCount(battles: number): number {
-  if (battles >= SKILL_TIER2_BATTLES) return 2;
-  if (battles >= SKILL_TIER1_BATTLES) return 1;
-  return 0;
-}

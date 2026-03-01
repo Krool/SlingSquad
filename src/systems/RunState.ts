@@ -355,6 +355,8 @@ export function recruitHero(heroClass: HeroClass): boolean {
     maxHp: baseHp,
     reviveCooldown: 0,
     deathCount: 0,
+    battlesCompleted: 0,
+    selectedSkills: [],
   });
   saveRun();
   return true;
@@ -451,12 +453,19 @@ export function addHeroBattleXP() {
   saveRun();
 }
 
-/** Choose a skill for a hero class. Pushes the skill ID onto selectedSkills. */
+/** Choose a skill for a hero class. Pushes the skill ID onto selectedSkills.
+ *  Rejects if the hero already has a skill for that tier (prevents double-pick race). */
 export function selectHeroSkill(heroClass: HeroClass, skillId: string) {
   const s = getRunState();
   const h = s.squad.find(e => e.heroClass === heroClass);
   if (!h) return;
   if (!h.selectedSkills) h.selectedSkills = [];
+  // Extract tier from skill ID (e.g. 'warrior_t1a' → '_t1')
+  const tierMatch = skillId.match(/_t(\d)/);
+  if (tierMatch) {
+    const tierTag = `_t${tierMatch[1]}`;
+    if (h.selectedSkills.some(id => id.includes(tierTag))) return; // already picked for this tier
+  }
   h.selectedSkills.push(skillId);
   saveRun();
 }

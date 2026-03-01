@@ -330,7 +330,7 @@ export class LaunchSystem {
 
     // Mage: draw AoE impact preview at projected landing point
     if (this.currentHero?.heroClass === 'MAGE') {
-      const mageAoeRadius = 150 + this.relicMods.mageAoeRadiusBonus; // matches HERO_STATS.MAGE.aoeRadius
+      const mageAoeRadius = 150 + this.relicMods.mageAoeRadiusBonus + (this.currentHero?.skillMods?.aoeRadiusBonus ?? 0);
       this.trajectoryGraphics.fillStyle(0x8e44ad, 0.10);
       this.trajectoryGraphics.fillCircle(landX, landY, mageAoeRadius);
       this.trajectoryGraphics.lineStyle(2, 0x8e44ad, 0.50);
@@ -339,7 +339,7 @@ export class LaunchSystem {
       this.trajectoryGraphics.lineStyle(1, 0xb065e0, 0.22);
       this.trajectoryGraphics.strokeCircle(landX, landY, mageAoeRadius * 0.5);
       // Cluster bomblet indicator: 5 small dots in a ring around the landing point
-      const clusterCount = HERO_STATS.MAGE.clusterCount;
+      const clusterCount = HERO_STATS.MAGE.clusterCount + (this.currentHero?.skillMods?.clusterCountBonus ?? 0);
       for (let i = 0; i < clusterCount; i++) {
         const angle = (i / clusterCount) * Math.PI * 2;
         const cx = landX + Math.cos(angle) * 40;
