@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform, treasuryRoom } from '../shared';
 
 // ─── "Infernal Throne" — demon lord's throne room with lava moat ────────────
 export const infernalThrone: TemplateFn = (ctx) => {
@@ -68,6 +69,9 @@ export const infernalThrone: TemplateFn = (ctx) => {
   ctx.coin(RX + 40, rf1 - 40, 4);                 // structure — above rear tower
   ctx.coin(GX + 35, groundY - 40, 6);             // risky — near lava pit at gate
   ctx.coin(HX + hallW + 30, groundY - 40, 6);     // risky — near fire geyser
+
+  // Terrain — hidden obsidian chamber
+  treasuryRoom(ctx, 950, groundY, 80, 50, 'OBSIDIAN', 6);
 };
 
 // ─── "Demon Lord Lair" — 3 connected chambers with increasing difficulty ────
@@ -465,6 +469,10 @@ export const demonKingFortress: TemplateFn = (ctx) => {
   ctx.coin(GX + 40, groundY - 40, 6);                  // risky — near lava pit at gate
   ctx.coin(KX + keepW / 2, groundY - 40, 6);           // risky — near lava pit under keep
   ctx.coin(KX + keepW + 20, groundY - 40, 3);          // risky — near fire geyser
+
+  // Terrain — volcanic rock formations in courtyard
+  raisedPlatform(ctx, 600, groundY, 130, 24);
+  raisedPlatform(ctx, 900, groundY, 100, 20);
 };
 
 export const diff5Templates: TemplateFn[] = [

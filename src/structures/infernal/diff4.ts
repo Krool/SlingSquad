@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { raisedPlatform } from '../shared';
 
 // ─── "Demon Citadel" — massive twin-tower fortress with obsidian bridge ─────
 export const demonCitadel: TemplateFn = (ctx) => {
@@ -197,6 +198,9 @@ export const lavaFortress: TemplateFn = (ctx) => {
   ctx.coin(500, groundY - 40, 5);            // risky — near outer lava moat
   ctx.coin(850, groundY - 40, 5);            // risky — near right lava moat
   ctx.coin(CX, groundY - 40, 3);            // risky — near fire geyser
+
+  // Terrain — rock formation at approach
+  raisedPlatform(ctx, 560, groundY, 100, 22);
 };
 
 // ─── "Hellfire Complex" — multi-building compound with fire geysers ─────────
@@ -435,6 +439,9 @@ export const obsidianMonolith: TemplateFn = (ctx) => {
   ctx.coin(RX + 40, rf2 - 30, 4);              // structure — above right upper platform
   ctx.coin(MX - 60, groundY - 40, 5);          // risky — near lava left of monolith
   ctx.coin(LX + 35, groundY - 40, 4);          // risky — near fire geyser at left
+
+  // Terrain — rock outcrop around monolith base
+  raisedPlatform(ctx, 750, groundY, 80, 18);
 };
 
 // ─── "Inferno Compound" — walled compound with inner structures ─────────────

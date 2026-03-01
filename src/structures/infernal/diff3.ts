@@ -1,4 +1,5 @@
 import type { TemplateFn } from '../types';
+import { pit, treasuryRoom } from '../shared';
 
 // ─── "Demon Forge" — anvil structure with fire geyser and lava pit ──────────
 export const demonForge: TemplateFn = (ctx) => {
@@ -52,6 +53,9 @@ export const demonForge: TemplateFn = (ctx) => {
   ctx.coin(RX + 45, rFloor2 - 30, 3);              // structure — above weapon rack top
   ctx.coin(FX + frameW / 2, groundY - 40, 4);      // risky — near lava pit inside forge
   ctx.coin(FX + frameW + 40, groundY - 40, 5);     // risky — near fire geyser
+
+  // Terrain — forge stash
+  treasuryRoom(ctx, 900, groundY, 80, 50, 'OBSIDIAN', 5);
 };
 
 // ─── "Obsidian Castle" — two-tower castle with obsidian walls ───────────────
@@ -278,6 +282,9 @@ export const demonArena: TemplateFn = (ctx) => {
   ctx.coin(CX - 40, groundY - 40, 5);      // risky — near lava in pit
   ctx.coin(CX + 40, groundY - 18, 3);      // risky — near lava in pit (ground level)
   ctx.coin(LX + 35, lf - 30, 3);           // structure — above left platform
+
+  // Terrain — raised edges around the arena pit
+  pit(ctx, 700, groundY, 100, 24);
 };
 
 // ─── "Volcanic Spire" — very tall single spire with fire geyser ────────────
