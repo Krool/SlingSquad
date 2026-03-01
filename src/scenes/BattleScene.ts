@@ -34,7 +34,8 @@ import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
 
 import {
   getRunState, hasRunState, completeNode, syncSquadHp, newRun, getRelicModifiers, loadRun,
-  addRelic, ensureActiveHero, getHeroesOnCooldown, applyAndStoreRegen,
+  addRelic, ensureActiveHero, getHeroesOnCooldown,
+  addHeroBattleXP, getPendingLevelUps,
   type NodeDef, type RelicDef,
 } from '@/systems/RunState';
 import { AudioSystem } from '@/systems/AudioSystem';
@@ -221,7 +222,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const banner = this.add.text(GAME_WIDTH / 2, 60, this.activeNode.name.toUpperCase(), {
-      fontSize: '34px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '34px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#f1c40f', stroke: '#000', strokeThickness: 4,
       letterSpacing: 3,
     }).setOrigin(0.5).setDepth(60).setAlpha(0);
@@ -272,7 +273,7 @@ export class BattleScene extends Phaser.Scene {
 
     // Boss name — large, slams in from scale
     const nameText = this.add.text(cx, cy + 20, this.activeNode.name.toUpperCase(), {
-      fontSize: '80px', fontFamily: 'Cinzel, Nunito, sans-serif',
+      fontSize: '80px', fontFamily: 'Knights Quest, Nunito, sans-serif',
       color: '#c0392b', stroke: '#1a0000', strokeThickness: 10,
     }).setOrigin(0.5).setDepth(90).setAlpha(0).setScale(1.35);
     this.tweens.add({
@@ -295,7 +296,7 @@ export class BattleScene extends Phaser.Scene {
     const darken = diff >= 4 ? 0.7 : diff >= 3 ? 0.85 : 1.0;
     const skyColor = this.darkenColor(theme.skyColor, darken);
 
-    this.bg = this.add.graphics().setDepth(0);
+    this.bg = this.add.graphics().setDepth(-10);
 
     // ── Multi-stop sky gradient ──────────────────────────────────────────────
     if (theme.skyGradient && theme.skyGradient.length >= 2) {
@@ -457,9 +458,9 @@ export class BattleScene extends Phaser.Scene {
 
   /** Draw background decorative elements based on zone theme, using 3 depth layers */
   private drawBgElements(theme: ZoneTheme) {
-    const farGfx  = this.add.graphics().setDepth(0.5);
-    const midGfx  = this.add.graphics().setDepth(1);
-    const nearGfx = this.add.graphics().setDepth(1.5);
+    const farGfx  = this.add.graphics().setDepth(-4);
+    const midGfx  = this.add.graphics().setDepth(-3);
+    const nearGfx = this.add.graphics().setDepth(-2);
 
     for (const el of theme.bgElements) {
       const layer = el.layer ?? 'mid';
@@ -1119,6 +1120,23 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
+    // Spike trap collision — hero takes spike damage, trap takes impact damage
+    if (hero && other.label === 'hazard_spike') {
+      const trap = this.hazards.find(h => h.body === other && !h.destroyed);
+      if (trap) {
+        // Damage hero
+        hero.applyDamage(HAZARD.SPIKE_TRAP.damage);
+        DamageNumber.damage(this, hero.x, hero.y, HAZARD.SPIKE_TRAP.damage);
+        // Hero impact damages the trap (destroyable)
+        if (hero.state === 'flying') {
+          const v = hero.body?.velocity ?? { x: 0, y: 0 };
+          const speed = Math.hypot(v.x, v.y);
+          const impactDmg = speed * 10;
+          trap.applyDamage(impactDmg);
+        }
+      }
+    }
+
   }
 
   // ─── Events ──────────────────────────────────────────────────────────────
@@ -1147,21 +1165,19 @@ export class BattleScene extends Phaser.Scene {
       this.audio.playBlockHit(mat as MaterialType);
       this.blocksDestroyedThisBattle++;
       addBlocksDestroyed(1);
-      // Wake nearby sleeping bodies so they fall when support is removed
+      // Wake ALL sleeping bodies so they fall when support is removed.
+      // (80px radius was too small — top of a tower stayed floating when the base was knocked out.)
       for (const b of this.blocks) {
-        if (b.destroyed) continue;
-        const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
-        if (d < 80) this.wakeBody(b.body);
+        if (!b.destroyed) this.wakeBody(b.body);
       }
       for (const e of this.enemies) {
-        if (e.state === 'dead') continue;
-        const d = Math.hypot(e.x - x, e.y - y);
-        if (d < 80) this.wakeBody(e.body);
+        if (e.state !== 'dead') this.wakeBody(e.body);
       }
       for (const barrel of this.barrels) {
-        if (barrel.exploded) continue;
-        const d = Math.hypot(barrel.body.position.x - x, barrel.body.position.y - y);
-        if (d < 80) this.wakeBody(barrel.body);
+        if (!barrel.exploded) this.wakeBody(barrel.body);
+      }
+      for (const h of this.heroes) {
+        if (h.body && h.state !== 'dead') this.wakeBody(h.body as MatterJS.BodyType);
       }
       // Near-miss flinch: enemies close but not crushed visually react
       for (const e of this.enemies) {
@@ -1321,7 +1337,7 @@ export class BattleScene extends Phaser.Scene {
     // Mage cluster grenade: bomblets launch upward with random spread, then arc down
     this.events.on('mageClusterSpawn', (x: number, y: number, hero: Hero) => {
       const stats = HERO_STATS.MAGE;
-      const count = stats.clusterCount;
+      const count = stats.clusterCount + (hero.skillMods?.clusterCountBonus ?? 0);
       const dmg = stats.clusterDamage;
       for (let i = 0; i < count; i++) {
         const hSpeed = Phaser.Math.FloatBetween(-6, 6);    // random horizontal spread
@@ -1368,10 +1384,11 @@ export class BattleScene extends Phaser.Scene {
 
     if (victory) {
       this.audio.playWin();
-      // completeNode first (ticks existing cooldowns), then syncSquadHp (assigns new cooldowns for dead heroes), then regen alive heroes
+      // completeNode first (ticks existing cooldowns), then syncSquadHp (assigns new cooldowns for dead heroes)
+      // Regen is applied on the overworld map so the player sees health bars increase
       completeNode(this.activeNode.id);
       syncSquadHp(this.heroes.map(h => ({ heroClass: h.heroClass, hp: h.hp, maxHp: h.maxHp, state: h.state })));
-      applyAndStoreRegen();
+      addHeroBattleXP();
     } else {
       this.audio.playLose();
     }
@@ -1437,8 +1454,9 @@ export class BattleScene extends Phaser.Scene {
       healingDone: Math.round(h.battleHealingDone),
     }));
 
+    const pendingLevelUps = victory ? getPendingLevelUps() : [];
     this.time.delayedCall(800, () => {
-      this.scene.start('ResultScene', { victory, reason, gold, nodeId: this.activeNode.id, heroStats });
+      this.scene.start('ResultScene', { victory, reason, gold, nodeId: this.activeNode.id, heroStats, pendingLevelUps });
     });
   }
 

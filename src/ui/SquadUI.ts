@@ -29,7 +29,10 @@ export class SquadUI {
   private portraitSprites: Map<Hero, Phaser.GameObjects.Image>   = new Map();
   private statusDots:     Map<Hero, Phaser.GameObjects.Graphics> = new Map();
   private nameLabels:     Map<Hero, Phaser.GameObjects.Text>     = new Map();
-  private nextLabel!:  Phaser.GameObjects.Text;
+  private goldBorder!: Phaser.GameObjects.Graphics;
+  private prevNextHero: Hero | null = null;
+  private borderPulseTween: Phaser.Tweens.Tween | null = null;
+  private borderTransitioning = false;
   private bg: Phaser.GameObjects.Rectangle;
   private sep!: Phaser.GameObjects.Graphics;
 
@@ -94,12 +97,8 @@ export class SquadUI {
     this.sep.lineStyle(1, 0x1e3050, 0.8);
     this.sep.lineBetween(0, GAME_HEIGHT - HUD_BAR_HEIGHT, GAME_WIDTH, GAME_HEIGHT - HUD_BAR_HEIGHT);
 
-    // "NEXT" label — floats above the queued hero portrait
-    this.nextLabel = scene.add.text(0, 0, 'NEXT', {
-      fontSize: '13px', fontFamily: 'Nunito, sans-serif',
-      color: '#2ecc71', stroke: '#000', strokeThickness: 2,
-      letterSpacing: 1,
-    }).setOrigin(0.5).setDepth(44).setAlpha(0);
+    // Gold border — highlights the next-to-launch hero
+    this.goldBorder = scene.add.graphics().setDepth(44).setAlpha(0);
 
     this.buildPortraits();
   }
@@ -150,6 +149,8 @@ export class SquadUI {
     const portraitSprite = this.scene.add.image(startX, cy - 2, `${charKey}_idle_1`)
       .setDisplaySize(PORTRAIT_SIZE - 8, PORTRAIT_SIZE - 8)
       .setDepth(42);
+    const classTint = Hero.CLASS_TINT[hero.heroClass];
+    if (classTint) portraitSprite.setTint(classTint);
 
     // ── Short class tag below portrait ────────────────────────────────────
     const nameTag = this.scene.add.text(
@@ -199,13 +200,6 @@ export class SquadUI {
     }).setOrigin(0.5).setDepth(43);
     this.cdPortraits.push(cdNum);
 
-    // "nodes" label
-    const nodesLabel = this.scene.add.text(cx, cy + 12, 'nodes', {
-      fontSize: '9px', fontFamily: 'Nunito, sans-serif',
-      color: '#aa5555',
-    }).setOrigin(0.5).setDepth(43);
-    this.cdPortraits.push(nodesLabel);
-
     // Class tag at bottom
     const tag = this.scene.add.text(cx, cy + PORTRAIT_SIZE / 2 - 14, cd.heroClass.slice(0, 3), {
       fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#555',
@@ -228,11 +222,39 @@ export class SquadUI {
     g.fillCircle(x, y, 5);
   }
 
+  private drawGoldBorder(x: number, cy: number) {
+    this.goldBorder.clear();
+    // Draw centered at (0,0) so setScale pivots around the portrait center
+    const expand = 3;
+    const half = PORTRAIT_SIZE / 2 + expand;
+    // Outer glow
+    this.goldBorder.lineStyle(5, 0xffd700, 0.2);
+    this.goldBorder.strokeRoundedRect(-half - 1, -half - 1, half * 2 + 2, half * 2 + 2, 9);
+    // Main border
+    this.goldBorder.lineStyle(3, 0xffd700, 1);
+    this.goldBorder.strokeRoundedRect(-half, -half, half * 2, half * 2, 8);
+    // Position at portrait center
+    this.goldBorder.setPosition(x, cy);
+  }
+
+  private startPulseTween() {
+    this.borderPulseTween?.stop();
+    this.goldBorder.setAlpha(1);
+    this.borderPulseTween = this.scene.tweens.add({
+      targets: this.goldBorder,
+      alpha: { from: 1, to: 0.7 },
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
   update() {
     const cy = GAME_HEIGHT - HUD_BAR_HEIGHT / 2;
 
     // Find the first queued hero — that's the "NEXT" to launch
-    const nextHero = this.heroes.find(h => h.state === 'queued');
+    const nextHero = this.heroes.find(h => h.state === 'queued') ?? null;
 
     for (let i = 0; i < this.slots.length; i++) {
       const slot = this.slots[i];
@@ -263,22 +285,61 @@ export class SquadUI {
         hero,
       );
 
-      // Show NEXT label above the next-to-launch hero
-      if (hero === nextHero) {
-        this.nextLabel
-          .setPosition(startX, cy - PORTRAIT_SIZE / 2 - 10)
-          .setAlpha(1);
-      }
     }
 
-    // Hide NEXT label if no queued hero
-    if (!nextHero) this.nextLabel.setAlpha(0);
+    // ── Gold border transition ───────────────────────────────────────────
+    if (nextHero !== this.prevNextHero && !this.borderTransitioning) {
+      this.prevNextHero = nextHero;
+      this.borderPulseTween?.stop();
+      this.borderPulseTween = null;
+
+      if (!nextHero) {
+        // No queued hero — fade out
+        this.scene.tweens.add({
+          targets: this.goldBorder,
+          alpha: 0,
+          duration: 150,
+          ease: 'Power2',
+        });
+      } else {
+        // Find slot position for the next hero
+        const idx = this.slots.findIndex(s => s.type === 'hero' && s.hero === nextHero);
+        if (idx >= 0) {
+          const slotX = this.slotPositions[idx];
+          this.borderTransitioning = true;
+
+          // Fade out old border, then pop in on new position
+          this.scene.tweens.add({
+            targets: this.goldBorder,
+            alpha: 0,
+            duration: 150,
+            ease: 'Power2',
+            onComplete: () => {
+              this.drawGoldBorder(slotX, cy);
+              this.goldBorder.setScale(1.15);
+              this.scene.tweens.add({
+                targets: this.goldBorder,
+                alpha: 1,
+                scale: 1,
+                duration: 250,
+                ease: 'Back.easeOut',
+                onComplete: () => {
+                  this.borderTransitioning = false;
+                  this.startPulseTween();
+                },
+              });
+            },
+          });
+        }
+      }
+    }
   }
 
   destroy() {
     this.bg.destroy();
     this.sep.destroy();
-    this.nextLabel.destroy();
+    this.scene.tweens.killTweensOf(this.goldBorder);
+    this.goldBorder.destroy();
     this.portraits.forEach(g => g.destroy());
     this.portraitSprites.forEach(s => s.destroy());
     this.nameLabels.forEach(t => t.destroy());
