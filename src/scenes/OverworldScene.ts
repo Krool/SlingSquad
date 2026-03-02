@@ -59,16 +59,16 @@ const RARITY_ICON: Record<string, string> = {
 
 // ── Biome color palettes ─────────────────────────────────────────────────────
 // Shared base
-const TERRAIN_GREEN   = 0x2d5a1e;
-const TERRAIN_DARK    = 0x1a3a12;
-const TERRAIN_LIGHT   = 0x4a8a30;
+const TERRAIN_GREEN   = 0x1e4416;
+const TERRAIN_DARK    = 0x142e0e;
+const TERRAIN_LIGHT   = 0x3a6a24;
 const ROAD_COLOR      = 0x8a7a5a;
 const ROAD_BORDER     = 0x6a5a3a;
 
 // Goblin Wastes accents
-const GW_CANOPY    = 0x2a5520;
+const GW_CANOPY    = 0x1e4018;
 const GW_DEAD_TREE = 0x4a3a2a;
-const GW_SWAMP     = 0x3a5a4a;
+const GW_SWAMP     = 0x2a4a3a;
 const GW_RUIN      = 0x6a6a5a;
 
 // Frozen Peaks accents
@@ -310,7 +310,7 @@ export class OverworldScene extends Phaser.Scene {
 
     // Set particle theme
     const particleThemes: Record<string, { particle: 'firefly' | 'snowflake' | 'ember'; particleColors: number[] }> = {
-      goblin_wastes:  { particle: 'firefly',   particleColors: [0x88ff88, 0x66ee66, 0xaaff77] },
+      goblin_wastes:  { particle: 'firefly',   particleColors: [0x66cc66, 0x55aa55, 0x88cc66] },
       frozen_peaks:   { particle: 'snowflake', particleColors: [0xeeeeff, 0xddeeff, 0xffffff] },
       infernal_keep:  { particle: 'ember',     particleColors: [0xff8844, 0xff6622, 0xffaa33] },
     };
@@ -372,14 +372,14 @@ export class OverworldScene extends Phaser.Scene {
       bg.fillRect(0, topH + botH * 0.3, W, botH * 0.2);
     } else {
       // Goblin Wastes
-      // Sky: dusky green to canopy
-      bg.fillGradientStyle(0x3a5a4a, 0x3a5a4a, 0x2a4a1e, 0x2a4a1e);
+      // Sky: dark mossy green to canopy
+      bg.fillGradientStyle(0x1e3a28, 0x1e3a28, 0x1a3416, 0x1a3416);
       bg.fillRect(0, 0, W, topH);
       // Terrain: rich green
       bg.fillGradientStyle(TERRAIN_GREEN, TERRAIN_GREEN, TERRAIN_DARK, TERRAIN_DARK);
       bg.fillRect(0, topH, W, botH);
       // Variation band
-      bg.fillStyle(0x2a5020, 0.25);
+      bg.fillStyle(0x1a3a14, 0.2);
       bg.fillRect(0, topH + botH * 0.35, W, botH * 0.15);
     }
   }
@@ -455,20 +455,25 @@ export class OverworldScene extends Phaser.Scene {
   private drawGoblinWastes(g: Phaser.GameObjects.Graphics, rand: () => number, W: number, H: number) {
     const NODE_CLEAR = 70;
 
-    // Dense tree canopy clusters (primary forest fill)
-    for (let i = 0; i < 70; i++) {
+    // Dense tree canopy clusters — ellipses for 3/4 perspective
+    for (let i = 0; i < 65; i++) {
       const cx = rand() * W;
       const cy = rand() * H;
       if (this.isNearNode(cx, cy, NODE_CLEAR)) continue;
-      const count = 4 + Math.floor(rand() * 5); // 4-8 circles per cluster
+      const count = 3 + Math.floor(rand() * 4); // 3-6 per cluster
       for (let j = 0; j < count; j++) {
         const ox = (rand() - 0.5) * 40;
-        const oy = (rand() - 0.5) * 30;
-        const r = 20 + rand() * 25;
+        const oy = (rand() - 0.5) * 25;
+        const rw = 22 + rand() * 28;  // wider than tall
+        const rh = rw * (0.5 + rand() * 0.15); // squash 50-65% for perspective
         const greenVar = Math.floor(rand() * 3);
-        const colors = [GW_CANOPY, 0x2a6020, 0x245018];
-        g.fillStyle(colors[greenVar], 0.55 + rand() * 0.25);
-        g.fillCircle(cx + ox, cy + oy, r);
+        const colors = [GW_CANOPY, 0x1e4a18, 0x1a3c14];
+        // Dark shadow underneath for depth
+        g.fillStyle(0x0a1a08, 0.3);
+        g.fillEllipse(cx + ox + 2, cy + oy + rh * 0.2, rw * 0.9, rh * 0.7);
+        // Canopy
+        g.fillStyle(colors[greenVar], 0.35 + rand() * 0.2);
+        g.fillEllipse(cx + ox, cy + oy, rw, rh);
       }
     }
 
@@ -499,7 +504,7 @@ export class OverworldScene extends Phaser.Scene {
       g.fillStyle(GW_SWAMP, 0.45);
       g.fillEllipse(px, py, sw, sh);
       // Water sheen highlight
-      g.fillStyle(0x5a8a6a, 0.2);
+      g.fillStyle(0x3a6a4a, 0.15);
       g.fillEllipse(px - sw * 0.1, py - sh * 0.15, sw * 0.6, sh * 0.5);
     }
 
@@ -522,7 +527,7 @@ export class OverworldScene extends Phaser.Scene {
     for (let i = 0; i < 35; i++) {
       const gx = rand() * W;
       const gy = rand() * H;
-      g.lineStyle(1, 0x5aaa40, 0.35);
+      g.lineStyle(1, 0x3a8a2a, 0.3);
       const tufts = 2 + Math.floor(rand() * 3);
       for (let t = 0; t < tufts; t++) {
         const ox = (rand() - 0.5) * 6;
