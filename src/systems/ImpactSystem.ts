@@ -120,6 +120,7 @@ export class ImpactSystem {
         const dealt = dmg * (1 - d / IMPACT_RADIUS_WARRIOR);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
+        hero.battleImpactDamage += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -151,6 +152,7 @@ export class ImpactSystem {
         const dealt = crashDmg * (1 - d / IMPACT_RADIUS_RANGER);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
+        hero.battleImpactDamage += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -213,6 +215,7 @@ export class ImpactSystem {
         const dealt = mageDmg * (1 - d / r);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
+        hero.battleImpactDamage += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
         hitEnemies.push(e);
       }
@@ -234,6 +237,7 @@ export class ImpactSystem {
         if (e.state === 'dead' || hitEnemies.includes(e)) continue;
         e.applyDamage(chainDmg, undefined, hero);
         hero.battleDamageDealt += chainDmg;
+        hero.battleImpactDamage += chainDmg;
         this.emitDamage(e.x, e.y, chainDmg, true);
         this.spawnChainLightning(x, y, e.x, e.y);
         chains--;
@@ -277,6 +281,7 @@ export class ImpactSystem {
         const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PRIEST);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
+        hero.battleImpactDamage += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -328,6 +333,7 @@ export class ImpactSystem {
         const dealt = crashDmg * (1 - d / 80);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
+        hero.battleImpactDamage += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -398,6 +404,7 @@ export class ImpactSystem {
         const dealt = crashDmg * (1 - d / IMPACT_RADIUS_ROGUE) * backstab;
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
+        hero.battleImpactDamage += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -428,6 +435,7 @@ export class ImpactSystem {
         const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PALADIN);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
+        hero.battleImpactDamage += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
@@ -469,6 +477,7 @@ export class ImpactSystem {
         const dealt = crashDmg * (1 - d / IMPACT_RADIUS_DRUID);
         e.applyDamage(dealt, undefined, hero);
         hero.battleDamageDealt += dealt;
+        hero.battleImpactDamage += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }

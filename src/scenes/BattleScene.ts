@@ -1339,14 +1339,18 @@ export class BattleScene extends Phaser.Scene {
       const stats = HERO_STATS.MAGE;
       const count = stats.clusterCount + (hero.skillMods?.clusterCountBonus ?? 0);
       const dmg = stats.clusterDamage;
+      // Stagger spawns to avoid frame-spike from creating all bodies at once
       for (let i = 0; i < count; i++) {
-        const hSpeed = Phaser.Math.FloatBetween(-6, 6);    // random horizontal spread
-        const vSpeed = Phaser.Math.FloatBetween(-10, -5);   // upward launch
-        const p = new Projectile(this, x, y, hSpeed, vSpeed, dmg, 0x8e44ad);
-        p.sourceHero = hero;
-        // Moderate air friction so bomblets slow and arc down naturally
-        if (p.body) p.body.frictionAir = 0.015;
-        this.combatSystem.addProjectile(p);
+        this.time.delayedCall(i * 120, () => {
+          if (this.battleEnded) return;
+          const hSpeed = Phaser.Math.FloatBetween(-3, 3);      // tight horizontal spread
+          const vSpeed = Phaser.Math.FloatBetween(-14, -10);    // strong upward launch
+          const p = new Projectile(this, x, y, hSpeed, vSpeed, dmg, 0x8e44ad);
+          p.sourceHero = hero;
+          // Low air friction so bomblets arc high and fall naturally with gravity
+          if (p.body) p.body.frictionAir = 0.005;
+          this.combatSystem.addProjectile(p);
+        });
       }
     });
   }
@@ -1449,6 +1453,7 @@ export class BattleScene extends Phaser.Scene {
     const heroStats = this.heroes.map(h => ({
       heroClass: h.heroClass,
       damageDealt: Math.round(h.battleDamageDealt),
+      impactDamage: Math.round(h.battleImpactDamage),
       blockDamage: Math.round(h.battleBlockDamage),
       enemiesKilled: h.battleEnemiesKilled,
       healingDone: Math.round(h.battleHealingDone),

@@ -14,6 +14,7 @@ import { Hero } from '@/entities/Hero';
 interface HeroBattleStats {
   heroClass: string;
   damageDealt: number;
+  impactDamage: number;
   blockDamage: number;
   enemiesKilled: number;
   healingDone: number;
@@ -487,7 +488,7 @@ export class ResultScene extends Phaser.Scene {
       const heroColW = (tableW - labelColW) / count;
       const headerH = 90;
       const rowH = 34;
-      const statRowCount = 4;
+      const statRowCount = 5;
       const tableH = headerH + rowH * statRowCount;
       const left = cx - tableW / 2;
 
@@ -532,9 +533,17 @@ export class ResultScene extends Phaser.Scene {
 
       // ── Per-hero stat entries for comparative coloring ──────────────
       const heroStatEntries = squad.map(h => heroStats?.find(s => s.heroClass === h.heroClass));
-      type StatKey = 'damageDealt' | 'blockDamage' | 'enemiesKilled' | 'healingDone';
+      type StatKey = 'impactDamage' | 'combatDamage' | 'blockDamage' | 'enemiesKilled' | 'healingDone';
+
+      /** Get stat value — combatDamage is derived (total - impact). */
+      function getStatValue(entry: HeroBattleStats, key: StatKey): number {
+        if (key === 'combatDamage') return Math.max(0, entry.damageDealt - (entry.impactDamage ?? 0));
+        return (entry as unknown as Record<string, number>)[key] ?? 0;
+      }
+
       const statKeys: { key: StatKey; label: string; icon: string }[] = [
-        { key: 'damageDealt', label: 'Dmg', icon: '\u2694' },
+        { key: 'impactDamage', label: 'Impact', icon: '\ud83d\udca5' },
+        { key: 'combatDamage', label: 'Combat', icon: '\u2694' },
         { key: 'blockDamage', label: 'Struct', icon: '\u25fc' },
         { key: 'enemiesKilled', label: 'Kills', icon: '\u2726' },
         { key: 'healingDone', label: 'Healed', icon: '\u2665' },
@@ -607,10 +616,10 @@ export class ResultScene extends Phaser.Scene {
         );
 
         // Gather values for comparative coloring
-        const rowValues = heroStatEntries.map(e => (e ? e[stat.key] : 0));
+        const rowValues = heroStatEntries.map(e => (e ? getStatValue(e, stat.key) : 0));
 
         // Per-hero values
-        squad.forEach((h, i) => {
+        squad.forEach((_h, i) => {
           const colCx = left + labelColW + heroColW * i + heroColW / 2;
           const entry = heroStatEntries[i];
 
@@ -623,7 +632,7 @@ export class ResultScene extends Phaser.Scene {
               }).setOrigin(0.5),
             );
           } else {
-            const val = entry[stat.key];
+            const val = getStatValue(entry, stat.key);
             const color = rankColor(val, rowValues);
             rowContainer.add(
               this.add.text(colCx, rowY, `${val}`, {

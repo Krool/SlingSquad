@@ -57,7 +57,8 @@ export class Hero {
   private static readonly MAX_RECOVERIES = 3;
 
   // Per-battle performance stats (auto-reset each battle since Hero instances are recreated)
-  battleDamageDealt = 0;
+  battleDamageDealt = 0;    // total enemy damage (impact + combat + projectile + thorns)
+  battleImpactDamage = 0;   // enemy damage from sling impact only (ImpactSystem)
   battleBlockDamage = 0;
   battleEnemiesKilled = 0;
   battleHealingDone = 0;
