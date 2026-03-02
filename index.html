@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Physics-based roguelike where you sling a squad of heroes at enemy fortresses. Built with Phaser 3." />
+    <meta name="theme-color" content="#0a0a0f" />
+    <link rel="icon" href="/SlingSquad/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/SlingSquad/manifest.json" />
+    <link rel="canonical" href="https://krool.github.io/SlingSquad/" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Sling Squad" />
+    <meta property="og:description" content="Physics-based roguelike where you sling a squad of heroes at enemy fortresses." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://krool.github.io/SlingSquad/" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Sling Squad" />
+    <meta name="twitter:description" content="Physics-based roguelike where you sling a squad of heroes at enemy fortresses." />
+
+    <title>Sling Squad</title>
+
+    <!-- Game fonts: Knights Quest for titles, Nunito for body/UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+      @font-face {
+        font-family: 'Knights Quest';
+        src: url('fonts/KnightsQuest.ttf') format('truetype');
+        font-weight: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Knights Quest Shielded';
+        src: url('fonts/KnightsQuestShielded.ttf') format('truetype');
+        font-weight: normal;
+        font-display: swap;
+      }
+    </style>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        background: #0a0a0f;
+        overflow: hidden;
+        touch-action: none;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      /* Fill entire screen edge-to-edge */
+      #game-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        width: 100dvw;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+        /* Stretch to fill entire viewport — overrides Phaser's FIT letterboxing */
+        width: 100vw !important;
+        width: 100dvw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        object-fit: fill;
+      }
+
+      /* ── Portrait orientation overlay ─────────────────────────── */
+      #rotate-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: #0a0a0f;
+        color: #c8ccd4;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        font-family: 'Nunito', sans-serif;
+        text-align: center;
+        padding: 32px;
+      }
+      #rotate-overlay .rotate-icon {
+        width: 64px;
+        height: 64px;
+        animation: rotate-nudge 2s ease-in-out infinite;
+      }
+      #rotate-overlay .rotate-title {
+        font-family: 'Knights Quest', serif;
+        font-size: 22px;
+        color: #f0e6d3;
+        letter-spacing: 1px;
+      }
+      #rotate-overlay .rotate-sub {
+        font-size: 15px;
+        opacity: 0.6;
+        max-width: 280px;
+        line-height: 1.5;
+      }
+      @keyframes rotate-nudge {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(90deg); }
+        50%, 75% { transform: rotate(90deg); }
+      }
+      /* hover:none = touch-primary device (phone/tablet) that can actually be rotated.
+         Desktop users with narrow windows or portrait monitors are not blocked. */
+      @media (orientation: portrait) and (hover: none) {
+        #rotate-overlay { display: flex; }
+      }
+    </style>
+    <script type="module" crossorigin src="/SlingSquad/assets/index-C7tKWoIh.js"></script>
+  </head>
+  <body>
+    <div id="game-container"></div>
+
+    <!-- Portrait orientation overlay — hidden in landscape via CSS -->
+    <div id="rotate-overlay">
+      <svg class="rotate-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Phone in portrait orientation (animation rotates toward landscape) -->
+        <rect x="19" y="8" width="26" height="42" rx="4" stroke="#c8ccd4" stroke-width="2.5"/>
+        <circle cx="32" cy="44" r="2" fill="#c8ccd4"/>
+        <!-- Curved arrow suggesting clockwise rotation -->
+        <path d="M50 18 l5 5 l-5 5" stroke="#f0e6d3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M55 23 Q55 11 43 11" stroke="#f0e6d3" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="rotate-title">Rotate Your Device</div>
+      <div class="rotate-sub">Sling Squad is designed for landscape mode. Please rotate your screen to play.</div>
+    </div>
+
+    <!-- Must run before any module to set audio session before AudioContext creation.
+         'ambient' = our audio mixes under podcasts/music instead of interrupting them.
+         Supported: Safari 17+ / iOS 17+. Silently ignored everywhere else. -->
+    <script>
+      if ('audioSession' in navigator) {
+        navigator.audioSession.type = 'ambient';
+      }
+    </script>
+    <!-- Try to lock orientation on first user gesture (API requires user activation + fullscreen).
+         Silently fails on browsers/contexts that don't support it. -->
+    <script>
+      document.addEventListener('pointerdown', function tryLock() {
+        document.removeEventListener('pointerdown', tryLock);
+        try { screen.orientation.lock('landscape').catch(function(){}); } catch(e) {}
+      }, { once: true });
+    </script>
+  </body>
+</html>

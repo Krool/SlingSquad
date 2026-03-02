@@ -1,0 +1,17 @@
+{
+  "name": "Sling Squad",
+  "short_name": "SlingSquad",
+  "description": "Physics-based roguelike where you sling a squad of heroes at enemy fortresses.",
+  "start_url": "/SlingSquad/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
