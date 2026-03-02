@@ -3,6 +3,7 @@ import { MusicSystem } from '@/systems/MusicSystem';
 import { AudioSystem } from '@/systems/AudioSystem';
 import relicsData from '@/data/relics.json';
 import cursesData from '@/data/curses.json';
+import eventsData from '@/data/events.json';
 import { relicTextureKey } from '@/ui/RelicIcon';
 
 interface CharAnim {
@@ -290,6 +291,13 @@ export class BootScene extends Phaser.Scene {
         this.load.image(relicTextureKey(r.id), `${iconBase}/${r.icon}`);
       }
     }
+
+    // ── Event icon sprites ──────────────────────────────────────────────────
+    for (const ev of eventsData as { id: string; icon?: string }[]) {
+      if (ev.icon) {
+        this.load.image(`event_${ev.id}`, `${iconBase}/${ev.icon}`);
+      }
+    }
   }
 
   create() {
@@ -309,7 +317,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     // Set nearest-neighbor filtering on icon textures for crisp pixel art
-    const iconKeys = this.textures.getTextureKeys().filter(k => k.startsWith('icon_') || k.startsWith('relic_'));
+    const iconKeys = this.textures.getTextureKeys().filter(k => k.startsWith('icon_') || k.startsWith('relic_') || k.startsWith('event_'));
     for (const key of iconKeys) {
       const src = this.textures.get(key).getSourceImage();
       if (src instanceof HTMLImageElement) {

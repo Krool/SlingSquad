@@ -3,6 +3,7 @@
     "id": "mysterious_shrine",
     "name": "Mysterious Shrine",
     "text": "A glowing shrine hums with power. Strange symbols pulse across its surface.",
+    "icon": "skill/skill_015.png",
     "choices": [
       { "label": "Touch the shrine", "desc": "Gain a random relic, but gain a random curse", "outcome": { "type": "RELIC_AND_CURSE" } },
       { "label": "Offer 25 gold", "desc": "Pay tribute for an uncommon relic", "outcome": { "type": "BUY_RELIC", "cost": 25, "rarity": "uncommon" } },
@@ -13,6 +14,7 @@
     "id": "wounded_knight",
     "name": "Wounded Knight",
     "text": "A knight lies bleeding by the road. He clutches a heavy purse.",
+    "icon": "shield/shield_03.png",
     "choices": [
       { "label": "Help him", "desc": "Spend 15 gold to heal him — he may join your cause", "outcome": { "type": "BUY_RELIC", "cost": 15, "rarity": "common" } },
       { "label": "Rob him", "desc": "Take his gold (+30) but gain a curse", "outcome": { "type": "GOLD_AND_CURSE", "gold": 30 } },
@@ -23,6 +25,7 @@
     "id": "witch_bargain",
     "name": "Witch's Bargain",
     "text": "A cackling witch offers you a deal from her bubbling cauldron.",
+    "icon": "potion/potion_007.png",
     "choices": [
       { "label": "Remove a curse", "desc": "She'll cleanse one curse from you", "outcome": { "type": "REMOVE_CURSE" } },
       { "label": "Upgrade a relic", "desc": "Transform a common relic into something better", "outcome": { "type": "UPGRADE_RELIC" } },
@@ -33,6 +36,7 @@
     "id": "abandoned_armory",
     "name": "Abandoned Armory",
     "text": "You discover a dusty armory filled with old weapons and armor.",
+    "icon": "weapon/weapon_sword_03.png",
     "choices": [
       { "label": "Take weapon", "desc": "Gain +4 combat damage relic", "outcome": { "type": "SPECIFIC_RELIC", "relicId": "blood_crystal" } },
       { "label": "Take shield", "desc": "Gain +20 HP relic", "outcome": { "type": "SPECIFIC_RELIC", "relicId": "iron_shield" } },
@@ -43,6 +47,7 @@
     "id": "dark_ritual",
     "name": "Dark Ritual",
     "text": "A circle of dark runes glows on the ground. Power radiates from within.",
+    "icon": "skill/skill_020.png",
     "choices": [
       { "label": "Sacrifice health", "desc": "All heroes lose 30 HP this run, gain a rare relic", "outcome": { "type": "HP_COST_RELIC", "hpCost": 30, "rarity": "rare" } },
       { "label": "Decline", "desc": "The darkness isn't worth the risk", "outcome": { "type": "NOTHING" } }
@@ -52,6 +57,7 @@
     "id": "goblin_gambler",
     "name": "Goblin Gambler",
     "text": "A goblin with a toothy grin challenges you: 'Bet 20 gold! Double or nothing!'",
+    "icon": "drops/drops_04.png",
     "choices": [
       { "label": "Accept the bet", "desc": "50% chance to win 40 gold, 50% to lose 20", "outcome": { "type": "GAMBLE", "cost": 20, "reward": 40 } },
       { "label": "Decline", "desc": "You don't trust goblins", "outcome": { "type": "NOTHING" } }
@@ -61,6 +67,7 @@
     "id": "traveling_merchant",
     "name": "Traveling Merchant",
     "text": "A merchant with a mysterious cart waves you over. 'Special deals today!'",
+    "icon": "quest/quest_002.png",
     "choices": [
       { "label": "Buy mystery box", "desc": "Pay 30 gold for a random uncommon or rare relic", "outcome": { "type": "BUY_RELIC", "cost": 30, "rarity": "uncommon" } },
       { "label": "Trade a relic", "desc": "Give a common relic, get a random uncommon", "outcome": { "type": "TRADE_RELIC" } },
@@ -71,6 +78,7 @@
     "id": "ancient_well",
     "name": "Ancient Well",
     "text": "An ancient well with runes carved around its rim. You can hear whispers from below.",
+    "icon": "potion/potion_005.png",
     "choices": [
       { "label": "Toss a coin", "desc": "Pay 10 gold — something good may happen", "outcome": { "type": "BUY_RELIC", "cost": 10, "rarity": "common" } },
       { "label": "Drink the water", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } },
@@ -81,6 +89,7 @@
     "id": "blacksmith",
     "name": "Wandering Blacksmith",
     "text": "A blacksmith offers to improve your equipment for a modest fee.",
+    "icon": "weapon/weapon_mace_03.png",
     "choices": [
       { "label": "Upgrade a relic", "desc": "Pay 20 gold to enhance one relic by +50%", "outcome": { "type": "BUY_UPGRADE", "cost": 20 } },
       { "label": "New weapon", "desc": "Gain a random common relic", "outcome": { "type": "FREE_RELIC", "rarity": "common" } },
@@ -91,6 +100,7 @@
     "id": "cursed_chest",
     "name": "Cursed Chest",
     "text": "A chest covered in thorny vines. The lock is rusted but the contents gleam.",
+    "icon": "quest/quest_004.png",
     "choices": [
       { "label": "Force it open", "desc": "Gain a rare relic but also a curse", "outcome": { "type": "RELIC_AND_CURSE", "rarity": "rare" } },
       { "label": "Pick the lock", "desc": "Pay 15 gold to open safely — gain an uncommon relic", "outcome": { "type": "BUY_RELIC", "cost": 15, "rarity": "uncommon" } },
@@ -101,6 +111,7 @@
     "id": "war_camp",
     "name": "Destroyed War Camp",
     "text": "You find the remains of a war camp. Supplies are scattered everywhere.",
+    "icon": "helmet/helmet_03.png",
     "choices": [
       { "label": "Scavenge supplies", "desc": "Gain 25 gold from the wreckage", "outcome": { "type": "GOLD", "gold": 25 } },
       { "label": "Search for weapons", "desc": "Gain a random common relic", "outcome": { "type": "FREE_RELIC", "rarity": "common" } }
@@ -110,6 +121,7 @@
     "id": "fortune_teller",
     "name": "Fortune Teller",
     "text": "A hooded figure peers into a crystal ball. 'I see your future... for a price.'",
+    "icon": "ring/ring_003.png",
     "choices": [
       { "label": "Pay 20 gold", "desc": "Gain +2 trajectory dots and learn enemy weakness", "outcome": { "type": "BUY_RELIC", "cost": 20, "rarity": "uncommon" } },
       { "label": "Refuse", "desc": "You make your own destiny", "outcome": { "type": "NOTHING" } }
@@ -119,6 +131,7 @@
     "id": "sacred_spring",
     "name": "Sacred Spring",
     "text": "Crystal-clear water flows from a mossy rock. The air hums with healing energy.",
+    "icon": "potion/potion_001.png",
     "choices": [
       { "label": "Bathe in the spring", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } },
       { "label": "Fill your canteens", "desc": "Gain 15 gold selling blessed water", "outcome": { "type": "GOLD", "gold": 15 } }
@@ -128,6 +141,7 @@
     "id": "fallen_paladin",
     "name": "Fallen Paladin",
     "text": "A paladin's ghost guards a sealed tomb. He offers his blessing — for a price.",
+    "icon": "armor/armor_010.png",
     "choices": [
       { "label": "Accept blessing", "desc": "All heroes lose 20 HP, gain a rare relic", "outcome": { "type": "HP_COST_RELIC", "hpCost": 20, "rarity": "rare" } },
       { "label": "Pray with him", "desc": "Remove a curse from your squad", "outcome": { "type": "REMOVE_CURSE" } },
@@ -138,6 +152,7 @@
     "id": "thieves_guild",
     "name": "Thieves' Guild",
     "text": "A shadowy figure whispers from an alley: 'We have what you need... for the right price.'",
+    "icon": "weapon/weapon_dagger_01.png",
     "choices": [
       { "label": "Buy rare goods", "desc": "Pay 40 gold for a rare relic", "outcome": { "type": "BUY_RELIC", "cost": 40, "rarity": "rare" } },
       { "label": "Fence a relic", "desc": "Trade a common relic for 35 gold", "outcome": { "type": "TRADE_RELIC" } },
@@ -148,6 +163,7 @@
     "id": "enchanted_grove",
     "name": "Enchanted Grove",
     "text": "Trees with golden leaves whisper ancient secrets. Fruit glows on the branches.",
+    "icon": "food/food_03.png",
     "choices": [
       { "label": "Eat the fruit", "desc": "Gain a free uncommon relic", "outcome": { "type": "FREE_RELIC", "rarity": "uncommon" } },
       { "label": "Harvest and sell", "desc": "Gain 30 gold", "outcome": { "type": "GOLD", "gold": 30 } },
@@ -158,6 +174,7 @@
     "id": "dragon_hoard",
     "name": "Dragon's Hoard",
     "text": "A sleeping dragon curls around a mountain of treasure. Do you dare?",
+    "icon": "drops/drops_06.png",
     "choices": [
       { "label": "Grab the treasure", "desc": "50% chance: +60 gold or lose 30 gold and gain a curse", "outcome": { "type": "GAMBLE", "cost": 30, "reward": 60 } },
       { "label": "Sneak a relic", "desc": "All heroes lose 15 HP, gain a rare relic", "outcome": { "type": "HP_COST_RELIC", "hpCost": 15, "rarity": "rare" } },
@@ -168,6 +185,7 @@
     "id": "ruined_library",
     "name": "Ruined Library",
     "text": "Dusty tomes line the walls. Most are ruined, but some still hold power.",
+    "icon": "skill/skill_008.png",
     "choices": [
       { "label": "Study the tomes", "desc": "Upgrade a random relic by +50%", "outcome": { "type": "UPGRADE_RELIC" } },
       { "label": "Sell rare books", "desc": "Gain 20 gold", "outcome": { "type": "GOLD", "gold": 20 } },
@@ -178,6 +196,7 @@
     "id": "demon_pact",
     "name": "Demon's Pact",
     "text": "A horned figure materializes from smoke. 'Power beyond measure... for a small sacrifice.'",
+    "icon": "skill/skill_016.png",
     "choices": [
       { "label": "Accept the pact", "desc": "Gain a rare relic AND a curse", "outcome": { "type": "RELIC_AND_CURSE", "rarity": "rare" } },
       { "label": "Counter-offer", "desc": "Pay 25 gold for an uncommon relic, no strings", "outcome": { "type": "BUY_RELIC", "cost": 25, "rarity": "uncommon" } },
@@ -188,6 +207,7 @@
     "id": "war_refugees",
     "name": "War Refugees",
     "text": "A group of displaced villagers beg for help. Their gratitude could be valuable.",
+    "icon": "food/food_05.png",
     "choices": [
       { "label": "Give 20 gold", "desc": "They gift you a relic in thanks", "outcome": { "type": "BUY_RELIC", "cost": 20, "rarity": "uncommon" } },
       { "label": "Recruit scouts", "desc": "Gain a common relic — field intel", "outcome": { "type": "FREE_RELIC", "rarity": "common" } },
@@ -198,6 +218,7 @@
     "id": "alchemist_lab",
     "name": "Alchemist's Lab",
     "text": "Bubbling potions and strange apparatus fill the room. The alchemist is long gone.",
+    "icon": "potion/potion_009.png",
     "choices": [
       { "label": "Drink a potion", "desc": "50% chance: heal all heroes OR gain a curse", "outcome": { "type": "GAMBLE", "cost": 0, "reward": 0 } },
       { "label": "Sell the equipment", "desc": "Gain 25 gold", "outcome": { "type": "GOLD", "gold": 25 } },
@@ -208,6 +229,7 @@
     "id": "fairy_ring",
     "name": "Fairy Ring",
     "text": "Mushrooms form a perfect circle in a moonlit clearing. Tiny lights dance within.",
+    "icon": "ring/ring_005.png",
     "choices": [
       { "label": "Step inside", "desc": "Gain a free rare relic — the fae are generous", "outcome": { "type": "FREE_RELIC", "rarity": "rare" } },
       { "label": "Leave an offering", "desc": "Pay 15 gold, remove a curse", "outcome": { "type": "REMOVE_CURSE" } },
@@ -218,6 +240,7 @@
     "id": "siege_remains",
     "name": "Siege Remains",
     "text": "The aftermath of a great siege. Broken siege engines and scattered supplies litter the field.",
+    "icon": "weapon/weapon_axe_01.png",
     "choices": [
       { "label": "Salvage parts", "desc": "Pay 10 gold to upgrade a relic by +50%", "outcome": { "type": "BUY_UPGRADE", "cost": 10 } },
       { "label": "Loot the dead", "desc": "Gain 35 gold, but gain a curse", "outcome": { "type": "GOLD_AND_CURSE", "gold": 35 } },
@@ -228,6 +251,7 @@
     "id": "mirror_pool",
     "name": "Mirror Pool",
     "text": "A still pool reflects a version of you — stronger, but changed. It beckons.",
+    "icon": "accessory/accessory_10.png",
     "choices": [
       { "label": "Touch the surface", "desc": "Transform a common relic into uncommon", "outcome": { "type": "TRADE_RELIC" } },
       { "label": "Gaze deeper", "desc": "All heroes lose 10 HP, gain an uncommon relic", "outcome": { "type": "HP_COST_RELIC", "hpCost": 10, "rarity": "uncommon" } },
@@ -238,6 +262,7 @@
     "id": "bounty_board",
     "name": "Bounty Board",
     "text": "A weathered board lists bounties for local threats. One has already been collected on.",
+    "icon": "quest/quest_006.png",
     "choices": [
       { "label": "Claim a bounty", "desc": "Gain 20 gold from a completed bounty", "outcome": { "type": "GOLD", "gold": 20 } },
       { "label": "Check for intel", "desc": "Gain a common relic — local knowledge", "outcome": { "type": "FREE_RELIC", "rarity": "common" } }
@@ -247,6 +272,7 @@
     "id": "healers_camp",
     "name": "Healer's Camp",
     "text": "A traveling healer has set up camp nearby. Bandages and poultices line the shelves.",
+    "icon": "potion/potion_003.png",
     "choices": [
       { "label": "Accept healing", "desc": "All heroes restored to full HP", "outcome": { "type": "HEAL_ALL" } },
       { "label": "Buy medicine (25g)", "desc": "Purchase a common relic", "outcome": { "type": "BUY_RELIC", "cost": 25, "rarity": "common" } },
@@ -257,6 +283,7 @@
     "id": "fallen_comrade",
     "name": "Fallen Comrade",
     "text": "You find traces of a fallen ally who left behind supplies.",
+    "icon": "helmet/helmet_05.png",
     "choices": [
       { "label": "Salvage their gear", "desc": "Gain a common relic", "outcome": { "type": "FREE_RELIC", "rarity": "common" } },
       { "label": "Use their medicine", "desc": "Reduce all revive cooldowns by 1", "outcome": { "type": "REDUCE_COOLDOWN" } },
@@ -267,6 +294,7 @@
     "id": "mystic_fountain",
     "name": "Mystic Fountain",
     "text": "A glowing fountain pulses with restorative energy. The water shimmers with healing magic.",
+    "icon": "potion/potion_010.png",
     "choices": [
       { "label": "Drink deeply", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } },
       { "label": "Bottle the water", "desc": "Gain Tome of Healing", "outcome": { "type": "SPECIFIC_RELIC", "relicId": "tome_of_healing" } },
@@ -277,6 +305,7 @@
     "id": "crystal_cavern",
     "name": "Crystal Cavern",
     "text": "Glowing crystals jut from the cave walls, pulsing with ethereal energy.",
+    "icon": "material/material_003.png",
     "choices": [
       { "label": "Mine the crystals", "desc": "Gain 3 shards", "outcome": { "type": "GAIN_SHARDS", "shards": 3 } },
       { "label": "Sell crystal fragments", "desc": "Gain 30 gold", "outcome": { "type": "GOLD", "gold": 30 } },
@@ -287,9 +316,10 @@
     "id": "ethereal_merchant",
     "name": "Ethereal Merchant",
     "text": "A spectral figure hovers before a display of otherworldly artifacts. 'I trade only in crystallized essence...'",
+    "icon": "ring/ring_007.png",
     "choices": [
-      { "label": "Buy rare artifact (◆5)", "desc": "Spend 5 shards for a rare relic", "outcome": { "type": "SHARD_RELIC", "shardCost": 5, "rarity": "rare" } },
-      { "label": "Buy minor charm (◆3)", "desc": "Spend 3 shards for an uncommon relic", "outcome": { "type": "SHARD_RELIC", "shardCost": 3, "rarity": "uncommon" } },
+      { "label": "Buy rare artifact (\u25c65)", "desc": "Spend 5 shards for a rare relic", "outcome": { "type": "SHARD_RELIC", "shardCost": 5, "rarity": "rare" } },
+      { "label": "Buy minor charm (\u25c63)", "desc": "Spend 3 shards for an uncommon relic", "outcome": { "type": "SHARD_RELIC", "shardCost": 3, "rarity": "uncommon" } },
       { "label": "Not interested", "desc": "Move along", "outcome": { "type": "NOTHING" } }
     ]
   },
@@ -297,6 +327,7 @@
     "id": "ancient_monument",
     "name": "Ancient Monument",
     "text": "A crumbling monument to a forgotten hero. Shard-like crystals are embedded in its base.",
+    "icon": "quest/quest_009.png",
     "choices": [
       { "label": "Pry out the crystals", "desc": "Gain 2 shards", "outcome": { "type": "GAIN_SHARDS", "shards": 2 } },
       { "label": "Pay respects", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } },
@@ -307,8 +338,9 @@
     "id": "crystal_shrine",
     "name": "Crystal Shrine",
     "text": "A shrine adorned with crystalline shards hums with ancient magic. It seems to respond to crystal offerings.",
+    "icon": "material/material_001.png",
     "choices": [
-      { "label": "Offer shards (◆4)", "desc": "Spend 4 shards for a rare relic", "outcome": { "type": "SHARD_RELIC", "shardCost": 4, "rarity": "rare" } },
+      { "label": "Offer shards (\u25c64)", "desc": "Spend 4 shards for a rare relic", "outcome": { "type": "SHARD_RELIC", "shardCost": 4, "rarity": "rare" } },
       { "label": "Harvest the crystals", "desc": "Gain 2 shards from the shrine", "outcome": { "type": "GAIN_SHARDS", "shards": 2 } },
       { "label": "Meditate here", "desc": "Heal all heroes to full HP", "outcome": { "type": "HEAL_ALL" } }
     ]

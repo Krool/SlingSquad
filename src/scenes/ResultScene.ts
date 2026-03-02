@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS, type HeroClass } from '@/config/constants';
-import { getRunState, selectHeroSkill, type NodeDef } from '@/systems/RunState';
+import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS, MAX_RETRIES_PER_BATTLE, type HeroClass } from '@/config/constants';
+import { getRunState, saveRun, incrementRetries, selectHeroSkill, type NodeDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { calcShardsEarned } from '@/systems/MetaState';
 import { addXP, addMVP } from '@/systems/MasterySystem';
@@ -423,17 +423,29 @@ export class ResultScene extends Phaser.Scene {
     this.buildStatsTable(cx, 165, 720, heroStats, false);
 
     this.time.delayedCall(880, () => {
-      this.buildButton(cx - 115, GAME_HEIGHT - 56, 'Retry', 0x3a1010, 0xe74c3c, () => {
-        this.cameras.main.fadeOut(300, 0, 0, 0, (_: unknown, p: number) => {
-          if (p === 1) this.scene.start('BattleScene');
-        });
-      });
-      this.buildButton(cx + 115, GAME_HEIGHT - 56, 'To Camp  \u25c6', 0x0d1a2e, 0x7ec8e3, () => {
+      let canRetry = false;
+      try { canRetry = getRunState().retriesUsed < MAX_RETRIES_PER_BATTLE; }
+      catch (e) { console.warn('ResultScene: could not read retry state', e); }
+
+      const goToCamp = () => {
         finalizeRun(false);
         this.cameras.main.fadeOut(300, 0, 0, 0, (_: unknown, p: number) => {
           if (p === 1) this.scene.start('MainMenuScene', { shardsEarned: shards, fromDefeat: true });
         });
-      });
+      };
+
+      if (canRetry) {
+        this.buildButton(cx - 115, GAME_HEIGHT - 56, 'Retry', 0x3a1010, 0xe74c3c, () => {
+          try { incrementRetries(); }
+          catch (e) { console.warn('ResultScene: failed to increment retry', e); }
+          this.cameras.main.fadeOut(300, 0, 0, 0, (_: unknown, p: number) => {
+            if (p === 1) this.scene.start('BattleScene');
+          });
+        });
+        this.buildButton(cx + 115, GAME_HEIGHT - 56, 'To Camp  \u25c6', 0x0d1a2e, 0x7ec8e3, goToCamp);
+      } else {
+        this.buildButton(cx, GAME_HEIGHT - 56, 'To Camp  \u25c6', 0x0d1a2e, 0x7ec8e3, goToCamp);
+      }
     });
   }
 

@@ -38,6 +38,7 @@ interface EventDef {
   id: string;
   name: string;
   text: string;
+  icon?: string;
   choices: EventChoice[];
 }
 
@@ -134,10 +135,16 @@ export class EventScene extends Phaser.Scene {
     iconBg.lineStyle(1, ACCENT, 0.5);
     iconBg.strokeCircle(GAME_WIDTH / 2, 72, 30);
 
-    this.add.text(GAME_WIDTH / 2, 72, '?', {
-      fontSize: '36px', fontFamily: 'Nunito, sans-serif',
-      color: ACCENT_HEX, stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(6);
+    const eventIconKey = `event_${this.event.id}`;
+    if (this.textures.exists(eventIconKey)) {
+      this.add.image(GAME_WIDTH / 2, 72, eventIconKey)
+        .setDisplaySize(36, 36).setOrigin(0.5).setDepth(6);
+    } else {
+      this.add.text(GAME_WIDTH / 2, 72, '?', {
+        fontSize: '36px', fontFamily: 'Nunito, sans-serif',
+        color: ACCENT_HEX, stroke: '#000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(6);
+    }
 
     // Event name
     this.add.text(GAME_WIDTH / 2, 122, this.event.name, {
