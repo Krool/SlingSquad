@@ -125,6 +125,9 @@ export class OverworldScene extends Phaser.Scene {
   // Active node beacons
   private nodeBeacons: Map<number, Phaser.GameObjects.Graphics> = new Map();
 
+  // Entrance animation timing (ms until nodes/paths are done animating)
+  private entranceDelay = 0;
+
   // Completed path segments for particle spawning
   private completedPathSegments: { fromX: number; fromY: number; toX: number; toY: number }[] = [];
   private availablePathSegments: { fromX: number; fromY: number; toX: number; toY: number }[] = [];
@@ -290,6 +293,9 @@ export class OverworldScene extends Phaser.Scene {
     bg.fillStyle(theme.sky, 1);
     bg.fillRect(0, 0, this.worldWidth, GAME_HEIGHT);
 
+    // ── Terrain silhouettes (drawn between sky fill and hex grid) ────────
+    this.drawTerrain(bg, run.currentMapId);
+
     bg.lineStyle(1, theme.grid, 0.7);
     const size = 55;
     const w = size * 1.5;
@@ -326,15 +332,292 @@ export class OverworldScene extends Phaser.Scene {
       });
     }
 
+    const fogColor = theme.sky;
     const fog = this.add.graphics().setDepth(1).setScrollFactor(0);
     fog.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.6, 0.6, 0, 0);
     fog.fillRect(0, 0, 180, GAME_HEIGHT);
     fog.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.6, 0.6);
     fog.fillRect(GAME_WIDTH - 180, 0, 180, GAME_HEIGHT);
-    fog.fillGradientStyle(0x000000, 0x000000, 0x0e1520, 0x0e1520, 0.65, 0.65, 0, 0);
+    fog.fillGradientStyle(0x000000, 0x000000, fogColor, fogColor, 0.65, 0.65, 0, 0);
     fog.fillRect(0, 0, GAME_WIDTH, 60);
-    fog.fillGradientStyle(0x0e1520, 0x0e1520, 0x000000, 0x000000, 0, 0, 0.55, 0.55);
+    fog.fillGradientStyle(fogColor, fogColor, 0x000000, 0x000000, 0, 0, 0.55, 0.55);
     fog.fillRect(0, GAME_HEIGHT - 60, GAME_WIDTH, 60);
+  }
+
+  // ── Terrain drawing per map theme ─────────────────────────────────────────
+  private drawTerrain(g: Phaser.GameObjects.Graphics, mapId: string) {
+    // Seeded RNG for consistent terrain placement
+    let seed = 0;
+    for (let i = 0; i < mapId.length; i++) seed = (seed * 31 + mapId.charCodeAt(i)) | 0;
+    const rand = () => { seed = (seed * 16807 + 11) % 2147483647; return (seed & 0x7fffffff) / 0x7fffffff; };
+
+    const W = this.worldWidth;
+    const H = GAME_HEIGHT;
+
+    if (mapId === 'frozen_peaks') {
+      this.drawFrozenPeaks(g, rand, W, H);
+    } else if (mapId === 'infernal_keep') {
+      this.drawInfernalKeep(g, rand, W, H);
+    } else {
+      this.drawGoblinWastes(g, rand, W, H);
+    }
+  }
+
+  private drawGoblinWastes(g: Phaser.GameObjects.Graphics, rand: () => number, W: number, H: number) {
+    // Far hill range along bottom
+    g.fillStyle(0x0a1218, 0.6);
+    const hillPts: { x: number; y: number }[] = [{ x: -20, y: H }];
+    for (let x = -20; x <= W + 20; x += 60 + rand() * 40) {
+      hillPts.push({ x, y: H - 80 - rand() * 100 });
+    }
+    hillPts.push({ x: W + 20, y: H });
+    g.fillPoints(hillPts, true);
+
+    // Near hill range (closer, darker)
+    g.fillStyle(0x080e14, 0.7);
+    const nearPts: { x: number; y: number }[] = [{ x: -20, y: H }];
+    for (let x = -20; x <= W + 20; x += 80 + rand() * 60) {
+      nearPts.push({ x, y: H - 30 - rand() * 60 });
+    }
+    nearPts.push({ x: W + 20, y: H });
+    g.fillPoints(nearPts, true);
+
+    // Far treeline along top
+    g.fillStyle(0x0c1a12, 0.35);
+    const topPts: { x: number; y: number }[] = [{ x: -20, y: 0 }];
+    for (let x = -20; x <= W + 20; x += 40 + rand() * 30) {
+      topPts.push({ x, y: 40 + rand() * 50 });
+    }
+    topPts.push({ x: W + 20, y: 0 });
+    g.fillPoints(topPts, true);
+
+    // Scattered dead trees
+    for (let i = 0; i < 18; i++) {
+      const tx = rand() * W;
+      const ty = 100 + rand() * (H - 200);
+      const th = 30 + rand() * 50;
+      const tw = 2 + rand() * 2;
+      g.fillStyle(0x0a1a0e, 0.2);
+      // Trunk
+      g.fillRect(tx - tw / 2, ty - th, tw, th);
+      // Bare branches
+      const bw = 8 + rand() * 14;
+      g.lineStyle(1, 0x0a1a0e, 0.15);
+      g.lineBetween(tx, ty - th * 0.7, tx - bw, ty - th * 0.9 - rand() * 10);
+      g.lineBetween(tx, ty - th * 0.5, tx + bw, ty - th * 0.7 - rand() * 8);
+      if (rand() > 0.5) g.lineBetween(tx, ty - th * 0.85, tx + bw * 0.6, ty - th - rand() * 8);
+    }
+
+    // Swamp pools
+    for (let i = 0; i < 8; i++) {
+      const px = 100 + rand() * (W - 200);
+      const py = 200 + rand() * (H - 300);
+      g.fillStyle(0x0a1a18, 0.12);
+      g.fillEllipse(px, py, 40 + rand() * 60, 15 + rand() * 20);
+    }
+
+    // Ground mist (low horizontal bands)
+    for (let i = 0; i < 6; i++) {
+      const mx = rand() * W;
+      const my = H - 100 - rand() * 200;
+      g.fillStyle(0x1a2a22, 0.06);
+      g.fillEllipse(mx, my, 200 + rand() * 300, 20 + rand() * 15);
+    }
+
+    // Ruined stone pillars
+    for (let i = 0; i < 5; i++) {
+      const px = 150 + rand() * (W - 300);
+      const py = 150 + rand() * (H - 300);
+      const ph = 20 + rand() * 35;
+      const pw = 6 + rand() * 4;
+      g.fillStyle(0x1a1e28, 0.15);
+      g.fillRect(px - pw / 2, py - ph, pw, ph);
+      // Broken top
+      g.fillStyle(0x1a1e28, 0.1);
+      g.fillRect(px - pw, py - ph - 3, pw * 2, 3);
+    }
+  }
+
+  private drawFrozenPeaks(g: Phaser.GameObjects.Graphics, rand: () => number, W: number, H: number) {
+    // Far mountain range (top)
+    g.fillStyle(0x0e2040, 0.5);
+    const farMtPts: { x: number; y: number }[] = [{ x: -20, y: 0 }];
+    for (let x = -20; x <= W + 20; x += 120 + rand() * 80) {
+      const peakH = 80 + rand() * 140;
+      farMtPts.push({ x: x - 20, y: peakH + 30 + rand() * 20 });
+      farMtPts.push({ x, y: peakH });
+      farMtPts.push({ x: x + 20, y: peakH + 30 + rand() * 20 });
+    }
+    farMtPts.push({ x: W + 20, y: 0 });
+    g.fillPoints(farMtPts, true);
+
+    // Snow caps on far range
+    g.fillStyle(0x3a5a7a, 0.25);
+    for (let x = 60; x < W; x += 120 + rand() * 80) {
+      const capH = 60 + rand() * 80;
+      const capW = 30 + rand() * 20;
+      g.fillTriangle(x, capH, x - capW, capH + capW * 0.6, x + capW, capH + capW * 0.6);
+    }
+
+    // Near mountain range (bottom)
+    g.fillStyle(0x081828, 0.6);
+    const nearMtPts: { x: number; y: number }[] = [{ x: -20, y: H }];
+    for (let x = -20; x <= W + 20; x += 100 + rand() * 70) {
+      nearMtPts.push({ x, y: H - 60 - rand() * 100 });
+    }
+    nearMtPts.push({ x: W + 20, y: H });
+    g.fillPoints(nearMtPts, true);
+
+    // Pine tree clusters
+    for (let i = 0; i < 22; i++) {
+      const tx = rand() * W;
+      const ty = 120 + rand() * (H - 240);
+      const th = 25 + rand() * 40;
+      const tw = 8 + rand() * 8;
+      g.fillStyle(0x0a2030, 0.2);
+      // Triangle tree
+      g.fillTriangle(tx, ty - th, tx - tw, ty, tx + tw, ty);
+      // Second layer
+      g.fillTriangle(tx, ty - th * 0.7, tx - tw * 0.7, ty - th * 0.15, tx + tw * 0.7, ty - th * 0.15);
+    }
+
+    // Frozen river (winding path)
+    g.lineStyle(12, 0x1a3a5a, 0.12);
+    g.beginPath();
+    let rx = rand() * 200;
+    g.moveTo(rx, -10);
+    for (let y = 0; y < H + 20; y += 40) {
+      rx += (rand() - 0.5) * 120;
+      rx = Phaser.Math.Clamp(rx, 50, W - 50);
+      g.lineTo(rx, y);
+    }
+    g.strokePath();
+    // River highlight
+    g.lineStyle(4, 0x2a5a7a, 0.08);
+    g.beginPath();
+    rx = rand() * 200 + W * 0.5;
+    g.moveTo(rx, -10);
+    for (let y = 0; y < H + 20; y += 40) {
+      rx += (rand() - 0.5) * 100;
+      rx = Phaser.Math.Clamp(rx, 50, W - 50);
+      g.lineTo(rx, y);
+    }
+    g.strokePath();
+
+    // Snow drifts (low white patches)
+    for (let i = 0; i < 10; i++) {
+      const dx = rand() * W;
+      const dy = 150 + rand() * (H - 300);
+      g.fillStyle(0x2a4a6a, 0.06);
+      g.fillEllipse(dx, dy, 60 + rand() * 100, 12 + rand() * 10);
+    }
+
+    // Ice crystal formations
+    for (let i = 0; i < 6; i++) {
+      const cx = 100 + rand() * (W - 200);
+      const cy = 150 + rand() * (H - 300);
+      const cs = 8 + rand() * 12;
+      g.fillStyle(0x3a6a9a, 0.1);
+      g.fillTriangle(cx, cy - cs, cx - cs * 0.4, cy + cs * 0.3, cx + cs * 0.4, cy + cs * 0.3);
+      g.fillTriangle(cx, cy + cs * 0.5, cx - cs * 0.3, cy - cs * 0.2, cx + cs * 0.3, cy - cs * 0.2);
+    }
+  }
+
+  private drawInfernalKeep(g: Phaser.GameObjects.Graphics, rand: () => number, W: number, H: number) {
+    // Volcanic peaks (top)
+    g.fillStyle(0x1a0505, 0.6);
+    const volPts: { x: number; y: number }[] = [{ x: -20, y: 0 }];
+    for (let x = -20; x <= W + 20; x += 150 + rand() * 100) {
+      const peakH = 60 + rand() * 120;
+      volPts.push({ x: x - 30, y: peakH + 40 + rand() * 20 });
+      volPts.push({ x, y: peakH });
+      volPts.push({ x: x + 30, y: peakH + 40 + rand() * 20 });
+    }
+    volPts.push({ x: W + 20, y: 0 });
+    g.fillPoints(volPts, true);
+
+    // Volcano glow tips
+    for (let x = 80; x < W; x += 150 + rand() * 100) {
+      const glowY = 60 + rand() * 80;
+      g.fillStyle(0x4a1a08, 0.2);
+      g.fillCircle(x, glowY, 8 + rand() * 6);
+      g.fillStyle(0x6a2a0a, 0.1);
+      g.fillCircle(x, glowY, 4 + rand() * 3);
+    }
+
+    // Bottom crags
+    g.fillStyle(0x100404, 0.7);
+    const cragPts: { x: number; y: number }[] = [{ x: -20, y: H }];
+    for (let x = -20; x <= W + 20; x += 60 + rand() * 50) {
+      cragPts.push({ x, y: H - 40 - rand() * 80 });
+    }
+    cragPts.push({ x: W + 20, y: H });
+    g.fillPoints(cragPts, true);
+
+    // Lava rivers (glowing streams)
+    for (let r = 0; r < 2; r++) {
+      g.lineStyle(8, 0x4a1a00, 0.15);
+      g.beginPath();
+      let lx = rand() * W;
+      g.moveTo(lx, -10);
+      for (let y = 0; y < H + 20; y += 50) {
+        lx += (rand() - 0.5) * 140;
+        lx = Phaser.Math.Clamp(lx, 30, W - 30);
+        g.lineTo(lx, y);
+      }
+      g.strokePath();
+      // Bright core
+      g.lineStyle(3, 0x8a3a0a, 0.1);
+      g.beginPath();
+      lx = rand() * W;
+      g.moveTo(lx, -10);
+      for (let y = 0; y < H + 20; y += 50) {
+        lx += (rand() - 0.5) * 140;
+        lx = Phaser.Math.Clamp(lx, 30, W - 30);
+        g.lineTo(lx, y);
+      }
+      g.strokePath();
+    }
+
+    // Fortress tower silhouettes
+    for (let i = 0; i < 6; i++) {
+      const tx = 100 + rand() * (W - 200);
+      const ty = 100 + rand() * (H - 250);
+      const th = 40 + rand() * 60;
+      const tw = 12 + rand() * 10;
+      g.fillStyle(0x0e0404, 0.2);
+      g.fillRect(tx - tw / 2, ty - th, tw, th);
+      // Battlements
+      g.fillRect(tx - tw * 0.7, ty - th - 4, tw * 1.4, 4);
+      g.fillRect(tx - tw * 0.7, ty - th - 10, 3, 10);
+      g.fillRect(tx + tw * 0.7 - 3, ty - th - 10, 3, 10);
+      // Window glow
+      g.fillStyle(0x6a2a0a, 0.12);
+      g.fillRect(tx - 2, ty - th * 0.6, 4, 5);
+    }
+
+    // Glowing ground cracks
+    for (let i = 0; i < 12; i++) {
+      const cx = rand() * W;
+      const cy = 200 + rand() * (H - 350);
+      const len = 30 + rand() * 60;
+      const angle = rand() * Math.PI;
+      g.lineStyle(1.5, 0x6a2200, 0.1);
+      g.lineBetween(cx, cy, cx + Math.cos(angle) * len, cy + Math.sin(angle) * len);
+      // Branch
+      const bx = cx + Math.cos(angle) * len * 0.5;
+      const by = cy + Math.sin(angle) * len * 0.5;
+      const ba = angle + (rand() - 0.5) * 1.2;
+      g.lineBetween(bx, by, bx + Math.cos(ba) * len * 0.4, by + Math.sin(ba) * len * 0.4);
+    }
+
+    // Smoke/ash clouds
+    for (let i = 0; i < 8; i++) {
+      const sx = rand() * W;
+      const sy = 30 + rand() * 150;
+      g.fillStyle(0x1a0808, 0.08);
+      g.fillEllipse(sx, sy, 80 + rand() * 120, 25 + rand() * 20);
+    }
   }
 
   private buildMapTitle() {
@@ -510,6 +793,7 @@ export class OverworldScene extends Phaser.Scene {
     });
     // Fade in paths after last node arrives
     const pathDelay = entranceNodes.length * 50 + 280;
+    this.entranceDelay = pathDelay;
     this.tweens.add({
       targets: this.pathLayer,
       alpha: 1,
@@ -544,27 +828,48 @@ export class OverworldScene extends Phaser.Scene {
       const hy = baseY;
       const charKey = h.heroClass.toLowerCase();
       const onCooldown = (h.reviveCooldown ?? 0) > 0;
+      const targetAlpha = onCooldown ? 0.3 : 1.0;
 
       const sprite = this.add.sprite(hx, hy, `${charKey}_idle_1`)
         .setDisplaySize(44, 44)
-        .setDepth(4);
+        .setDepth(4)
+        .setAlpha(0)
+        .setScale(0.5);
 
       // Play idle animation
       try { sprite.play(`${charKey}_idle`); } catch { /* anim may not exist */ }
 
       if (onCooldown) {
-        sprite.setTint(0x444444).setAlpha(0.3);
-        // Red cooldown number above
+        sprite.setTint(0x444444);
+        // Red cooldown number above — starts hidden
         const cdLabel = this.add.text(hx, hy - 28, `${h.reviveCooldown}`, {
           fontSize: '14px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
           color: '#e74c3c', stroke: '#000', strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(4);
+        }).setOrigin(0.5).setDepth(4).setAlpha(0);
         this.heroCdLabels.push(cdLabel);
+
+        // Animate cooldown label in
+        this.tweens.add({
+          targets: cdLabel,
+          alpha: 1,
+          duration: 250,
+          delay: this.entranceDelay + i * 60,
+        });
       } else {
         // Apply class tint
         const classTint = Hero.CLASS_TINT[h.heroClass as HeroClass];
         if (classTint) sprite.setTint(classTint);
       }
+
+      // Animate sprite in — stagger after nodes/paths finish
+      this.tweens.add({
+        targets: sprite,
+        alpha: targetAlpha,
+        scaleX: 1, scaleY: 1,
+        duration: 300,
+        ease: 'Back.easeOut',
+        delay: this.entranceDelay + i * 60,
+      });
 
       this.heroSprites.push(sprite);
     });
