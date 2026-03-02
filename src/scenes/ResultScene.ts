@@ -2,10 +2,11 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, HERO_STATS, MAX_RETRIES_PER_BATTLE, type HeroClass } from '@/config/constants';
 import { getRunState, incrementRetries, selectHeroSkill, type NodeDef } from '@/systems/RunState';
 import type { MusicSystem } from '@/systems/MusicSystem';
-import { calcShardsEarned } from '@/systems/MetaState';
+import { calcShardsEarned, getMetaBonuses } from '@/systems/MetaState';
 import { addXP, addMVP } from '@/systems/MasterySystem';
-import { finalizeRun } from '@/systems/RunHistory';
+import { finalizeRun, getGlobalStats } from '@/systems/RunHistory';
 import { checkAchievements } from '@/systems/AchievementSystem';
+import { calculateRunScore, type ScoreBreakdown } from '@/systems/ScoreSystem';
 import { recordDailyScore, getTodayString } from '@/systems/DailyChallenge';
 import { getSkillOptions, type SkillDef } from '@/data/skills';
 import nodesData from '@/data/nodes.json';
@@ -32,6 +33,8 @@ interface ResultData {
   nodeId?: number;
   heroStats?: HeroBattleStats[];
   pendingLevelUps?: LevelUpEntry[];
+  extraShards?: number;
+  treasureRelicName?: string;
 }
 
 function mvpScore(s: HeroBattleStats): number {
@@ -61,7 +64,7 @@ export class ResultScene extends Phaser.Scene {
   }
 
   create(data: ResultData) {
-    const { victory, reason, gold = 0, nodeId, heroStats, pendingLevelUps } = data;
+    const { victory, reason, gold = 0, nodeId, heroStats, pendingLevelUps, extraShards = 0, treasureRelicName } = data;
     (this.registry.get('music') as MusicSystem | null)?.play(victory ? 'victory' : 'defeat');
     const cx = GAME_WIDTH / 2;
     const cy = GAME_HEIGHT / 2;
@@ -69,15 +72,33 @@ export class ResultScene extends Phaser.Scene {
     this.levelUpQueue = pendingLevelUps ?? [];
     this.levelUpIndex = 0;
 
-    // Calculate shards earned this run
+    // Calculate shards earned this run + score
     let shardsEarned = 0;
+    let scoreBreakdown: ScoreBreakdown | null = null;
+    let isNewBest = false;
     try {
       const run = getRunState();
       const nodesCompleted = run.completedNodeIds.size;
       const nodes = nodesData.nodes as NodeDef[];
       const bossNode = nodes.find((n: NodeDef) => n.type === 'BOSS');
       const killedBoss = bossNode ? run.completedNodeIds.has(bossNode.id) : false;
-      shardsEarned = calcShardsEarned({ nodesCompleted, killedBoss, victory });
+      shardsEarned = calcShardsEarned({ nodesCompleted, killedBoss, victory, ascensionLevel: run.ascensionLevel });
+      // Add bonus shards from TREASURE node shard crystals
+      shardsEarned += extraShards;
+      // Add bonus shards from Shard Magnet meta upgrade
+      shardsEarned += getMetaBonuses().bonusShardsPerRun;
+
+      // Calculate score
+      const completedNodes = run.nodeMap.filter(n => run.completedNodeIds.has(n.id));
+      const prevBest = getGlobalStats().bestScore ?? 0;
+      scoreBreakdown = calculateRunScore({
+        completedNodes,
+        victory,
+        heroDeathsTotal: run.heroDeathsTotal ?? 0,
+        ascensionLevel: run.ascensionLevel,
+        modifiers: run.activeModifiers,
+      });
+      isNewBest = scoreBreakdown.final > prevBest;
 
       // Award mastery XP to each hero used (per-battle, cosmetic progression)
       for (const h of run.squad) {
@@ -130,14 +151,14 @@ export class ResultScene extends Phaser.Scene {
 
     if (victory) {
       this.spawnGoldParticles();
-      this.buildVictoryContent(cx, reason, gold, shardsEarned, heroStats);
+      this.buildVictoryContent(cx, reason, gold, shardsEarned, heroStats, treasureRelicName, scoreBreakdown, isNewBest);
     } else {
-      this.buildDefeatContent(cx, reason, shardsEarned, heroStats);
+      this.buildDefeatContent(cx, reason, shardsEarned, heroStats, scoreBreakdown);
     }
   }
 
   // ── Victory layout ────────────────────────────────────────────────────────
-  private buildVictoryContent(cx: number, reason?: string, gold = 0, shards = 0, heroStats?: HeroBattleStats[]) {
+  private buildVictoryContent(cx: number, reason?: string, gold = 0, shards = 0, heroStats?: HeroBattleStats[], relicName?: string, scoreBreakdown?: ScoreBreakdown | null, isNewBest = false) {
     // Thin decorative rule
     const ruleY = 88;
     const rules = this.add.graphics().setDepth(12).setAlpha(0);
@@ -202,7 +223,41 @@ export class ResultScene extends Phaser.Scene {
       });
     }
 
-    this.buildStatsTable(cx, 175, 880, heroStats, true);
+    // Treasure relic name display
+    if (relicName) {
+      const relicY = (gold > 0 || shards > 0) ? (reason ? 158 : 138) : (reason ? 130 : 110);
+      const rt2 = this.add.text(cx, relicY, `Relic found: ${relicName}`, {
+        fontSize: '20px', fontFamily: 'Nunito, sans-serif', color: '#f1c40f',
+        stroke: '#000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(15).setAlpha(0);
+      this.tweens.add({ targets: rt2, alpha: 1, duration: 350, delay: 1020 });
+    }
+
+    // Score display
+    if (scoreBreakdown && scoreBreakdown.final > 0) {
+      const scoreY = 160;
+      const scoreText = `Score: ${scoreBreakdown.final.toLocaleString()}`;
+      const st = this.add.text(cx, scoreY, scoreText, {
+        fontSize: '28px', fontFamily: 'Knights Quest, Nunito, sans-serif',
+        color: '#f1c40f', stroke: '#5c3d00', strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(15).setAlpha(0);
+      this.tweens.add({ targets: st, alpha: 1, duration: 400, delay: 1050 });
+
+      if (isNewBest) {
+        const badge = this.add.text(cx + st.width / 2 + 16, scoreY - 2, 'NEW BEST!', {
+          fontSize: '16px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+          color: '#ff6b6b', stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0, 0.5).setDepth(15).setAlpha(0);
+        this.tweens.add({
+          targets: badge, alpha: 1, duration: 300, delay: 1200,
+          onComplete: () => {
+            this.tweens.add({ targets: badge, scaleX: 1.1, scaleY: 1.1, duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+          },
+        });
+      }
+    }
+
+    this.buildStatsTable(cx, 195, 880, heroStats, true);
 
     // If there are pending level-ups, show them before the continue button
     if (this.levelUpQueue.length > 0) {
@@ -385,7 +440,7 @@ export class ResultScene extends Phaser.Scene {
   }
 
   // ── Defeat layout ─────────────────────────────────────────────────────────
-  private buildDefeatContent(cx: number, reason?: string, shards = 0, heroStats?: HeroBattleStats[]) {
+  private buildDefeatContent(cx: number, reason?: string, shards = 0, heroStats?: HeroBattleStats[], scoreBreakdown?: ScoreBreakdown | null) {
     // Pulsing blood glow behind title
     const glow = this.add.graphics().setDepth(9).setAlpha(0);
     glow.fillStyle(0x8b0000, 0.22);
@@ -420,7 +475,17 @@ export class ResultScene extends Phaser.Scene {
       this.tweens.add({ targets: st, alpha: 1, duration: 350, delay: 820 });
     }
 
-    this.buildStatsTable(cx, 165, 720, heroStats, false);
+    // Score display (smaller, dimmer on defeat)
+    if (scoreBreakdown && scoreBreakdown.final > 0) {
+      const scoreY = 155;
+      const st2 = this.add.text(cx, scoreY, `Score: ${scoreBreakdown.final.toLocaleString()}`, {
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif',
+        color: '#6a5a4a', stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(15).setAlpha(0);
+      this.tweens.add({ targets: st2, alpha: 1, duration: 350, delay: 860 });
+    }
+
+    this.buildStatsTable(cx, 178, 720, heroStats, false);
 
     this.time.delayedCall(880, () => {
       let canRetry = false;

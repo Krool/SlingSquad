@@ -5,6 +5,8 @@ import relicsData from '@/data/relics.json';
 import cursesData from '@/data/curses.json';
 import eventsData from '@/data/events.json';
 import { relicTextureKey } from '@/ui/RelicIcon';
+import { ensureProfile, setFirebaseUid } from '@/systems/PlayerProfile';
+import { initFirebase, getFirebaseUid, isFirebaseAvailable } from '@/services/LeaderboardService';
 
 interface CharAnim {
   name: string;
@@ -334,6 +336,19 @@ export class BootScene extends Phaser.Scene {
 
     // Force-load custom fonts before starting first scene
     // (Phaser canvas text caches the font on first render — must be ready)
+    // Ensure player profile exists on first load
+    ensureProfile();
+
+    // Initialize Firebase (fire-and-forget — game works fully offline)
+    if (isFirebaseAvailable()) {
+      initFirebase().then(ok => {
+        if (ok) {
+          const uid = getFirebaseUid();
+          if (uid) setFirebaseUid(uid);
+        }
+      }).catch(() => { /* silent */ });
+    }
+
     Promise.all([
       document.fonts.load('52px "Knights Quest"'),
       document.fonts.load('400 16px "Nunito"'),

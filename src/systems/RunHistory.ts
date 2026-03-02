@@ -1,6 +1,10 @@
 import { getRunState, hasRunState } from '@/systems/RunState';
 import { addRunPlayed, addRunWon } from '@/systems/MasterySystem';
 import { incrementStat } from '@/systems/AchievementSystem';
+import { recordClear } from '@/systems/AscensionSystem';
+import { calculateRunScore } from '@/systems/ScoreSystem';
+import { updateBestScore, getProfile } from '@/systems/PlayerProfile';
+import { isFirebaseAvailable, submitScore } from '@/services/LeaderboardService';
 
 const SAVE_KEY = 'slingsquad_stats_v1';
 
@@ -13,6 +17,9 @@ export interface RunSummary {
   victory: boolean;
   timestamp: number;
   floorsCompleted?: number; // multi-floor: how many floors cleared
+  score?: number;           // calculated run score
+  ascensionLevel?: number;
+  modifiers?: string[];
 }
 
 export interface GlobalStats {
@@ -24,6 +31,7 @@ export interface GlobalStats {
   totalGoldEarned: number;
   bestDamageInOneLaunch: number;
   fastestBattleMs: number;
+  bestScore: number;
   recentRuns: RunSummary[]; // last 10
 }
 
@@ -51,6 +59,7 @@ function defaultStats(): GlobalStats {
     totalGoldEarned: 0,
     bestDamageInOneLaunch: 0,
     fastestBattleMs: Infinity,
+    bestScore: 0,
     recentRuns: [],
   };
 }
@@ -118,6 +127,23 @@ export function finalizeRun(victory: boolean): void {
   _runFinalized = true;
   const run = getRunState();
 
+  // Calculate score
+  const completedNodes = run.nodeMap.filter(n => run.completedNodeIds.has(n.id));
+  const breakdown = calculateRunScore({
+    completedNodes,
+    victory,
+    heroDeathsTotal: run.heroDeathsTotal ?? 0,
+    ascensionLevel: run.ascensionLevel,
+    modifiers: run.activeModifiers,
+  });
+  // Update best score in global stats and player profile
+  const stats = _ensure();
+  if (breakdown.final > (stats.bestScore ?? 0)) {
+    stats.bestScore = breakdown.final;
+    _save();
+  }
+  updateBestScore(breakdown.final, run.ascensionLevel, run.activeModifiers, run.currentFloor + 1);
+
   recordRunEnd({
     mapId: run.currentMapId,
     squad: run.squad.map(h => h.heroClass),
@@ -127,6 +153,9 @@ export function finalizeRun(victory: boolean): void {
     victory,
     timestamp: Date.now(),
     floorsCompleted: (run.completedFloors?.length ?? 0) + (victory ? 1 : 0),
+    score: breakdown.final,
+    ascensionLevel: run.ascensionLevel,
+    modifiers: run.activeModifiers.length > 0 ? run.activeModifiers : undefined,
   });
 
   // Per-hero run stats
@@ -135,7 +164,18 @@ export function finalizeRun(victory: boolean): void {
     if (victory) addRunWon(h.heroClass, run.ascensionLevel);
   }
 
+  // Ascension unlock: record clear at this ascension level
+  if (victory) {
+    recordClear(run.currentMapId, run.ascensionLevel);
+  }
+
   // Achievement stats (once per run, not per battle)
   incrementStat('runs_completed');
   incrementStat('total_gold', run.gold);
+
+  // Attempt leaderboard submission (fire-and-forget)
+  if (isFirebaseAvailable()) {
+    const profile = getProfile();
+    submitScore(profile).catch(() => { /* silent */ });
+  }
 }

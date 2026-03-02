@@ -71,12 +71,12 @@
     },
     {
       "id": 7,
-      "type": "BATTLE",
-      "name": "Siege Camp",
+      "type": "TREASURE",
+      "name": "Hidden Trove",
       "x": 680, "y": 455,
       "next": [9],
-      "enemies": ["GRUNT", "GRUNT", "BOMBER"],
-      "gold": 28,
+      "enemies": [],
+      "gold": 0,
       "difficulty": 2
     },
     {

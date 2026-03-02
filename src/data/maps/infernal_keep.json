@@ -37,9 +37,9 @@
       "enemies": ["DEMON_KNIGHT", "DEMON_KNIGHT", "FIRE_IMP", "FIRE_IMP", "HEALER"], "gold": 44, "difficulty": 4
     },
     {
-      "id": 7, "type": "BATTLE", "name": "Ember Tunnels",
+      "id": 7, "type": "TREASURE", "name": "Infernal Hoard",
       "x": 680, "y": 455, "next": [9],
-      "enemies": ["FIRE_IMP", "FIRE_IMP", "FIRE_IMP", "RANGED"], "gold": 30, "difficulty": 3
+      "enemies": [], "gold": 0, "difficulty": 2
     },
     {
       "id": 8, "type": "REST", "name": "Demon's Reprieve",

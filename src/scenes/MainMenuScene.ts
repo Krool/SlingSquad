@@ -12,11 +12,15 @@ import {
 } from '@/systems/MetaState';
 import { hasSavedRun } from '@/systems/RunState';
 import { Hero } from '@/entities/Hero';
+import { Enemy } from '@/entities/Enemy';
+import { isFirebaseAvailable, fetchTopScores, initFirebase, getFirebaseUid } from '@/services/LeaderboardService';
+import { getProfile } from '@/systems/PlayerProfile';
 import { CAMP_STRUCTURES, CAMP_ALWAYS_VISIBLE, LAYER_CFG } from '@/data/campBuildings';
 import type { ParallaxLayer } from '@/data/campBuildings';
 import type { MusicSystem } from '@/systems/MusicSystem';
 import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
 import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
+import { ensureProfile } from '@/systems/PlayerProfile';
 
 interface MainMenuData {
   shardsEarned?: number;
@@ -47,7 +51,6 @@ export class MainMenuScene extends Phaser.Scene {
   private _layerGfx: Phaser.GameObjects.Graphics[] = [];
   private _fireGfx: Phaser.GameObjects.Graphics | null = null;
   private _heroStates: HeroWalkState[] = [];
-  private _shimmerGfx: Phaser.GameObjects.Graphics | null = null;
   private _transitioning = false;
   private _slingOccupied = false;
   private _slingBands: Phaser.GameObjects.Graphics | null = null;
@@ -89,6 +92,8 @@ export class MainMenuScene extends Phaser.Scene {
     this._shardBar = buildCurrencyBar(this, 'shard', () => getShards(), 10);
     this.buildShardEarnedBadge(shardsEarned);
     buildSettingsGear(this, 'MainMenuScene', 20);
+    this.buildProfileButton();
+    this.buildLeaderboardStrip();
     this.buildButtons();
 
     // Build version stamp (auto-updates each compile)
@@ -935,16 +940,8 @@ export class MainMenuScene extends Phaser.Scene {
             // Micro-shake for impact
             if (isScreenShakeEnabled()) this.cameras.main.shake(120, 0.003);
 
-            // Ambient scale pulse
-            this.tweens.add({
-              targets: title,
-              scaleX: 1.02, scaleY: 1.02,
-              yoyo: true, repeat: -1, duration: 2000,
-              ease: 'Sine.easeInOut',
-            });
-
-            // Gold shimmer sweep
-            this.buildShimmer(title, finalX, finalY);
+            // Random rubber-bandy idle effects
+            this.startTitleEffects(title);
           },
         });
       },
@@ -952,35 +949,367 @@ export class MainMenuScene extends Phaser.Scene {
 
   }
 
-  // ── Shimmer sweep across title ────────────────────────────────────────
-  private buildShimmer(title: Phaser.GameObjects.Text, cx: number, cy: number) {
-    if (this._shimmerGfx) {
-      this.tweens.killTweensOf(this._shimmerGfx);
-      this._shimmerGfx.destroy();
+  // ── Random rubber-bandy title idle effects ──────────────────────────
+  private _titleEffectTimer?: Phaser.Time.TimerEvent;
+
+  private startTitleEffects(title: Phaser.GameObjects.Text) {
+    // Capture resting state once — every effect resets to this before animating
+    const homeX = title.x;
+    const homeY = title.y;
+
+    const resetTitle = () => {
+      this.tweens.killTweensOf(title);
+      title.setPosition(homeX, homeY).setScale(1, 1).setAngle(0);
+    };
+
+    // Each effect calls done() when finished to schedule the next
+    type EffectFn = (done: () => void) => void;
+    const effects: EffectFn[] = [
+
+      // 1. Squash & stretch — horizontal pull then secondary bounce
+      (done) => {
+        this.tweens.chain({
+          targets: title,
+          tweens: [
+            { scaleX: 1.12, scaleY: 0.90, duration: 180, ease: 'Sine.easeOut' },
+            { scaleX: 0.95, scaleY: 1.05, duration: 160, ease: 'Sine.easeOut' },
+            { scaleX: 1.03, scaleY: 0.98, duration: 120, ease: 'Sine.easeOut' },
+            { scaleX: 1, scaleY: 1, duration: 100, ease: 'Sine.easeOut' },
+          ],
+          onComplete: done,
+        });
+      },
+
+      // 2. Drop bounce — falls, squishes on "landing", springs back up
+      (done) => {
+        this.tweens.chain({
+          targets: title,
+          tweens: [
+            { y: homeY + 10, scaleY: 0.88, scaleX: 1.08, duration: 160, ease: 'Quad.easeIn' },
+            { y: homeY - 6, scaleY: 1.07, scaleX: 0.96, duration: 220, ease: 'Back.easeOut' },
+            { y: homeY + 2, scaleY: 0.97, scaleX: 1.02, duration: 120, ease: 'Sine.easeOut' },
+            { y: homeY, scaleX: 1, scaleY: 1, duration: 100, ease: 'Sine.easeOut' },
+          ],
+          onComplete: done,
+        });
+      },
+
+      // 3. Spring wobble — decaying left-right tilt
+      (done) => {
+        this.tweens.chain({
+          targets: title,
+          tweens: [
+            { angle: 3, duration: 80, ease: 'Sine.easeOut' },
+            { angle: -2.5, duration: 80, ease: 'Sine.easeOut' },
+            { angle: 1.8, duration: 70, ease: 'Sine.easeOut' },
+            { angle: -1, duration: 70, ease: 'Sine.easeOut' },
+            { angle: 0.4, duration: 60, ease: 'Sine.easeOut' },
+            { angle: 0, duration: 60, ease: 'Sine.easeOut' },
+          ],
+          onComplete: done,
+        });
+      },
+
+      // 4. Jelly pulse — elastic pop out then settle
+      (done) => {
+        this.tweens.chain({
+          targets: title,
+          tweens: [
+            { scaleX: 1.10, scaleY: 1.10, duration: 200, ease: 'Back.easeOut' },
+            { scaleX: 0.97, scaleY: 0.97, duration: 180, ease: 'Sine.easeOut' },
+            { scaleX: 1, scaleY: 1, duration: 250, ease: 'Elastic.easeOut' },
+          ],
+          onComplete: done,
+        });
+      },
+
+      // 5. Snap sideways — horizontal jolt then elastic return
+      (done) => {
+        this.tweens.chain({
+          targets: title,
+          tweens: [
+            { x: homeX + 8, scaleX: 0.94, duration: 70, ease: 'Sine.easeOut' },
+            { x: homeX - 3, scaleX: 1.02, duration: 200, ease: 'Elastic.easeOut' },
+            { x: homeX, scaleX: 1, duration: 300, ease: 'Elastic.easeOut' },
+          ],
+          onComplete: done,
+        });
+      },
+
+      // 6. Trampoline — rapid small bounces decaying in height
+      (done) => {
+        this.tweens.chain({
+          targets: title,
+          tweens: [
+            { y: homeY - 8, duration: 120, ease: 'Quad.easeOut' },
+            { y: homeY, scaleY: 0.93, scaleX: 1.05, duration: 100, ease: 'Quad.easeIn' },
+            { y: homeY - 5, scaleY: 1.03, scaleX: 0.98, duration: 100, ease: 'Quad.easeOut' },
+            { y: homeY, scaleY: 0.96, scaleX: 1.03, duration: 90, ease: 'Quad.easeIn' },
+            { y: homeY - 2, scaleY: 1.01, scaleX: 0.99, duration: 80, ease: 'Quad.easeOut' },
+            { y: homeY, scaleX: 1, scaleY: 1, duration: 70, ease: 'Sine.easeOut' },
+          ],
+          onComplete: done,
+        });
+      },
+
+      // 7. Shiver — quick micro-vibrations (nervous energy)
+      (done) => {
+        let count = 0;
+        const total = 8;
+        const shake = () => {
+          if (count >= total) {
+            title.setPosition(homeX, homeY);
+            done();
+            return;
+          }
+          const amp = 2.5 * (1 - count / total); // decaying amplitude
+          const dx = (Math.random() - 0.5) * amp * 2;
+          const dy = (Math.random() - 0.5) * amp;
+          this.tweens.add({
+            targets: title, x: homeX + dx, y: homeY + dy,
+            duration: 40, ease: 'Linear', onComplete: () => { count++; shake(); },
+          });
+        };
+        shake();
+      },
+
+      // 8. Slingshot echo — mimics being pulled left then flung right
+      (done) => {
+        this.tweens.chain({
+          targets: title,
+          tweens: [
+            { x: homeX - 12, scaleX: 0.90, duration: 200, ease: 'Sine.easeIn' },
+            { x: homeX + 6, scaleX: 1.06, duration: 180, ease: 'Back.easeOut' },
+            { x: homeX - 2, scaleX: 1.01, duration: 140, ease: 'Sine.easeOut' },
+            { x: homeX, scaleX: 1, scaleY: 1, duration: 120, ease: 'Sine.easeOut' },
+          ],
+          onComplete: done,
+        });
+      },
+
+      // 9. Breathe — slow gentle inhale/exhale
+      (done) => {
+        this.tweens.chain({
+          targets: title,
+          tweens: [
+            { scaleX: 1.04, scaleY: 1.04, duration: 600, ease: 'Sine.easeInOut' },
+            { scaleX: 1, scaleY: 1, duration: 600, ease: 'Sine.easeInOut' },
+          ],
+          onComplete: done,
+        });
+      },
+    ];
+
+    let lastIdx = -1;
+
+    const playRandom = () => {
+      // Pick a random effect, avoiding back-to-back repeats
+      let idx: number;
+      do { idx = Phaser.Math.Between(0, effects.length - 1); } while (idx === lastIdx);
+      lastIdx = idx;
+
+      // Reset to home before each effect to prevent drift
+      resetTitle();
+
+      effects[idx](() => {
+        // Defensive reset after effect completes
+        title.setPosition(homeX, homeY).setScale(1, 1).setAngle(0);
+        const rest = Phaser.Math.Between(2500, 5000);
+        this._titleEffectTimer = this.time.delayedCall(rest, playRandom);
+      });
+    };
+
+    // First effect after a short pause
+    this._titleEffectTimer = this.time.delayedCall(2000, playRandom);
+  }
+
+  // ── Profile button (top-left, next to gear) ───────────────────────
+  private buildProfileButton() {
+    const profile = ensureProfile();
+    const size = 42;
+    const x = 78;  // right of the settings gear
+    const y = 20;
+    const container = this.add.container(x, y).setDepth(15);
+
+    const bg = this.add.graphics();
+    const drawBg = (hovered: boolean) => {
+      bg.clear();
+      bg.fillStyle(hovered ? 0x2a1e3a : 0x0d1520, 0.85);
+      bg.fillRoundedRect(-size / 2, -size / 2, size, size, 8);
+      bg.lineStyle(1, hovered ? 0xc0a060 : 0x3a5070, hovered ? 0.9 : 0.5);
+      bg.strokeRoundedRect(-size / 2, -size / 2, size, size, 8);
+    };
+    drawBg(false);
+    container.add(bg);
+
+    // Avatar sprite
+    const spriteKey = `${profile.avatarKey}_idle_1`;
+    if (this.textures.exists(spriteKey)) {
+      const avatar = this.add.image(0, 0, spriteKey).setDisplaySize(28, 28);
+      const upper = profile.avatarKey.toUpperCase();
+      const tint = (Hero.CLASS_TINT as Record<string, number>)[upper]
+        ?? (Enemy.CLASS_TINT as Record<string, number>)[upper];
+      if (tint) avatar.setTint(tint);
+      container.add(avatar);
     }
-    const shimmer = this.add.graphics().setDepth(11);
-    this._shimmerGfx = shimmer;
-    const shimmerW = 60;
-    const shimmerH = 62;
-    const halfW = title.displayWidth / 2;
-    const shimmerStartX = cx - halfW - shimmerW;
-    const shimmerEndX = cx + halfW + shimmerW;
 
-    shimmer.setPosition(shimmerStartX, cy - shimmerH / 2);
-    shimmer.fillStyle(0xfff8d0, 0.15);
-    shimmer.fillRect(0, 0, shimmerW, shimmerH);
-    shimmer.fillStyle(0xfff8d0, 0.25);
-    shimmer.fillRect(shimmerW * 0.3, 0, shimmerW * 0.4, shimmerH);
-    shimmer.setBlendMode(Phaser.BlendModes.ADD);
+    container.setInteractive(
+      new Phaser.Geom.Rectangle(-size / 2, -size / 2, size, size),
+      Phaser.Geom.Rectangle.Contains,
+    );
+    container.on('pointerover', () => {
+      drawBg(true);
+      this.tweens.add({ targets: container, scaleX: 1.08, scaleY: 1.08, duration: 60 });
+    });
+    container.on('pointerout', () => {
+      drawBg(false);
+      this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 60 });
+    });
+    container.on('pointerdown', () => {
+      if (this._transitioning) return;
+      this._transitioning = true;
+      this.cameras.main.fadeOut(200, 0, 0, 0, (_: unknown, p: number) => {
+        if (p === 1) this.scene.start('ProfileScene', { callerKey: 'MainMenuScene' });
+      });
+    });
+  }
 
-    this.tweens.add({
-      targets: shimmer,
-      x: shimmerEndX,
-      duration: 4000,
-      repeat: -1,
-      repeatDelay: 2000,
-      ease: 'Linear',
-      onRepeat: () => shimmer.setPosition(shimmerStartX, cy - shimmerH / 2),
+  // ── Leaderboard strip (top-right, below shard bar) ────────────────────
+  private buildLeaderboardStrip() {
+    const stripW = 200;
+    const stripX = GAME_WIDTH - stripW - 10; // right-aligned
+    const stripY = 40;  // below shard bar
+    const depth = 15;
+
+    const container = this.add.container(stripX, stripY).setDepth(depth).setAlpha(0);
+
+    if (!isFirebaseAvailable()) {
+      // Show "Offline" placeholder
+      const offBg = this.add.graphics();
+      offBg.fillStyle(0x0a1220, 0.7);
+      offBg.fillRoundedRect(0, 0, stripW, 30, 6);
+      container.add(offBg);
+      container.add(this.add.text(stripW / 2, 15, 'Leaderboard: Offline', {
+        fontSize: '10px', fontFamily: 'Nunito, sans-serif', color: '#4a5a6a',
+      }).setOrigin(0.5));
+      this.tweens.add({ targets: container, alpha: 1, duration: 400, delay: 600 });
+      return;
+    }
+
+    // Async fetch — show loading then populate
+    const loadingText = this.add.text(stripW / 2, 15, 'Loading...', {
+      fontSize: '10px', fontFamily: 'Nunito, sans-serif', color: '#4a5a6a',
+    }).setOrigin(0.5);
+    const loadBg = this.add.graphics();
+    loadBg.fillStyle(0x0a1220, 0.7);
+    loadBg.fillRoundedRect(0, 0, stripW, 30, 6);
+    container.add(loadBg);
+    container.add(loadingText);
+    this.tweens.add({ targets: container, alpha: 1, duration: 400, delay: 600 });
+
+    fetchTopScores(5).then(entries => {
+      if (!this.scene.isActive()) return; // scene may have been destroyed
+      container.removeAll(true);
+
+      if (!entries || entries.length === 0) {
+        const emptyBg = this.add.graphics();
+        emptyBg.fillStyle(0x0a1220, 0.7);
+        emptyBg.fillRoundedRect(0, 0, stripW, 30, 6);
+        container.add(emptyBg);
+        container.add(this.add.text(stripW / 2, 15, 'No scores yet', {
+          fontSize: '10px', fontFamily: 'Nunito, sans-serif', color: '#4a5a6a',
+        }).setOrigin(0.5));
+        return;
+      }
+
+      const headerH = 20;
+      const rowH_est = 22;
+      const totalH = headerH + entries.length * rowH_est + 4;
+
+      const bg = this.add.graphics();
+      bg.fillStyle(0x0a1220, 0.75);
+      bg.fillRoundedRect(0, 0, stripW, totalH, 6);
+      bg.lineStyle(1, 0x3a5070, 0.4);
+      bg.strokeRoundedRect(0, 0, stripW, totalH, 6);
+      container.add(bg);
+
+      // Header
+      container.add(this.add.text(stripW / 2, 2, 'LEADERBOARD', {
+        fontSize: '9px', fontFamily: 'Nunito, sans-serif',
+        color: '#c0a060', letterSpacing: 2,
+      }).setOrigin(0.5, 0));
+
+      // Entries
+      const rowH = 22;
+      let ey = headerH;
+      for (let i = 0; i < entries.length; i++) {
+        const e = entries[i];
+        const rank = `#${i + 1}`;
+        const name = e.name.length > 10 ? e.name.slice(0, 9) + '\u2026' : e.name;
+        const score = e.score.toLocaleString();
+        const color = i === 0 ? '#f1c40f' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : '#7a9ab8';
+
+        container.add(this.add.text(6, ey + 3, rank, {
+          fontSize: '10px', fontFamily: 'Nunito, sans-serif', color, fontStyle: 'bold',
+        }).setOrigin(0, 0));
+
+        // Avatar sprite
+        const avKey = `${e.avatarKey || 'warrior'}_idle_1`;
+        if (this.textures.exists(avKey)) {
+          const av = this.add.image(34, ey + rowH / 2, avKey).setDisplaySize(16, 16);
+          const upper = (e.avatarKey || 'warrior').toUpperCase();
+          const tint = (Hero.CLASS_TINT as Record<string, number>)[upper]
+            ?? (Enemy.CLASS_TINT as Record<string, number>)[upper];
+          if (tint) av.setTint(tint);
+          container.add(av);
+        }
+
+        container.add(this.add.text(46, ey + 3, name, {
+          fontSize: '10px', fontFamily: 'Nunito, sans-serif', color: '#b0c8e0',
+        }).setOrigin(0, 0));
+        container.add(this.add.text(stripW - 6, ey + 3, score, {
+          fontSize: '10px', fontFamily: 'Nunito, sans-serif', color,
+        }).setOrigin(1, 0));
+        ey += rowH;
+      }
+
+      // Player's own rank
+      const profile = getProfile();
+      const uid = getFirebaseUid() || profile.uid;
+      if (uid && profile.bestScore > 0) {
+        const isInTop = entries.some(e => e.uid === uid);
+        if (!isInTop) {
+          const yourY = ey + 2;
+          const divider = this.add.graphics();
+          divider.lineStyle(1, 0x3a5070, 0.3);
+          divider.lineBetween(8, yourY - 1, stripW - 8, yourY - 1);
+          container.add(divider);
+          container.add(this.add.text(6, yourY + 2, 'You:', {
+            fontSize: '10px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
+          }).setOrigin(0, 0));
+          container.add(this.add.text(stripW - 6, yourY + 2, profile.bestScore.toLocaleString(), {
+            fontSize: '10px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
+          }).setOrigin(1, 0));
+
+          // Resize background to fit
+          const newH = yourY + rowH + 4;
+          bg.clear();
+          bg.fillStyle(0x0a1220, 0.75);
+          bg.fillRoundedRect(0, 0, stripW, newH, 6);
+          bg.lineStyle(1, 0x3a5070, 0.4);
+          bg.strokeRoundedRect(0, 0, stripW, newH, 6);
+        }
+      }
+    }).catch(() => {
+      if (!this.scene.isActive()) return;
+      container.removeAll(true);
+      const errBg = this.add.graphics();
+      errBg.fillStyle(0x0a1220, 0.7);
+      errBg.fillRoundedRect(0, 0, stripW, 30, 6);
+      container.add(errBg);
+      container.add(this.add.text(stripW / 2, 15, 'Leaderboard unavailable', {
+        fontSize: '10px', fontFamily: 'Nunito, sans-serif', color: '#6a4a4a',
+      }).setOrigin(0.5));
     });
   }
 

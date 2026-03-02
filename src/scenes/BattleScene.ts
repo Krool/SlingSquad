@@ -45,7 +45,7 @@ import { addBlocksDestroyed, addEnemiesKilled, recordLaunchDamage, recordBattleT
 import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
 import { isTutorialComplete, completeStep, getTutorialText, getNextStep } from '@/systems/TutorialSystem';
 import { getAscensionModifiers } from '@/systems/AscensionSystem';
-import { pickTemplate } from '@/structures/index';
+import { pickTemplate, pickTreasureTemplate } from '@/structures/index';
 import type { StructureContext, HazardType } from '@/structures/types';
 import nodesData from '@/data/nodes.json';
 import relicsData from '@/data/relics.json';
@@ -106,6 +106,14 @@ export class BattleScene extends Phaser.Scene {
   // Tutorial hint text
   private tutorialHint: Phaser.GameObjects.Text | null = null;
 
+  // TREASURE mode state
+  private isTreasure = false;
+  private shardBonus = 0;
+  private treasureRelicAwarded = false;
+  private treasureRelicName = '';
+  private treasureSettleTimer = 0;
+  private coinCountText!: Phaser.GameObjects.Text;
+
   // Background
   private bg!: Phaser.GameObjects.Graphics;
   private ground!: MatterJS.BodyType;
@@ -132,6 +140,10 @@ export class BattleScene extends Phaser.Scene {
     this.barrelExplosionsThisBattle = 0;
     this.enemiesKilledThisBattle = 0;
     this.tutorialHint = null;
+    this.shardBonus = 0;
+    this.treasureRelicAwarded = false;
+    this.treasureRelicName = '';
+    this.treasureSettleTimer = 0;
 
     // Bootstrap run state if launched standalone (dev mode)
     if (!hasRunState()) {
@@ -149,9 +161,10 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     this.activeNode = foundNode;
+    this.isTreasure = this.activeNode.type === 'TREASURE';
 
     const music = this.registry.get('music') as MusicSystem | null;
-    music?.play(this.activeNode.type === 'BOSS' ? 'boss' : 'battle');
+    music?.play(this.isTreasure ? 'event' : this.activeNode.type === 'BOSS' ? 'boss' : 'battle');
 
     this.zoneTheme = getZoneTheme(run.currentMapId);
     this.buildBackground();
@@ -862,7 +875,9 @@ export class BattleScene extends Phaser.Scene {
 
     // Deterministic seed: set on first visit, reused on retry
     const seed = ensureBattleSeed();
-    const template = pickTemplate(zone, diff, seed);
+    const template = this.isTreasure
+      ? pickTreasureTemplate(seed)
+      : pickTemplate(zone, diff, seed);
 
     const templateCoins: Array<[number, number, number]> = [];
     const terrainBodies: Array<{ x: number; y: number; w: number; h: number }> = [];
@@ -887,8 +902,18 @@ export class BattleScene extends Phaser.Scene {
       enemySlots: [],
     };
 
+    // TREASURE: add shard and chest callbacks
+    if (this.isTreasure) {
+      ctx.shard = (x, y) => {
+        this.coins.push(new Coin(this, x, y, 0, 'shard'));
+      };
+      ctx.chest = (x, y) => {
+        this.coins.push(new Coin(this, x, y, 0, 'chest'));
+      };
+    }
+
     template(ctx);
-    this.placeEnemies(ctx.enemySlots);
+    if (!this.isTreasure) this.placeEnemies(ctx.enemySlots);
     this.spawnTemplateCoins(templateCoins);
     this.buildTerrain(terrainBodies);
   }
@@ -910,9 +935,11 @@ export class BattleScene extends Phaser.Scene {
     const baseHpMult = this.activeNode.type === 'BOSS' ? 1.5
                      : this.activeNode.type === 'ELITE' ? 1.25
                      : 1.0;
-    // Ascension HP scaling
-    const bossExtra = this.activeNode.type === 'BOSS' ? ascMods.bossHpMult : ascMods.enemyHpMult;
-    const hpMult = baseHpMult * bossExtra;
+    // Ascension HP scaling — use dedicated elite/boss/enemy mults
+    const ascHpMult = this.activeNode.type === 'BOSS' ? ascMods.bossHpMult
+                    : this.activeNode.type === 'ELITE' ? ascMods.eliteHpMult
+                    : ascMods.enemyHpMult;
+    const hpMult = baseHpMult * ascHpMult;
 
     // Seeded jitter: use battleSeed so retries produce identical placement
     const seed = run.battleSeed;
@@ -1002,25 +1029,38 @@ export class BattleScene extends Phaser.Scene {
     const squadOrder = getRunState().squad.map(h => h.heroClass);
     this.squadUI = new SquadUI(this, this.heroes, cooldownHeroes, squadOrder);
 
-    // Enemies-remaining counter panel (top-right)
+    // HUD counter panel (top-right)
     this.enemyPanel = this.add.graphics().setDepth(49);
     this.enemyPanel.fillStyle(0x060b12, 0.88);
     this.enemyPanel.fillRoundedRect(GAME_WIDTH - 174, 12, 162, 42, 7);
-    this.enemyPanel.lineStyle(1, 0x5a1010, 0.7);
+    this.enemyPanel.lineStyle(1, this.isTreasure ? 0x5a5a10 : 0x5a1010, 0.7);
     this.enemyPanel.strokeRoundedRect(GAME_WIDTH - 174, 12, 162, 42, 7);
 
-    // Static "ENEMIES" label
-    this.add.text(GAME_WIDTH - 93, 20, 'ENEMIES', {
-      fontSize: '14px', fontFamily: 'Nunito, sans-serif',
-      color: '#5a3a3a', letterSpacing: 2,
-    }).setOrigin(0.5, 0).setDepth(50);
-
-    this.enemyCountText = this.add.text(GAME_WIDTH - 93, 32,
-      `${this.enemies.length}`, {
+    if (this.isTreasure) {
+      // TREASURE mode: show coin counter
+      this.add.text(GAME_WIDTH - 93, 20, 'COINS', {
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif',
+        color: '#5a5a3a', letterSpacing: 2,
+      }).setOrigin(0.5, 0).setDepth(50);
+      this.coinCountText = this.add.text(GAME_WIDTH - 93, 32, '0', {
         fontSize: '24px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
-        color: '#e74c3c', stroke: '#000', strokeThickness: 3,
-      },
-    ).setOrigin(0.5, 0).setDepth(50);
+        color: '#f1c40f', stroke: '#000', strokeThickness: 3,
+      }).setOrigin(0.5, 0).setDepth(50);
+      // Dummy enemy counter (hidden)
+      this.enemyCountText = this.add.text(0, 0, '').setVisible(false);
+    } else {
+      // Normal battle: enemy counter
+      this.add.text(GAME_WIDTH - 93, 20, 'ENEMIES', {
+        fontSize: '14px', fontFamily: 'Nunito, sans-serif',
+        color: '#5a3a3a', letterSpacing: 2,
+      }).setOrigin(0.5, 0).setDepth(50);
+      this.enemyCountText = this.add.text(GAME_WIDTH - 93, 32,
+        `${this.enemies.length}`, {
+          fontSize: '24px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+          color: '#e74c3c', stroke: '#000', strokeThickness: 3,
+        },
+      ).setOrigin(0.5, 0).setDepth(50);
+    }
 
     // Gear / settings button — top-left corner (standardized TopBar)
     // Override default listener with battle-aware one that blocks after battle ends
@@ -1039,8 +1079,13 @@ export class BattleScene extends Phaser.Scene {
         completeStep('trajectoryDots');
         this.updateTutorialHint();
       }
-      if (this.launchSystem.allLaunched) this.startTimeoutIfNeeded();
+      if (this.launchSystem.allLaunched && !this.isTreasure) this.startTimeoutIfNeeded();
     };
+
+    // TREASURE: show "End Level" button immediately
+    if (this.isTreasure) {
+      this.buildTreasureEndButton();
+    }
 
     // Damage events → shake camera + reset stall timer
     const onDmg = () => {
@@ -1113,10 +1158,18 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    // Coin pickup — any flying hero that touches a coin sensor collects it
+    // Coin pickup — any hero that touches a coin/shard/chest sensor collects it
     if (hero) {
       const coinBody = bA.label === 'coin' ? bA : bB.label === 'coin' ? bB : null;
       if (coinBody) this.processCoinPickup(coinBody);
+
+      // TREASURE: shard crystal pickup
+      const shardBody = bA.label === 'shard_crystal' ? bA : bB.label === 'shard_crystal' ? bB : null;
+      if (shardBody) this.processShardPickup(shardBody);
+
+      // TREASURE: chest pickup
+      const chestBody = bA.label === 'chest' ? bA : bB.label === 'chest' ? bB : null;
+      if (chestBody) this.processChestPickup(chestBody);
     }
 
     // Block crush check
@@ -1372,6 +1425,7 @@ export class BattleScene extends Phaser.Scene {
 
   private checkWin() {
     if (this.battleEnded) return;
+    if (this.isTreasure) return; // TREASURE: victory handled by checkTreasureVictory / End Level button
     if (this.enemies.every(e => e.state === 'dead')) this.endBattle(true, 'All enemies defeated!');
   }
 
@@ -1467,8 +1521,10 @@ export class BattleScene extends Phaser.Scene {
     }));
 
     const pendingLevelUps = victory ? getPendingLevelUps() : [];
+    const extraShards = this.isTreasure ? this.shardBonus : 0;
+    const treasureRelicName = this.isTreasure ? this.treasureRelicName : '';
     this.time.delayedCall(800, () => {
-      this.scene.start('ResultScene', { victory, reason, gold, nodeId: this.activeNode.id, heroStats, pendingLevelUps });
+      this.scene.start('ResultScene', { victory, reason, gold, nodeId: this.activeNode.id, heroStats, pendingLevelUps, extraShards, treasureRelicName });
     });
   }
 
@@ -1536,6 +1592,115 @@ export class BattleScene extends Phaser.Scene {
     });
 
     this.audio.playCoinPickup();
+  }
+
+  // ─── TREASURE pickups ──────────────────────────────────────────────────────
+  private processShardPickup(shardBody: MatterJS.BodyType) {
+    const shard = this.coins.find(c => c.body === shardBody && !c.collected && c.coinType === 'shard');
+    if (!shard) return;
+
+    shard.collect();
+    this.matter.world.remove(shardBody);
+    this.shardBonus++;
+
+    // Blue floating text
+    DamageNumber.show(this, shard.x, shard.graphics.y, 1, {
+      prefix: '+', suffix: ' shard', color: '#7ec8e3', fontSize: 24,
+    });
+
+    this.audio.playCoinPickup();
+  }
+
+  private processChestPickup(chestBody: MatterJS.BodyType) {
+    const chest = this.coins.find(c => c.body === chestBody && !c.collected && c.coinType === 'chest');
+    if (!chest) return;
+    if (this.treasureRelicAwarded) return; // only one chest per level
+
+    chest.collect();
+    this.matter.world.remove(chestBody);
+    this.treasureRelicAwarded = true;
+
+    // Award a random relic
+    const run = getRunState();
+    const ownedIds = new Set(run.relics.map(r => r.id));
+    const pool = (relicsData as RelicDef[]).filter(r => !r.curse && !ownedIds.has(r.id));
+    if (pool.length > 0) {
+      const relic = pool[Math.floor(Math.random() * pool.length)];
+      addRelic(relic as RelicDef);
+      this.treasureRelicName = relic.name;
+
+      // Floating relic name
+      DamageNumber.show(this, chest.x, chest.graphics.y - 10, 0, {
+        text: `${relic.name}!`, color: '#f1c40f', fontSize: 26,
+      });
+    }
+
+    this.audio.playCoinPickup();
+  }
+
+  // ─── TREASURE auto-victory ──────────────────────────────────────────────────
+  private checkTreasureVictory(delta: number) {
+    if (this.battleEnded || !this.launchSystem.allLaunched) {
+      this.treasureSettleTimer = 0;
+      return;
+    }
+
+    // Check if all heroes have stopped flying (settled or dead)
+    const anyFlying = this.heroes.some(h => h.state === 'flying');
+    if (anyFlying) {
+      this.treasureSettleTimer = 0;
+      return;
+    }
+
+    // Check hero speeds — must all be below threshold
+    const allSlow = this.heroes.every(h => {
+      if (h.state === 'dead') return true;
+      const v = h.body?.velocity ?? { x: 0, y: 0 };
+      return Math.hypot(v.x, v.y) < 0.5;
+    });
+
+    if (!allSlow) {
+      this.treasureSettleTimer = 0;
+      return;
+    }
+
+    this.treasureSettleTimer += delta;
+    if (this.treasureSettleTimer >= 1500) {
+      this.endBattle(true, 'Treasure looted!');
+    }
+  }
+
+  // ─── TREASURE End Level button ─────────────────────────────────────────────
+  private buildTreasureEndButton() {
+    const W = 170, H = 44, R = 7;
+    const bx = GAME_WIDTH - W / 2 - 10;
+    const by = GAME_HEIGHT - HUD_BAR_HEIGHT / 2;
+
+    const bg = this.add.graphics();
+    const drawBg = (hovered: boolean) => {
+      bg.clear();
+      bg.fillStyle(0x2a2800, hovered ? 1 : 0.88);
+      bg.fillRoundedRect(-W / 2, -H / 2, W, H, R);
+      bg.lineStyle(1.5, hovered ? 0xf1c40f : 0x7a6a10, hovered ? 1 : 0.75);
+      bg.strokeRoundedRect(-W / 2, -H / 2, W, H, R);
+    };
+    drawBg(false);
+
+    const label = this.add.text(0, 0, 'END LEVEL \u2713', {
+      fontSize: '16px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+      color: '#f1c40f', stroke: '#000', strokeThickness: 2,
+      letterSpacing: 2,
+    }).setOrigin(0.5);
+
+    const hit = this.add.rectangle(0, 0, W, H, 0, 0).setInteractive();
+    hit.on('pointerover',  () => { drawBg(true);  label.setStyle({ color: '#ffe066' }); });
+    hit.on('pointerout',   () => { drawBg(false); label.setStyle({ color: '#f1c40f' }); });
+    hit.on('pointerdown',  () => {
+      if (!this.battleEnded) this.endBattle(true, 'Treasure looted!');
+    });
+
+    this.endRunBtn = this.add.container(bx, by, [bg, label, hit]).setDepth(60).setAlpha(0);
+    this.tweens.add({ targets: this.endRunBtn, alpha: 1, duration: 300, ease: 'Power2' });
   }
 
   /** Wake a sleeping Matter.js body (isSleeping/sleepCounter are valid but not always in Phaser's type defs). */
@@ -1617,21 +1782,66 @@ export class BattleScene extends Phaser.Scene {
 
   // ─── Wolf minion (Druid ability) ────────────────────────────────────────────
   private spawnWolfMinion(x: number, y: number, dmg: number, hp: number, druid?: Hero) {
+    // ── Wolf body ───────────────────────────────────────────────────────────
     const wolf = this.add.graphics().setDepth(12);
-    wolf.fillStyle(0x16a085, 0.9);
-    wolf.fillCircle(0, 0, 10);
-    wolf.fillStyle(0x1abc9c, 1);
-    wolf.fillCircle(3, -3, 3); // "eye"
+    const drawWolf = (lunging: boolean) => {
+      wolf.clear();
+      const sc = lunging ? 1.3 : 1;
+      // Body
+      wolf.fillStyle(0x16a085, 0.9);
+      wolf.fillEllipse(0, 0, 18 * sc, 12 * sc);
+      // Head
+      wolf.fillStyle(0x1abc9c, 1);
+      wolf.fillCircle(7 * sc, -3, 6);
+      // Eyes (glow when lunging)
+      wolf.fillStyle(lunging ? 0xffff00 : 0x0d2818, 1);
+      wolf.fillCircle(9 * sc, -5, lunging ? 2.5 : 1.5);
+      // Ears
+      wolf.fillStyle(0x16a085, 1);
+      wolf.fillTriangle(4, -8, 7, -14, 10, -8);
+    };
+    drawWolf(false);
     wolf.setPosition(x, y);
+
+    // Spawn burst
+    wolf.setScale(0.3).setAlpha(0);
+    this.tweens.add({ targets: wolf, scaleX: 1, scaleY: 1, alpha: 1, duration: 200, ease: 'Back.easeOut' });
 
     let wolfHp = hp;
     let attackTimer = 0;
-    const wolfSpeed = 3;          // faster per-tick to compensate for slower tick rate
-    const TICK_MS = 150;          // update every 150ms instead of 50ms (6.7/sec vs 20/sec)
+    let lunging = false;
+    const TICK_MS = 80;
+    const RUN_SPEED = 6;
+    const LUNGE_SPEED = 14;
+    const LUNGE_RANGE = 80;
+    const ATTACK_RANGE = 28;
+    const ATTACK_COOLDOWN = 800;
+    const WOLF_RADIUS = 10;
+    const BLOCK_DMG = Math.ceil(dmg * 0.6); // wolves deal reduced damage to structures
+    const BLOCK_HIT_COOLDOWN = 400;         // don't shred blocks instantly
+    let blockHitTimer = BLOCK_HIT_COOLDOWN; // ready to hit immediately
 
     // Cache target to avoid scanning every tick
     let cachedTarget: Enemy | null = null;
     let targetScanTimer = 0;
+
+    // Trail particles
+    let trailTimer = 0;
+    const spawnTrail = () => {
+      const t = this.add.graphics().setDepth(11);
+      t.fillStyle(0x1abc9c, 0.5);
+      t.fillCircle(0, 0, Phaser.Math.Between(2, 4));
+      t.setPosition(wolf.x - (lunging ? 4 : 2), wolf.y + 2);
+      this.tweens.add({ targets: t, alpha: 0, scaleX: 0.2, scaleY: 0.2, duration: 250, onComplete: () => t.destroy() });
+    };
+
+    const killWolf = () => {
+      wolfHp = 0;
+      this.tweens.add({
+        targets: wolf, alpha: 0, scaleX: 1.5, scaleY: 1.5,
+        duration: 200, onComplete: () => wolf.destroy(),
+      });
+    };
 
     const wolfUpdate = () => {
       if (wolfHp <= 0 || this.battleEnded) {
@@ -1640,9 +1850,9 @@ export class BattleScene extends Phaser.Scene {
         return;
       }
 
-      // Re-scan for nearest enemy every ~450ms instead of every tick
+      // Re-scan for nearest enemy periodically
       targetScanTimer += TICK_MS;
-      if (!cachedTarget || cachedTarget.state === 'dead' || targetScanTimer >= 450) {
+      if (!cachedTarget || cachedTarget.state === 'dead' || targetScanTimer >= 300) {
         targetScanTimer = 0;
         cachedTarget = null;
         let nearestDist = Infinity;
@@ -1653,29 +1863,73 @@ export class BattleScene extends Phaser.Scene {
         }
       }
 
+      // ── Block collision: damage blocks in the way, wolf takes recoil ──
+      blockHitTimer += TICK_MS;
+      if (blockHitTimer >= BLOCK_HIT_COOLDOWN) {
+        for (const b of this.blocks) {
+          if (b.destroyed) continue;
+          const bx = b.body.position.x, by = b.body.position.y;
+          // Simple overlap: wolf circle vs block AABB
+          const closestX = Phaser.Math.Clamp(wolf.x, bx - b.halfW, bx + b.halfW);
+          const closestY = Phaser.Math.Clamp(wolf.y, by - b.halfH, by + b.halfH);
+          const dd = Math.hypot(wolf.x - closestX, wolf.y - closestY);
+          if (dd < WOLF_RADIUS) {
+            b.applyDamage(BLOCK_DMG);
+            DamageNumber.blockDamage(this, bx, by, BLOCK_DMG);
+            wolfHp -= 8;
+            blockHitTimer = 0;
+            if (wolfHp <= 0) { killWolf(); return; }
+            break; // one block per cooldown
+          }
+        }
+      }
+
       if (cachedTarget) {
         const dx = cachedTarget.x - wolf.x;
         const dy = cachedTarget.y - wolf.y;
         const dist = Math.hypot(dx, dy);
-        if (dist > 20) {
-          wolf.x += (dx / dist) * wolfSpeed;
-          wolf.y += (dy / dist) * wolfSpeed;
+
+        // Face direction of travel
+        wolf.setScale(dx < 0 ? -1 : 1, 1);
+
+        // Lunge when close enough and attack ready
+        const canLunge = !lunging && dist < LUNGE_RANGE && dist > ATTACK_RANGE && attackTimer >= ATTACK_COOLDOWN * 0.7;
+        if (canLunge) {
+          lunging = true;
+          drawWolf(true);
+          this.time.delayedCall(200, () => { lunging = false; drawWolf(false); });
         }
 
-        // Attack if close enough
+        const speed = lunging ? LUNGE_SPEED : RUN_SPEED;
+        if (dist > ATTACK_RANGE * 0.6) {
+          wolf.x += (dx / dist) * speed;
+          wolf.y += (dy / dist) * speed;
+        }
+
+        // Trail while moving
+        trailTimer += TICK_MS;
+        if (trailTimer >= (lunging ? 50 : 160)) {
+          trailTimer = 0;
+          spawnTrail();
+        }
+
+        // Attack enemy
         attackTimer += TICK_MS;
-        if (dist < 30 && attackTimer >= 1000) {
+        if (dist < ATTACK_RANGE && attackTimer >= ATTACK_COOLDOWN) {
           attackTimer = 0;
           cachedTarget.applyDamage(dmg, undefined, druid);
           if (druid) druid.battleDamageDealt += dmg;
           DamageNumber.damage(this, cachedTarget.x, cachedTarget.y, dmg);
+
+          // Bite flash
+          const flash = this.add.graphics().setDepth(13);
+          flash.fillStyle(0xffff00, 0.7);
+          flash.fillCircle(0, 0, 8);
+          flash.setPosition(cachedTarget.x, cachedTarget.y);
+          this.tweens.add({ targets: flash, alpha: 0, scaleX: 2, scaleY: 2, duration: 150, onComplete: () => flash.destroy() });
+
           wolfHp -= 5;
-          if (wolfHp <= 0) {
-            this.tweens.add({
-              targets: wolf, alpha: 0, scaleX: 1.5, scaleY: 1.5,
-              duration: 200, onComplete: () => wolf.destroy(),
-            });
-          }
+          if (wolfHp <= 0) { killWolf(); return; }
         }
       }
     };
@@ -1805,9 +2059,15 @@ export class BattleScene extends Phaser.Scene {
     this.squadUI.update();
     this.vfxSystem.update(delta);
 
-    // Update enemy counter
-    const alive = this.enemies.filter(e => e.state !== 'dead').length;
-    this.enemyCountText.setText(`${alive}`);
+    if (this.isTreasure) {
+      // TREASURE mode: update coin counter + check for auto-victory
+      this.coinCountText.setText(`${this.coinGoldBonus}`);
+      this.checkTreasureVictory(delta);
+    } else {
+      // Normal battle: update enemy counter
+      const alive = this.enemies.filter(e => e.state !== 'dead').length;
+      this.enemyCountText.setText(`${alive}`);
+    }
 
     // Drain queued shake
     if (this.shakeQueued > 0) {
@@ -1815,7 +2075,7 @@ export class BattleScene extends Phaser.Scene {
       this.shakeQueued = 0;
     }
 
-    if (this.launchSystem.allLaunched) {
+    if (this.launchSystem.allLaunched && !this.isTreasure) {
       this.startTimeoutIfNeeded();
       this.checkLoss();
       if (!this.endRunBtnShown && this.enemies.some(e => e.state !== 'dead')) {

@@ -1,4 +1,5 @@
 import type { TemplateFn, ZoneId } from './types';
+import { treasureTemplates } from './treasure';
 
 // ─── Goblin Wastes ──────────────────────────────────────────────────────────
 import { diff1Templates as gDiff1 } from './goblin/diff1';
@@ -81,6 +82,17 @@ export function pickTemplate(zone: string, difficulty: number, seed = 0): Templa
     ? seed % templates.length
     : Math.floor(Math.random() * templates.length);
   return templates[idx];
+}
+
+/**
+ * Pick a treasure template (not difficulty-based).
+ * If `seed` > 0, the selection is deterministic.
+ */
+export function pickTreasureTemplate(seed = 0): TemplateFn {
+  const idx = seed > 0
+    ? seed % treasureTemplates.length
+    : Math.floor(Math.random() * treasureTemplates.length);
+  return treasureTemplates[idx];
 }
 
 export type { TemplateFn, ZoneId };

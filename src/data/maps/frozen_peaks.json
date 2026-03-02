@@ -37,9 +37,9 @@
       "enemies": ["YETI", "YETI", "ICE_MAGE", "FROST_ARCHER"], "gold": 42, "difficulty": 3
     },
     {
-      "id": 7, "type": "BATTLE", "name": "Blizzard Ridge",
+      "id": 7, "type": "TREASURE", "name": "Frozen Vault",
       "x": 680, "y": 455, "next": [9],
-      "enemies": ["ICE_MAGE", "FROST_ARCHER", "FROST_ARCHER"], "gold": 30, "difficulty": 2
+      "enemies": [], "gold": 0, "difficulty": 2
     },
     {
       "id": 8, "type": "FORGE", "name": "Dwarven Forge",

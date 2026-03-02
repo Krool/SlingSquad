@@ -10,10 +10,10 @@ export class DamageNumber {
     x: number,
     y: number,
     amount: number,
-    opts: { color?: string; prefix?: string; fontSize?: number } = {},
+    opts: { color?: string; prefix?: string; suffix?: string; text?: string; fontSize?: number } = {},
   ) {
-    const { color = '#ffffff', prefix = '-', fontSize = 22 } = opts;
-    const label = `${prefix}${Math.round(amount)}`;
+    const { color = '#ffffff', prefix = '-', suffix = '', text, fontSize = 22 } = opts;
+    const label = text ?? `${prefix}${Math.round(amount)}${suffix}`;
     const jitter = Phaser.Math.Between(-18, 18);
 
     const txt = scene.add.text(x + jitter, y - 8, label, {
@@ -51,5 +51,10 @@ export class DamageNumber {
 
   static bigHit(scene: Phaser.Scene, x: number, y: number, amount: number) {
     DamageNumber.show(scene, x, y, amount, { color: '#e74c3c', prefix: '-', fontSize: 32 });
+  }
+
+  /** Floating label for rare trigger procs (crit, backstab, revive, etc.) */
+  static proc(scene: Phaser.Scene, x: number, y: number, label: string, color: string) {
+    DamageNumber.show(scene, x, y, 0, { text: label, color, fontSize: 16 });
   }
 }

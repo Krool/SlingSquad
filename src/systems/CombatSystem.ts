@@ -10,7 +10,9 @@ import {
   NON_WARRIOR_BLOCK_RANGE_CAP, SLOW_SPEED_PENALTY, LOW_HP_THRESHOLD,
   POISON_TICK_MS, POISON_TICK_COUNT,
 } from '@/config/constants';
-import { getRelicModifiers, type RelicModifiers } from '@/systems/RunState';
+import { getRelicModifiers, getRunState, type RelicModifiers } from '@/systems/RunState';
+import { getAscensionModifiers } from '@/systems/AscensionSystem';
+import { DamageNumber } from '@/ui/DamageNumber';
 
 type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
 
@@ -24,6 +26,8 @@ export class CombatSystem {
   private relicCombatSpeedMult = 1.0;
   private metaDamageMult = 1.0;
   private relicMods: RelicModifiers;
+  private enemyDamageMult = 1.0;
+  private enemyAttackSpeedMult = 1.0;
   /** Accumulated gold-on-kill bonus for BattleScene to read */
   killGoldBonus = 0;
 
@@ -39,6 +43,9 @@ export class CombatSystem {
     this.relicFlatDmg         = mods.flatCombatDamage;
     this.relicCombatSpeedMult = mods.combatSpeedMult;
     this.metaDamageMult       = 1.0 + (mods.metaDamagePct ?? 0);
+    const ascMods = getAscensionModifiers(getRunState().ascensionLevel);
+    this.enemyDamageMult      = ascMods.enemyDamageMult;
+    this.enemyAttackSpeedMult = ascMods.enemyAttackSpeedMult;
   }
 
   addProjectile(p: Projectile) {
@@ -99,6 +106,15 @@ export class CombatSystem {
   private updateHeroMovement(delta: number) {
     const liveHeroes  = this.heroes.filter(h => h.state === 'combat' && h.body);
     const liveEnemies = this.enemies.filter(e => e.state !== 'dead');
+
+    // No enemies (e.g. TREASURE mode) — heroes stay idle, no walking
+    if (liveEnemies.length === 0) {
+      for (const hero of liveHeroes) {
+        this.scene.matter.setVelocity(hero.body!, 0, hero.body!.velocity.y);
+        this.ensureNotWalking(hero);
+      }
+      return;
+    }
 
     for (const hero of liveHeroes) {
       const body = hero.body!;
@@ -270,9 +286,11 @@ export class CombatSystem {
       const skillDmgMult = 1 + (hero.skillMods?.combatDamageMult ?? 0);
       let heroDmg = (hero.stats.combatDamage + this.relicFlatDmg) * this.metaDamageMult * skillDmgMult;
       // Crit chance
-      if (this.relicMods.critChance > 0 && Math.random() < this.relicMods.critChance) heroDmg *= 2;
+      let isCrit = false;
+      if (this.relicMods.critChance > 0 && Math.random() < this.relicMods.critChance) { heroDmg *= 2; isCrit = true; }
       // Low HP berserker bonus
-      if (this.relicMods.lowHpDamageMult > 0 && hero.hp / hero.maxHp < LOW_HP_THRESHOLD) heroDmg *= this.relicMods.lowHpDamageMult;
+      let isBerserk = false;
+      if (this.relicMods.lowHpDamageMult > 0 && hero.hp / hero.maxHp < LOW_HP_THRESHOLD) { heroDmg *= this.relicMods.lowHpDamageMult; isBerserk = true; }
       const targets = liveEnemies.filter(e =>
         Math.hypot(e.x - hero.x, e.y - hero.y) <= hero.stats.combatRange
       );
@@ -282,6 +300,8 @@ export class CombatSystem {
           hero.battleDamageDealt += heroDmg;
           this.scene.events.emit('meleeHit', t.x, t.y, 'enemy');
           this.scene.events.emit('unitDamage', t.x, t.y, Math.round(heroDmg));
+          if (isCrit) DamageNumber.proc(this.scene, t.x, t.y - 20, 'CRIT!', '#f1c40f');
+          if (isBerserk) DamageNumber.proc(this.scene, t.x, t.y - 40, 'BERSERK!', '#e74c3c');
         }
         hero.lastAttackTime = now;
         this.flashAttackAnim(hero);
@@ -312,7 +332,7 @@ export class CombatSystem {
 
       // Healer: heals nearest injured ally instead of attacking
       if (enemy.enemyClass === 'HEALER' && !enemy.charmed) {
-        if (now - enemy.lastHealTime >= enemy.stats.combatSpeed) {
+        if (now - enemy.lastHealTime >= enemy.stats.combatSpeed * this.enemyAttackSpeedMult) {
           this.processHealerTick(enemy, liveEnemies, now);
         }
         continue;
@@ -334,13 +354,13 @@ export class CombatSystem {
         continue;
       }
 
-      if (!enemy.canAttack(now)) continue;
+      if (now - enemy.lastAttackTime < enemy.stats.combatSpeed * this.enemyAttackSpeedMult) continue;
       if (enemy.enemyClass === 'RANGED' || enemy.enemyClass === 'ICE_MAGE' || enemy.enemyClass === 'FROST_ARCHER') {
         this.processRangedAttack(enemy, liveHeroes, now);
       } else {
         const target = this.nearest(enemy.x, enemy.y, liveHeroes, enemy.stats.combatRange);
         if (target) {
-          const eDmg = enemy.stats.combatDamage;
+          const eDmg = enemy.stats.combatDamage * this.enemyDamageMult;
           // Damage reduction is applied inside Hero.applyDamage() — do NOT reduce here to avoid double-dipping
           target.applyDamage(eDmg);
           this.scene.events.emit('unitDamage', target.x, target.y, Math.round(eDmg));
@@ -410,7 +430,7 @@ export class CombatSystem {
       enemy.y,
       (dx / dist) * speed,
       (dy / dist) * speed,
-      enemy.stats.combatDamage,
+      enemy.stats.combatDamage * this.enemyDamageMult,
       color,
     );
     p.source = 'enemy';

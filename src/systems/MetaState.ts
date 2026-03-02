@@ -1,6 +1,7 @@
 import upgradesData from '@/data/upgrades.json';
 import relicsData from '@/data/relics.json';
 import type { RelicDef } from '@/systems/RunState';
+import { isUnlocked as isAchievementUnlocked } from '@/systems/AchievementSystem';
 
 // ─── Upgrade definition (mirrors upgrades.json) ───────────────────────────────
 export interface UpgradeDef {
@@ -28,6 +29,30 @@ export interface MetaBonuses {
   squadSizeBonus: number;       // extra squad slots beyond STARTER_SQUAD_SIZE
   unlockedHeroClasses: string[];// hero classes unlocked via meta upgrades
   reviveCooldownReduction: number; // nodes subtracted from revive cooldown
+  forgeBonusPct: number;          // extra forge upgrade multiplier (e.g. 0.25 → 1.75x instead of 1.5x)
+  curseResistancePct: number;     // chance to negate incoming curses (e.g. 0.25)
+  bonusShardsPerRun: number;      // flat bonus shards at end of each run
+}
+
+// ─── Achievement gates for upgrades ──────────────────────────────────────────
+const UPGRADE_ACHIEVEMENT_GATES: Record<string, string> = {
+  damage_bonus:   'first_blood',     // Blood Pact requires First Blood
+  starting_relic: 'collector',       // Fortunate Start requires Collector
+  launch_power:   'wrecking_ball',   // Giant's Arm requires Wrecking Ball
+  squad_size:     'conqueror',       // Extended Barracks requires Conqueror
+  forge_bonus:    'forge_master',    // Master Smith requires Forge Master
+};
+
+/** Check if the achievement gate (if any) is satisfied for an upgrade. */
+export function isUpgradeGateMet(upgradeId: string): boolean {
+  const gate = UPGRADE_ACHIEVEMENT_GATES[upgradeId];
+  if (!gate) return true; // no gate
+  return isAchievementUnlocked(gate);
+}
+
+/** Get the achievement ID gating an upgrade, or null if none. */
+export function getUpgradeGate(upgradeId: string): string | null {
+  return UPGRADE_ACHIEVEMENT_GATES[upgradeId] ?? null;
 }
 
 // ─── Persistent meta state ────────────────────────────────────────────────────
@@ -71,6 +96,7 @@ export function getPurchaseCount(upgradeId: string): number {
 export function canPurchase(upgradeId: string): boolean {
   const upgrade = getAllUpgrades().find(u => u.id === upgradeId);
   if (!upgrade) return false;
+  if (!isUpgradeGateMet(upgradeId)) return false;
   const count = getPurchaseCount(upgradeId);
   return count < upgrade.maxStack && getShards() >= upgrade.shardCost;
 }
@@ -99,6 +125,9 @@ export function getMetaBonuses(): MetaBonuses {
     squadSizeBonus: 0,
     unlockedHeroClasses: [],
     reviveCooldownReduction: 0,
+    forgeBonusPct: 0,
+    curseResistancePct: 0,
+    bonusShardsPerRun: 0,
   };
 
   for (const upgrade of getAllUpgrades()) {
@@ -113,6 +142,9 @@ export function getMetaBonuses(): MetaBonuses {
       case 'STARTING_RELIC':   bonuses.startingRelic     = true; break;
       case 'SQUAD_SIZE':       bonuses.squadSizeBonus   += (upgrade.value as number) * count; break;
       case 'REVIVE_COOLDOWN_BONUS': bonuses.reviveCooldownReduction += (upgrade.value as number) * count; break;
+      case 'FORGE_BONUS':          bonuses.forgeBonusPct          += (upgrade.value as number) * count; break;
+      case 'CURSE_RESISTANCE':     bonuses.curseResistancePct     += (upgrade.value as number) * count; break;
+      case 'SHARD_MAGNET':         bonuses.bonusShardsPerRun      += (upgrade.value as number) * count; break;
       case 'UNLOCK_HERO': {
         const cls = upgrade.heroClass ?? (typeof upgrade.value === 'string' ? upgrade.value : '');
         if (cls) bonuses.unlockedHeroClasses.push(cls);
@@ -141,11 +173,17 @@ export function calcShardsEarned(data: {
   nodesCompleted: number;
   killedBoss: boolean;
   victory: boolean;   // completed the full run
+  ascensionLevel?: number;
 }): number {
   let shards = 0;
   shards += data.nodesCompleted;          // 1 shard per node cleared
   if (data.killedBoss) shards += 4;       // bonus for boss kill
   if (data.victory)    shards += 3;       // full run clear bonus
+  // Ascension bonus: +10% per level
+  const ascLevel = data.ascensionLevel ?? 0;
+  if (ascLevel > 0) {
+    shards = Math.floor(shards * (1 + ascLevel * 0.1));
+  }
   return shards;
 }
 

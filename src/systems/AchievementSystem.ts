@@ -58,15 +58,15 @@ export function getAllAchievements(): AchievementDef[] {
   return achievementsData as AchievementDef[];
 }
 
-function isUnlocked(achievementId: string): boolean {
+export function isUnlocked(achievementId: string): boolean {
   return _ensureUnlocked().has(achievementId);
 }
 
-function getUnlockedIds(): string[] {
+export function getUnlockedIds(): string[] {
   return [..._ensureUnlocked()];
 }
 
-function getUnlockedCount(): number {
+export function getUnlockedCount(): number {
   return _ensureUnlocked().size;
 }
 

@@ -13,7 +13,7 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import type { MetaBonuses } from '@/systems/MetaState';
 import nodesData from '@/data/nodes.json';
 import { getAllMaps, getMapById, getFloorSequence } from '@/data/maps/index';
-import { getUnlockedAscension } from '@/systems/AscensionSystem';
+import { getUnlockedAscension, ASCENSION_LEVELS, getAscensionModifiers } from '@/systems/AscensionSystem';
 
 const SAVE_KEY = 'slingsquad_squad_v1';
 
@@ -669,22 +669,80 @@ export class SquadSelectScene extends Phaser.Scene {
     }).setOrigin(0.5, 0).setDepth(11);
 
     const maxAsc = getUnlockedAscension();
-    const ascLabel = this.add.text(ascCX, panelY + 26, `${this._ascensionLevel}`, {
-      fontSize: '18px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
-      color: this._ascensionLevel > 0 ? '#e74c3c' : '#5a7a9a',
+    const locked = maxAsc === 0;
+
+    // Color by ascension level: white(0), yellow(1-3), orange(4-6), red(7-9), purple(10)
+    const ascColor = (lv: number): string => {
+      if (lv === 0) return '#5a7a9a';
+      if (lv <= 3)  return '#f1c40f';
+      if (lv <= 6)  return '#e67e22';
+      if (lv <= 9)  return '#e74c3c';
+      return '#9b59b6';
+    };
+
+    const ascLabelText = (lv: number): string => {
+      if (locked) return '\uD83D\uDD12 Locked';
+      if (lv === 0) return '0 — Off';
+      const info = ASCENSION_LEVELS[lv - 1];
+      return info ? `${lv} — ${info.name}` : `${lv}`;
+    };
+
+    const ascLabel = this.add.text(ascCX, panelY + 24, ascLabelText(this._ascensionLevel), {
+      fontSize: '16px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+      color: locked ? '#3a4a5a' : ascColor(this._ascensionLevel),
       stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5, 0).setDepth(11);
 
-    const updateAsc = () => {
-      ascLabel.setText(`${this._ascensionLevel}`);
-      ascLabel.setColor(this._ascensionLevel > 0 ? '#e74c3c' : '#5a7a9a');
+    // Modifier preview below the panel
+    const previewText = this.add.text(cx, panelY + ph + 4, '', {
+      fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#6a8aaa',
+      stroke: '#000', strokeThickness: 1,
+      align: 'center', wordWrap: { width: pw - 20 },
+    }).setOrigin(0.5, 0).setDepth(11);
+
+    const updateAscPreview = () => {
+      if (this._ascensionLevel === 0 || locked) {
+        previewText.setText(locked ? 'Win a run to unlock ascension' : '');
+        return;
+      }
+      const parts: string[] = [];
+      for (let i = 0; i < this._ascensionLevel; i++) {
+        parts.push(ASCENSION_LEVELS[i].desc);
+      }
+      previewText.setText(parts.join('  ·  '));
     };
-    this.buildSmallArrowBtn(ascCX - 36, panelY + 26, '\u25c0', () => {
-      this._ascensionLevel = Math.max(0, this._ascensionLevel - 1); updateAsc();
-    });
-    this.buildSmallArrowBtn(ascCX + 36, panelY + 26, '\u25b6', () => {
-      this._ascensionLevel = Math.min(maxAsc, this._ascensionLevel + 1); updateAsc();
-    });
+
+    const updateAsc = () => {
+      ascLabel.setText(ascLabelText(this._ascensionLevel));
+      ascLabel.setColor(locked ? '#3a4a5a' : ascColor(this._ascensionLevel));
+      updateAscPreview();
+    };
+    updateAscPreview();
+
+    // Arrow buttons — hide ◄ at 0, hide ► at max unlocked (or if locked)
+    const leftArrowGfx: Phaser.GameObjects.GameObject[] = [];
+    const rightArrowGfx: Phaser.GameObjects.GameObject[] = [];
+
+    const updateArrowVisibility = () => {
+      const showLeft = !locked && this._ascensionLevel > 0;
+      const showRight = !locked && this._ascensionLevel < maxAsc;
+      leftArrowGfx.forEach(o => (o as unknown as { setVisible(v: boolean): void }).setVisible(showLeft));
+      rightArrowGfx.forEach(o => (o as unknown as { setVisible(v: boolean): void }).setVisible(showRight));
+    };
+
+    leftArrowGfx.push(...this.buildSmallArrowBtnTracked(ascCX - 50, panelY + 24, '\u25c0', () => {
+      if (locked) return;
+      this._ascensionLevel = Math.max(0, this._ascensionLevel - 1);
+      updateAsc();
+      updateArrowVisibility();
+    }));
+    rightArrowGfx.push(...this.buildSmallArrowBtnTracked(ascCX + 50, panelY + 24, '\u25b6', () => {
+      if (locked) return;
+      this._ascensionLevel = Math.min(maxAsc, this._ascensionLevel + 1);
+      updateAsc();
+      updateArrowVisibility();
+    }));
+    updateArrowVisibility();
 
     // Subtle divider
     panel.lineBetween(cx + 80, panelY + 8, cx + 80, panelY + ph - 8);
@@ -731,6 +789,28 @@ export class SquadSelectScene extends Phaser.Scene {
     hit.on('pointerover', () => draw(true));
     hit.on('pointerout', () => draw(false));
     hit.on('pointerdown', onClick);
+  }
+
+  /** Small arrow button that returns its game objects for visibility toggling */
+  private buildSmallArrowBtnTracked(x: number, y: number, char: string, onClick: () => void): Phaser.GameObjects.GameObject[] {
+    const g = this.add.graphics().setDepth(11);
+    const draw = (hovered: boolean) => {
+      g.clear();
+      g.fillStyle(hovered ? 0x1a2a3e : 0x0d1526, 1);
+      g.fillRoundedRect(x - 20, y - 6, 40, 32, 6);
+      g.lineStyle(1, hovered ? 0x5a8ab8 : 0x2a4a60, hovered ? 0.9 : 0.5);
+      g.strokeRoundedRect(x - 20, y - 6, 40, 32, 6);
+    };
+    draw(false);
+    const label = this.add.text(x, y + 10, char, {
+      fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
+    }).setOrigin(0.5).setDepth(12);
+    const hit = this.add.rectangle(x, y + 10, 40, 32, 0, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(13);
+    hit.on('pointerover', () => draw(true));
+    hit.on('pointerout', () => draw(false));
+    hit.on('pointerdown', onClick);
+    return [g, label, hit];
   }
 
   /** Modifier toggle chip (used in run config panel) */

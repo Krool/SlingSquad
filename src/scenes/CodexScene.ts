@@ -501,62 +501,6 @@ export class CodexScene extends Phaser.Scene {
     const stats = getGlobalStats();
     let cy = 10;
 
-    // ── Banner: LIFETIME STATISTICS ──
-    container.add(this.add.text(scrollW / 2, cy, 'LIFETIME STATISTICS', {
-      fontSize: '20px', fontFamily: 'Knights Quest, Nunito, sans-serif',
-      color: ACCENT_HEX, stroke: '#000', strokeThickness: 2,
-      letterSpacing: 4,
-    }).setOrigin(0.5, 0));
-    cy += 36;
-
-    // Stats grid (2x4)
-    const statItems: [string, string][] = [
-      ['Total Runs',      `${stats.totalRuns}`],
-      ['Victories',       `${stats.totalWins}`],
-      ['Defeats',         `${stats.totalLosses}`],
-      ['Win Rate',        stats.totalRuns > 0 ? `${Math.round(stats.totalWins / stats.totalRuns * 100)}%` : '--'],
-      ['Enemies Slain',   `${stats.totalEnemiesKilled}`],
-      ['Blocks Destroyed',`${stats.totalBlocksDestroyed}`],
-      ['Gold Earned',     `${stats.totalGoldEarned}`],
-      ['Best Launch DMG', `${Math.round(stats.bestDamageInOneLaunch)}`],
-    ];
-
-    const gridCols = 4, gridGapX = 14, gridGapY = 8;
-    const cellW = (scrollW - gridGapX * (gridCols - 1)) / gridCols;
-    const cellH = 58;
-
-    statItems.forEach((item, i) => {
-      const col = i % gridCols;
-      const row = Math.floor(i / gridCols);
-      const cx = col * (cellW + gridGapX) + cellW / 2;
-      const cellY = cy + row * (cellH + gridGapY);
-
-      const cellBg = this.add.graphics();
-      cellBg.fillStyle(0x0e1220, 1);
-      cellBg.fillRoundedRect(cx - cellW / 2, cellY, cellW, cellH, 6);
-      cellBg.lineStyle(1, ACCENT, 0.2);
-      cellBg.strokeRoundedRect(cx - cellW / 2, cellY, cellW, cellH, 6);
-      container.add(cellBg);
-
-      container.add(this.add.text(cx, cellY + 12, item[0], {
-        fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
-      }).setOrigin(0.5, 0));
-
-      container.add(this.add.text(cx, cellY + 30, item[1], {
-        fontSize: '20px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
-        color: ACCENT_HEX, stroke: '#000', strokeThickness: 1,
-      }).setOrigin(0.5, 0));
-    });
-
-    cy += 2 * (cellH + gridGapY) + 16;
-
-    // ── Divider ──
-    const divG = this.add.graphics();
-    divG.lineStyle(1, ACCENT, 0.2);
-    divG.lineBetween(40, cy, scrollW - 40, cy);
-    container.add(divG);
-    cy += 16;
-
     // ── Recent Runs ──
     container.add(this.add.text(scrollW / 2, cy, 'RECENT RUNS', {
       fontSize: '18px', fontFamily: 'Knights Quest, Nunito, sans-serif',
@@ -621,7 +565,8 @@ export class CodexScene extends Phaser.Scene {
         // Stats summary
         const nodeWord = run.nodesCleared === 1 ? 'node' : 'nodes';
         const relicWord = run.relicCount === 1 ? 'relic' : 'relics';
-        const summary = `${run.nodesCleared} ${nodeWord}  |  ${run.gold}g  |  ${run.relicCount} ${relicWord}`;
+        const scorePart = (run as { score?: number }).score ? `  |  ${(run as { score?: number }).score!.toLocaleString()} pts` : '';
+        const summary = `${run.nodesCleared} ${nodeWord}  |  ${run.gold}g  |  ${run.relicCount} ${relicWord}${scorePart}`;
         container.add(this.add.text(rcx + cardW2 / 2 - 14, cy + 38, summary, {
           fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
         }).setOrigin(1, 0));
@@ -636,22 +581,6 @@ export class CodexScene extends Phaser.Scene {
 
         cy += thisCardH + cardGap;
       }
-    }
-
-    // ── Fastest Battle ──
-    if (stats.fastestBattleMs < Infinity) {
-      cy += 8;
-      const divG2 = this.add.graphics();
-      divG2.lineStyle(1, ACCENT, 0.15);
-      divG2.lineBetween(40, cy, scrollW - 40, cy);
-      container.add(divG2);
-      cy += 12;
-
-      const secs = (stats.fastestBattleMs / 1000).toFixed(1);
-      container.add(this.add.text(scrollW / 2, cy, `Fastest Battle: ${secs}s`, {
-        fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#a0906a',
-      }).setOrigin(0.5, 0));
-      cy += 28;
     }
 
     this._scrollPanel!.setContentHeight(cy + 10);

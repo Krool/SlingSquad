@@ -15,6 +15,7 @@ import {
   ICE_IMPACT_VULNERABILITY, MAGE_ICE_BONUS,
 } from '@/config/constants';
 import { getRelicModifiers } from '@/systems/RunState';
+import { DamageNumber } from '@/ui/DamageNumber';
 
 type MatterScene = Phaser.Scene & { matter: Phaser.Physics.Matter.MatterPhysics };
 
@@ -126,6 +127,8 @@ export class ImpactSystem {
         this.emitDamage(e.x, e.y, dealt, true);
       }
     }
+
+    if (hero.isFirstLaunch) DamageNumber.proc(this.scene, x, y - 30, 'VANGUARD!', '#e67e22');
 
     this.spawnImpactParticles(x, y, 0xc0392b, 12);
     this.spawnShockwave(x, y, IMPACT_RADIUS_WARRIOR, 0xc0392b);
@@ -308,6 +311,7 @@ export class ImpactSystem {
         const d = Math.hypot(hx - x, hy - y);
         if (d < healRadius) {
           h.revive(Math.round(h.maxHp * this.relicMods.priestResurrectPct));
+          DamageNumber.proc(this.scene, hx, hy - 20, 'REVIVED!', '#2ecc71');
         }
       }
     }
@@ -317,8 +321,8 @@ export class ImpactSystem {
   private bardImpact(hero: Hero, blocks: Block[], enemies: Enemy[]) {
     const { x, y } = hero.body!.position;
     const bardStats = HERO_STATS.BARD;
-    const charmRadius = bardStats.charmRadius + this.relicMods.bardCharmBonus + (hero.skillMods?.charmRadiusBonus ?? 0);
-    const charmDuration = bardStats.charmDurationMs + (hero.skillMods?.charmDurationBonus ?? 0);
+    const charmRadius = bardStats.charmRadius + (hero.skillMods?.charmRadiusBonus ?? 0);
+    const charmDuration = bardStats.charmDurationMs + this.relicMods.bardCharmBonus + (hero.skillMods?.charmDurationBonus ?? 0);
 
     // Small landing damage (0.8x base, 80px radius)
     const crashDmg = this.calcImpact(bardStats.impactMultiplier);
@@ -413,6 +417,7 @@ export class ImpactSystem {
         hero.battleDamageDealt += dealt;
         hero.battleImpactDamage += dealt;
         this.emitDamage(e.x, e.y, dealt, true);
+        if (isBehind) DamageNumber.proc(this.scene, e.x, e.y - 30, 'BACKSTAB!', '#e67e22');
       }
     }
     this.spawnImpactParticles(x, y, 0x2c3e50, 8);

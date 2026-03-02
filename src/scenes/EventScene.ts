@@ -12,7 +12,7 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { discoverRelic } from '@/systems/DiscoveryLog';
 import { checkAchievements, incrementStat } from '@/systems/AchievementSystem';
-import { getShards, earnShards, spendShards } from '@/systems/MetaState';
+import { getShards, earnShards, spendShards, getMetaBonuses } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
 
 // ── Types mirroring events.json ────────────────────────────────────────────────
@@ -197,6 +197,8 @@ export class EventScene extends Phaser.Scene {
         return { text: `-${outcome.hpCost ?? 0} HP \u2192 Relic`, color: 0xe74c3c };
       case 'GAMBLE':
         return { text: '\u2726 50/50', color: 0xf39c12 };
+      case 'HEAL_OR_CURSE':
+        return { text: '\u2726 50/50', color: 0xf39c12 };
       case 'TRADE_RELIC':
         return { text: '\u27f3 Trade', color: 0x3498db };
       case 'HEAL_ALL':
@@ -362,7 +364,14 @@ export class EventScene extends Phaser.Scene {
         const relic = this.getRandomRelic(rarity);
         const curse = this.getRandomCurse();
         if (relic) { this.addRelicTracked(relic); resultText = `Gained: ${relic.name}`; }
-        if (curse) { this.addRelicTracked(curse); resultText += `\nCursed: ${curse.name}`; }
+        if (curse) {
+          const resist = getMetaBonuses().curseResistancePct;
+          if (resist > 0 && Math.random() < resist) {
+            resultText += '\nCurse negated!';
+          } else {
+            this.addRelicTracked(curse); resultText += `\nCursed: ${curse.name}`;
+          }
+        }
         if (!relic && !curse) resultText = 'Nothing happened...';
         break;
       }
@@ -392,7 +401,14 @@ export class EventScene extends Phaser.Scene {
         run.gold += gold;
         const curse = this.getRandomCurse();
         resultText = `+${gold} gold`;
-        if (curse) { this.addRelicTracked(curse); resultText += `\nCursed: ${curse.name}`; }
+        if (curse) {
+          const resist = getMetaBonuses().curseResistancePct;
+          if (resist > 0 && Math.random() < resist) {
+            resultText += '\nCurse negated!';
+          } else {
+            this.addRelicTracked(curse); resultText += `\nCursed: ${curse.name}`;
+          }
+        }
         break;
       }
 
@@ -419,7 +435,7 @@ export class EventScene extends Phaser.Scene {
         const commons = getNonCurseRelics().filter(r => (r.rarity ?? 'common') === 'common');
         if (commons.length > 0) {
           const relic = Phaser.Utils.Array.GetRandom(commons);
-          upgradeRelic(relic.id);
+          upgradeRelic(relic.id, 1.5 + getMetaBonuses().forgeBonusPct);
           resultText = `Upgraded: ${relic.name}`;
         } else {
           resultText = 'No eligible relics.';
@@ -504,10 +520,31 @@ export class EventScene extends Phaser.Scene {
         const relics = getNonCurseRelics();
         if (relics.length > 0) {
           const relic = Phaser.Utils.Array.GetRandom(relics);
-          upgradeRelic(relic.id);
+          upgradeRelic(relic.id, 1.5 + getMetaBonuses().forgeBonusPct);
           resultText = `Upgraded: ${relic.name}`;
         } else {
           resultText = 'No relics to upgrade.';
+        }
+        break;
+      }
+
+      case 'HEAL_OR_CURSE': {
+        if (Math.random() < 0.5) {
+          for (const hero of run.squad) hero.currentHp = hero.maxHp;
+          resultText = 'The potion heals everyone!';
+        } else {
+          const curse = this.getRandomCurse();
+          if (curse) {
+            const resist = getMetaBonuses().curseResistancePct;
+            if (resist > 0 && Math.random() < resist) {
+              resultText = 'Poisoned! But the curse was negated!';
+            } else {
+              this.addRelicTracked(curse);
+              resultText = `Poisoned! Cursed: ${curse.name}`;
+            }
+          } else {
+            resultText = 'The potion was inert...';
+          }
         }
         break;
       }

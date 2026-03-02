@@ -5,7 +5,7 @@ import { getMapById } from '@/data/maps/index';
 import { resetRunFinalized } from '@/systems/RunHistory';
 
 // ─── Node types ───────────────────────────────────────────────────────────────
-export type NodeType = 'BATTLE' | 'ELITE' | 'REWARD' | 'SHOP' | 'BOSS' | 'EVENT' | 'FORGE' | 'REST';
+export type NodeType = 'BATTLE' | 'ELITE' | 'REWARD' | 'SHOP' | 'BOSS' | 'EVENT' | 'FORGE' | 'REST' | 'TREASURE';
 export interface NodeDef {
   id: number;
   type: NodeType;
@@ -65,6 +65,8 @@ export interface RunState {
   // Battle retry fields
   battleSeed: number;     // deterministic seed for structure template + enemy jitter (0 = unset)
   retriesUsed: number;    // how many times the player has retried the current node
+  // Cumulative hero deaths (for score penalty)
+  heroDeathsTotal: number;
   // Meta bonuses carried through the run for systems that need them
   metaGoldGainPct: number;
   metaDamagePct: number;
@@ -156,23 +158,27 @@ export function newRun(
     completedFloors: [],
     battleSeed: 0,
     retriesUsed: 0,
+    heroDeathsTotal: 0,
     metaGoldGainPct: meta?.goldGainPct ?? 0,
     metaDamagePct: damageMult,
     metaLaunchPowerPct: meta?.launchPowerPct ?? 0,
     metaReviveCooldownReduction: meta?.reviveCooldownReduction ?? 0,
   };
 
-  // Ascension: start with a random curse
-  if (ascMods.startWithCurse) {
+  // Ascension: start with random curse(s)
+  if (ascMods.startCurseCount > 0) {
     try {
-      // Dynamic import not available here; load curses inline
       const cursePool = [
         { id: 'fragile_bones', name: 'Fragile Bones', desc: 'Take +15% damage.', effect: 'DAMAGE_REDUCTION', value: -0.15, rarity: 'common' as const, curse: true },
         { id: 'heavy_pockets', name: 'Heavy Pockets', desc: 'Launch power -10%.', effect: 'LAUNCH_POWER_CURSE', value: 0.1, rarity: 'common' as const, curse: true },
         { id: 'slow_hands', name: 'Slow Hands', desc: 'Launch cooldown +0.3s.', effect: 'COOLDOWN_REDUCE', value: -300, rarity: 'common' as const, curse: true },
       ];
-      const curse = cursePool[Math.floor(Math.random() * cursePool.length)];
-      _state.relics.push(curse);
+      const available = [...cursePool];
+      for (let i = 0; i < ascMods.startCurseCount && available.length > 0; i++) {
+        const idx = Math.floor(Math.random() * available.length);
+        _state.relics.push(available[idx]);
+        available.splice(idx, 1); // avoid duplicate curses
+      }
     } catch { /* */ }
   }
 
@@ -553,6 +559,7 @@ export function syncSquadHp(heroes: Array<{ heroClass: HeroClass; hp: number; ma
     if (h.state === 'dead') {
       entry.currentHp = 0;
       entry.deathCount = (entry.deathCount ?? 0) + 1;
+      s.heroDeathsTotal = (s.heroDeathsTotal ?? 0) + 1;
       const mods = getRelicModifiers();
       const totalReduction = mods.reviveCooldownReduce + (s.metaReviveCooldownReduction ?? 0);
       // Escalating: base + (deathCount - 1), so 1st=2, 2nd=3, 3rd=4...
@@ -605,6 +612,7 @@ export function loadRun(): boolean {
       completedFloors:   data.completedFloors    ?? [],
       battleSeed:        data.battleSeed         ?? 0,
       retriesUsed:       data.retriesUsed        ?? 0,
+      heroDeathsTotal:   data.heroDeathsTotal    ?? 0,
       metaGoldGainPct:   data.metaGoldGainPct   ?? 0,
       metaDamagePct:     data.metaDamagePct      ?? 0,
       metaLaunchPowerPct: data.metaLaunchPowerPct ?? 0,
@@ -744,7 +752,7 @@ export function getRelicModifiers(): RelicModifiers {
       case 'WARRIOR_KNOCKBACK':    mods.warriorKnockback       += r.value; break;
       case 'MAGE_CHAIN':           mods.mageChainTargets       += r.value; break;
       case 'RANGER_POISON':        mods.rangerPoisonDamage     += r.value; break;
-      case 'PRIEST_RESURRECT':     mods.priestResurrectPct      = r.value; break;
+      case 'PRIEST_RESURRECT':     mods.priestResurrectPct     += r.value; break;
       case 'BARD_CHARM_BONUS':     mods.bardCharmBonus         += r.value; break;
       case 'STONE_DAMAGE_BONUS':   mods.stoneDamageBonus       += r.value; break;
       case 'LOW_HP_DAMAGE':        mods.lowHpDamageMult         = r.value; break;

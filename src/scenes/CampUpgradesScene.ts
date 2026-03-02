@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, SAFE_AREA_LEFT } from '@/config/constants';
 import {
   getShards, purchaseUpgrade, canPurchase, getPurchaseCount,
-  getAllUpgrades, type UpgradeDef,
+  getAllUpgrades, isUpgradeGateMet, getUpgradeGate, type UpgradeDef,
 } from '@/systems/MetaState';
+import { getAllAchievements } from '@/systems/AchievementSystem';
 import { ScrollablePanel } from '@/ui/ScrollablePanel';
 import { drawCrystalIcon } from '@/ui/TopBar';
 import { CAMP_STRUCTURES } from '@/data/campBuildings';
@@ -132,7 +133,10 @@ export class CampUpgradesScene extends Phaser.Scene {
   ) {
     const count   = getPurchaseCount(upgrade.id);
     const maxed   = count >= upgrade.maxStack;
+    const gateMet = isUpgradeGateMet(upgrade.id);
+    const gateId  = getUpgradeGate(upgrade.id);
     const buyable = canPurchase(upgrade.id);
+    const locked  = !gateMet && !maxed; // achievement gate not met
     const R = 8;
 
     const card = this.add.container(cx, cy);
@@ -143,7 +147,9 @@ export class CampUpgradesScene extends Phaser.Scene {
     const drawBg = (hovered: boolean) => {
       bg.clear();
       let borderColor: number, borderAlpha: number, fillColor: number;
-      if (maxed) {
+      if (locked) {
+        borderColor = 0x8a4a00; borderAlpha = 0.6; fillColor = 0x0e0a04;
+      } else if (maxed) {
         borderColor = 0x2a6a2a; borderAlpha = 0.9; fillColor = 0x0a160a;
       } else if (buyable) {
         borderColor = hovered ? 0x7ec8e3 : 0x4a8aaa;
@@ -243,12 +249,33 @@ export class CampUpgradesScene extends Phaser.Scene {
       }).setOrigin(0, 0.5),
     );
 
-    // ── Right column: Cost badge or MAXED badge ──
+    // ── Right column: Cost badge, MAXED badge, or LOCKED badge ──
     const badgeX = W / 2 - 50;
     const badgeY = 0;
     const badgeW = 80, badgeH = 34;
 
-    if (maxed) {
+    if (locked && gateId) {
+      // Locked: show lock icon + "Requires: [Achievement]"
+      const badgeBg = this.add.graphics();
+      badgeBg.fillStyle(0x1a1200, 1);
+      badgeBg.fillRoundedRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6);
+      badgeBg.lineStyle(1, 0x8a4a00, 0.6);
+      badgeBg.strokeRoundedRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6);
+      card.add(badgeBg);
+      card.add(
+        this.add.text(badgeX, badgeY, '\u{1F512} Locked', {
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#8a6a30',
+        }).setOrigin(0.5),
+      );
+      // "Requires:" label below description
+      const achDef = getAllAchievements().find(a => a.id === gateId);
+      const achName = achDef?.name ?? gateId;
+      card.add(
+        this.add.text(-W / 2 + 72, H / 2 - 18, `Requires: ${achName}`, {
+          fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#8a6a30',
+        }),
+      );
+    } else if (maxed) {
       const badgeBg = this.add.graphics();
       badgeBg.fillStyle(0x1a3a1a, 1);
       badgeBg.fillRoundedRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6);

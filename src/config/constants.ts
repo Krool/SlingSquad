@@ -463,5 +463,17 @@ export const TOTAL_FLOORS_PER_RUN = 3;
 export const SKILL_TIER1_BATTLES = 2;   // battles won to unlock tier 1
 export const SKILL_TIER2_BATTLES = 5;   // battles won to unlock tier 2
 
+// ─── Score System ────────────────────────────────────────────────────────
+export const SCORE_NODE_BATTLE = 100;
+export const SCORE_NODE_ELITE = 250;
+export const SCORE_NODE_BOSS = 500;
+export const SCORE_NODE_OTHER = 50;
+export const SCORE_VICTORY_BONUS = 1000;
+export const SCORE_DEATH_PENALTY = 50;
+export const SCORE_ASCENSION_MULT_PER_LEVEL = 0.25;
+export const SCORE_MODIFIER_MULTS: Record<string, number> = {
+  glass_cannon: 1.5, marathon: 1.3, poverty: 1.4, chaos: 1.25,
+};
+
 // ─── Safe Area (dynamic island / notch buffer) ──────────────────────────
 export const SAFE_AREA_LEFT = 50;

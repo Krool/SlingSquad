@@ -7,6 +7,7 @@ import {
 import type { GameBody } from '@/config/types';
 import { mergeSkillEffects } from '@/data/skills';
 import { hasRunState, getRunState } from '@/systems/RunState';
+import { DamageNumber } from '@/ui/DamageNumber';
 
 export type HeroState = 'queued' | 'flying' | 'combat' | 'dead';
 
@@ -277,6 +278,11 @@ export class Hero {
         this._hp = 1;
         this.deathSavesRemaining--;
         this.drawHpBar();
+        DamageNumber.proc(this.scene, this.x, this.y - 30, 'SAVED!', '#f1c40f');
+        if (this.sprite) {
+          this.sprite.setTint(0xffd700);
+          this.scene.time.delayedCall(200, () => { if (this.state !== 'dead') this.restoreTint(); });
+        }
         return;
       }
       this.die();

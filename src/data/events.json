@@ -220,7 +220,7 @@
     "text": "Bubbling potions and strange apparatus fill the room. The alchemist is long gone.",
     "icon": "potion/potion_009.png",
     "choices": [
-      { "label": "Drink a potion", "desc": "50% chance: heal all heroes OR gain a curse", "outcome": { "type": "GAMBLE", "cost": 0, "reward": 0 } },
+      { "label": "Drink a potion", "desc": "50% chance: heal all heroes OR gain a curse", "outcome": { "type": "HEAL_OR_CURSE" } },
       { "label": "Sell the equipment", "desc": "Gain 25 gold", "outcome": { "type": "GOLD", "gold": 25 } },
       { "label": "Too risky", "desc": "Unknown potions are dangerous", "outcome": { "type": "NOTHING" } }
     ]

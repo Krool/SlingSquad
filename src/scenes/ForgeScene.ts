@@ -9,7 +9,7 @@ import type { MusicSystem } from '@/systems/MusicSystem';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { discoverRelic } from '@/systems/DiscoveryLog';
 import { incrementStat } from '@/systems/AchievementSystem';
-import { getShards } from '@/systems/MetaState';
+import { getShards, getMetaBonuses } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar } from '@/ui/TopBar';
 
 const ACCENT = 0xe67e22;
@@ -134,7 +134,7 @@ export class ForgeScene extends Phaser.Scene {
         action: () => {
           if (nonCurseRelics.length === 0) return 'No relics to upgrade.';
           const relic = Phaser.Utils.Array.GetRandom(nonCurseRelics);
-          upgradeRelic(relic.id);
+          upgradeRelic(relic.id, 1.5 + getMetaBonuses().forgeBonusPct);
           incrementStat('forge_upgrades');
           return `Upgraded: ${relic.name} +`;
         },
