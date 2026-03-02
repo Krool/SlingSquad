@@ -588,14 +588,14 @@ export class OverworldScene extends Phaser.Scene {
     if (state === 'available') {
       // Vertical light beacon behind node
       const beacon = this.add.graphics();
-      beacon.fillStyle(baseColor, 0.06);
+      beacon.fillStyle(baseColor, 0.14);
       beacon.fillTriangle(-12, 0, 12, 0, 0, -90);
       container.add(beacon);
       this.nodeBeacons.set(node.id, beacon);
 
       // Outer glow
       const glow = this.add.graphics();
-      glow.fillStyle(baseColor, 0.18);
+      glow.fillStyle(baseColor, 0.35);
       glow.fillCircle(0, 0, NODE_RADIUS + 14);
       container.add(glow);
       this.nodeGlows.set(node.id, glow);
@@ -632,9 +632,12 @@ export class OverworldScene extends Phaser.Scene {
         container.add(circle);
       } else {
         const circle = this.add.graphics();
+        // White ring glow behind the node for extra visibility
+        circle.lineStyle(4, 0xffffff, 0.15);
+        circle.strokeCircle(0, 0, NODE_RADIUS + 4);
         circle.fillStyle(baseColor, 1);
         circle.fillCircle(0, 0, NODE_RADIUS);
-        circle.lineStyle(2, 0xffffff, 0.7);
+        circle.lineStyle(2, 0xffffff, 0.9);
         circle.strokeCircle(0, 0, NODE_RADIUS);
         container.add(circle);
       }
@@ -1777,13 +1780,13 @@ export class OverworldScene extends Phaser.Scene {
     const run = getRunState();
 
     // ── Node glow + beacon pulse ──────────────────────────────────────────
-    const pulseMag = 0.09 * Math.sin(this.pulseTime / 380);
+    const pulseMag = 0.12 * Math.sin(this.pulseTime / 380);
     for (const id of run.availableNodeIds) {
       if (run.completedNodeIds.has(id) || run.lockedNodeIds.has(id)) continue;
       const glow = this.nodeGlows.get(id);
-      if (glow) glow.setAlpha(0.13 + pulseMag);
+      if (glow) glow.setAlpha(0.28 + pulseMag);
       const beacon = this.nodeBeacons.get(id);
-      if (beacon) beacon.setAlpha(0.04 + 0.04 * Math.sin(this.pulseTime / 380));
+      if (beacon) beacon.setAlpha(0.10 + 0.06 * Math.sin(this.pulseTime / 380));
     }
 
     // ── Twinkling stars ───────────────────────────────────────────────────

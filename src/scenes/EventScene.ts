@@ -155,7 +155,7 @@ export class EventScene extends Phaser.Scene {
   private buildNarrative() {
     this.add.text(GAME_WIDTH / 2, 186, this.event.text, {
       fontSize: '20px', fontFamily: 'Nunito, sans-serif',
-      color: '#9a8aaa', fontStyle: 'italic',
+      color: '#b8a8c8', fontStyle: 'italic',
       wordWrap: { width: 700 }, align: 'center',
     }).setOrigin(0.5).setDepth(5);
   }
@@ -229,10 +229,20 @@ export class EventScene extends Phaser.Scene {
     const bg = this.add.graphics();
     const drawBg = (hovered: boolean) => {
       bg.clear();
-      bg.fillStyle(hovered ? 0x1e1430 : 0x120e1e, canChoose ? 1 : 0.6);
-      bg.fillRoundedRect(-w / 2, -h / 2, w, h, 10);
-      bg.lineStyle(hovered ? 2 : 1, ACCENT, canChoose ? (hovered ? 0.9 : 0.5) : 0.15);
-      bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 10);
+      if (canChoose) {
+        bg.fillStyle(hovered ? 0x241a3a : 0x1a1230, 1);
+        bg.fillRoundedRect(-w / 2, -h / 2, w, h, 10);
+        bg.lineStyle(hovered ? 2.5 : 1.5, ACCENT, hovered ? 1 : 0.7);
+        bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 10);
+        // Left accent bar — immediate visual cue that this is clickable
+        bg.fillStyle(ACCENT, hovered ? 0.9 : 0.6);
+        bg.fillRoundedRect(-w / 2, -h / 2 + 6, 4, h - 12, 2);
+      } else {
+        bg.fillStyle(0x0e0a14, 0.7);
+        bg.fillRoundedRect(-w / 2, -h / 2, w, h, 10);
+        bg.lineStyle(1, 0x3a3040, 0.4);
+        bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 10);
+      }
     };
     drawBg(false);
     container.add(bg);
@@ -240,25 +250,26 @@ export class EventScene extends Phaser.Scene {
     // Label
     container.add(
       this.add.text(-w / 2 + 20, -16, choice.label, {
-        fontSize: '22px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
-        color: canChoose ? '#e8d8f0' : '#8a8a9a',
-        stroke: '#000', strokeThickness: 2,
+        fontSize: '24px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+        color: canChoose ? '#f0e8ff' : '#5a5a6a',
+        stroke: '#000', strokeThickness: 3,
       }).setOrigin(0, 0.5),
     );
 
     // Description
     container.add(
-      this.add.text(-w / 2 + 20, 10, choice.desc, {
-        fontSize: '16px', fontFamily: 'Nunito, sans-serif',
-        color: canChoose ? '#8a7a9a' : '#6a6a7a',
+      this.add.text(-w / 2 + 20, 12, choice.desc, {
+        fontSize: '18px', fontFamily: 'Nunito, sans-serif',
+        color: canChoose ? '#c0b0d8' : '#4a4a5a',
       }).setOrigin(0, 0.5),
     );
 
     // Outcome badge (replaces arrow)
     const badge = this.getOutcomeBadge(choice.outcome);
     const badgeText = this.add.text(0, 0, badge.text, {
-      fontSize: '15px', fontFamily: 'Nunito, sans-serif',
+      fontSize: '17px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
       color: '#' + badge.color.toString(16).padStart(6, '0'),
+      stroke: '#000', strokeThickness: 2,
     }).setOrigin(0.5);
     const badgePadX = 10, badgePadY = 4;
     const bw = badgeText.width + badgePadX * 2;
