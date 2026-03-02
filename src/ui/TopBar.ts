@@ -30,16 +30,10 @@ export function buildSettingsGear(
   draw(false);
   container.add(bg);
 
-  if (scene.textures.exists('ui_settings')) {
-    const iconImg = scene.add.image(gx + size / 2, gy + size / 2, 'ui_settings')
-      .setDisplaySize(28, 28).setOrigin(0.5);
-    container.add(iconImg);
-  } else {
-    const text = scene.add.text(gx + size / 2, gy + size / 2, '\u2699', {
-      fontSize: '28px', fontFamily: 'Nunito, sans-serif', color: '#c0c8d0',
-    }).setOrigin(0.5);
-    container.add(text);
-  }
+  const text = scene.add.text(gx + size / 2, gy + size / 2, '\u2699', {
+    fontSize: '28px', fontFamily: 'Nunito, sans-serif', color: '#c0c8d0',
+  }).setOrigin(0.5);
+  container.add(text);
 
   const hit = scene.add.rectangle(gx + size / 2, gy + size / 2, size, size, 0x000000, 0)
     .setInteractive({ useHandCursor: true }).setScrollFactor(0);
@@ -135,21 +129,14 @@ export function buildCurrencyBar(
   bg.strokeRoundedRect(0, 0, W, H, R);
   container.add(bg);
 
-  // Icon — sprite if available, else procedural
-  const coinKey = type === 'gold' ? 'ui_coin' : 'ui_gem';
-  if (scene.textures.exists(coinKey)) {
-    const iconImg = scene.add.image(18, H / 2, coinKey)
-      .setDisplaySize(18, 18).setOrigin(0.5);
-    container.add(iconImg);
+  // Procedural icon
+  const iconGfx = scene.add.graphics();
+  if (type === 'gold') {
+    drawCoinIcon(iconGfx, 18, H / 2);
   } else {
-    const iconGfx = scene.add.graphics();
-    if (type === 'gold') {
-      drawCoinIcon(iconGfx, 18, H / 2);
-    } else {
-      drawCrystalIcon(iconGfx, 18, H / 2);
-    }
-    container.add(iconGfx);
+    drawCrystalIcon(iconGfx, 18, H / 2);
   }
+  container.add(iconGfx);
 
   // Value text
   const textColor = type === 'gold' ? '#f1c40f' : '#7ec8e3';
@@ -230,20 +217,13 @@ export function showCurrencyPopover(
   container.add(bg);
 
   // Icon — sprite if available, else procedural
-  const popIconKey = type === 'gold' ? 'ui_coin' : 'ui_gem';
-  if (scene.textures.exists(popIconKey)) {
-    const popIconImg = scene.add.image(22, 24, popIconKey)
-      .setDisplaySize(20, 20).setOrigin(0.5);
-    container.add(popIconImg);
+  const iconGfx = scene.add.graphics();
+  if (type === 'gold') {
+    drawCoinIcon(iconGfx, 22, 24);
   } else {
-    const iconGfx = scene.add.graphics();
-    if (type === 'gold') {
-      drawCoinIcon(iconGfx, 22, 24);
-    } else {
-      drawCrystalIcon(iconGfx, 22, 24);
-    }
-    container.add(iconGfx);
+    drawCrystalIcon(iconGfx, 22, 24);
   }
+  container.add(iconGfx);
 
   // Title
   const title = type === 'gold' ? 'Gold' : 'Shards';

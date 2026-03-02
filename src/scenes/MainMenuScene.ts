@@ -1004,21 +1004,11 @@ export class MainMenuScene extends Phaser.Scene {
     const labelColor = enabled ? accentHex : '#6a6a7a';
 
     if (icon) {
-      // Try sprite icon first, fall back to Unicode text
-      const uiKey = `ui_${label.toLowerCase()}`;
-      if (this.textures.exists(uiKey)) {
-        const spriteIcon = this.add.image(0, -16, uiKey)
-          .setDisplaySize(iconSize + 4, iconSize + 4)
-          .setOrigin(0.5);
-        if (!enabled) spriteIcon.setAlpha(0.4);
-        container.add(spriteIcon);
-      } else {
-        container.add(
-          this.add.text(0, -18, icon, {
-            fontSize: `${iconSize}px`, fontFamily: 'Nunito, sans-serif',
-          }).setOrigin(0.5),
-        );
-      }
+      container.add(
+        this.add.text(0, -18, icon, {
+          fontSize: `${iconSize}px`, fontFamily: 'Nunito, sans-serif',
+        }).setOrigin(0.5),
+      );
       container.add(
         this.add.text(0, 24, label, {
           fontSize: `${labelSize}px`, fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',

@@ -283,22 +283,6 @@ export class BootScene extends Phaser.Scene {
       this.load.image(key, path);
     }
 
-    // ── UI icons (Area730) ──────────────────────────────────────────────────
-    const uiIconBase = 'sprites/area730/icons';
-    const UI_ICONS: Record<string, string> = {
-      ui_camp:     `${uiIconBase}/forge_ic.png`,
-      ui_codex:    `${uiIconBase}/messages_letter_ic.png`,
-      ui_continue: `${uiIconBase}/play_arrow_right_ic.png`,
-      ui_fresh:    `${uiIconBase}/sword_shield_ic.png`,
-      ui_settings: `${uiIconBase}/settings_ic_1.png`,
-      ui_coin:     `${uiIconBase}/coin_ic_1.png`,
-      ui_gem:      `${uiIconBase}/gems_ic.png`,
-      ui_star:     `${uiIconBase}/star_ic_1.png`,
-    };
-    for (const [key, path] of Object.entries(UI_ICONS)) {
-      this.load.image(key, path);
-    }
-
     // ── Relic & curse icon sprites ────────────────────────────────────────────
     const allRelicData = [...relicsData, ...cursesData] as { id: string; icon?: string }[];
     for (const r of allRelicData) {
@@ -325,7 +309,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     // Set nearest-neighbor filtering on icon textures for crisp pixel art
-    const iconKeys = this.textures.getTextureKeys().filter(k => k.startsWith('icon_') || k.startsWith('relic_') || k.startsWith('ui_'));
+    const iconKeys = this.textures.getTextureKeys().filter(k => k.startsWith('icon_') || k.startsWith('relic_'));
     for (const key of iconKeys) {
       const src = this.textures.get(key).getSourceImage();
       if (src instanceof HTMLImageElement) {
@@ -340,8 +324,12 @@ export class BootScene extends Phaser.Scene {
     const audio = new AudioSystem();
     this.registry.set('audio', audio);
 
-    // Wait for Google Fonts to load before starting first scene
+    // Force-load custom fonts before starting first scene
     // (Phaser canvas text caches the font on first render — must be ready)
-    document.fonts.ready.then(() => this.scene.start('MainMenuScene'));
+    Promise.all([
+      document.fonts.load('52px "Knights Quest"'),
+      document.fonts.load('400 16px "Nunito"'),
+    ]).then(() => this.scene.start('MainMenuScene'))
+      .catch(() => this.scene.start('MainMenuScene'));
   }
 }
