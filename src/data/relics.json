@@ -117,7 +117,7 @@
     "value": 0.15,
     "cost": 35,
     "rarity": "common",
-    "icon": "armor/armor_01.png"
+    "icon": "armor/armor_001.png"
   },
   {
     "id": "thorn_mail",
@@ -127,7 +127,7 @@
     "value": 5,
     "cost": 35,
     "rarity": "common",
-    "icon": "armor/armor_03.png"
+    "icon": "armor/armor_003.png"
   },
   {
     "id": "critical_eye",
@@ -267,7 +267,7 @@
     "value": 1,
     "cost": 40,
     "rarity": "uncommon",
-    "icon": "armor/armor_05.png"
+    "icon": "armor/armor_005.png"
   },
   {
     "id": "campfire_kit",
