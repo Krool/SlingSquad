@@ -351,14 +351,14 @@ export class OverworldScene extends Phaser.Scene {
     const botH = H - topH;
 
     if (mapId === 'frozen_peaks') {
-      // Sky: pale blue-grey to snow white
-      bg.fillGradientStyle(0x5a7a9a, 0x5a7a9a, 0xc8d8e8, 0xc8d8e8);
+      // Sky: muted blue-grey
+      bg.fillGradientStyle(0x4a6a88, 0x4a6a88, 0x8aa0b8, 0x8aa0b8);
       bg.fillRect(0, 0, W, topH);
-      // Terrain: snowy
-      bg.fillGradientStyle(0xb0c8d8, 0xb0c8d8, 0x8aa8b8, 0x8aa8b8);
+      // Terrain: snowy but not blown-out
+      bg.fillGradientStyle(0x8aa0b4, 0x8aa0b4, 0x6a8898, 0x6a8898);
       bg.fillRect(0, topH, W, botH);
       // Variation band
-      bg.fillStyle(0x9ab8c8, 0.3);
+      bg.fillStyle(0x7a98a8, 0.25);
       bg.fillRect(0, topH + botH * 0.4, W, botH * 0.15);
     } else if (mapId === 'infernal_keep') {
       // Sky: smoky dark red
@@ -392,13 +392,13 @@ export class OverworldScene extends Phaser.Scene {
     // Biome-appropriate clearing colors
     let clearOuter: number, clearInner: number, bossClear: number;
     if (mapId === 'frozen_peaks') {
-      clearOuter = 0xc8dce8; // bright snow
-      clearInner = 0xd8e8f0;
-      bossClear  = 0x4a5a6a; // dark icy
+      clearOuter = 0x4a5a6a; // dark icy border
+      clearInner = 0x6a8090; // exposed frozen ground
+      bossClear  = 0x3a4a5a; // dark icy
     } else if (mapId === 'infernal_keep') {
-      clearOuter = 0x2a2018; // ashen ground
-      clearInner = 0x3a2a1a;
-      bossClear  = 0x3a1010; // dark red
+      clearOuter = 0x0a0404; // charred border ring
+      clearInner = 0x2a1a14; // warm ashen ground (lighter than base)
+      bossClear  = 0x2a0808; // dark red
     } else {
       clearOuter = 0x0e2a0a; // very dark green ring
       clearInner = 0x1a3a12; // dark earthy clearing
@@ -537,7 +537,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private drawFrozenPeaks(g: Phaser.GameObjects.Graphics, rand: () => number, W: number, H: number) {
-    const NODE_CLEAR = 70;
+    const NODE_CLEAR = 90;
 
     // Mountain ridges (large triangular peaks) — top and bottom thirds
     for (let i = 0; i < 8; i++) {
@@ -615,7 +615,7 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private drawInfernalKeep(g: Phaser.GameObjects.Graphics, rand: () => number, W: number, H: number) {
-    const NODE_CLEAR = 70;
+    const NODE_CLEAR = 90;
 
     // Volcanic rocks/crags
     for (let i = 0; i < 25; i++) {
