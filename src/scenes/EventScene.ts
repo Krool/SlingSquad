@@ -52,6 +52,7 @@ export class EventScene extends Phaser.Scene {
   private event!: EventDef;
   private _goldBar: CurrencyBarResult | null = null;
   private _shardBar: CurrencyBarResult | null = null;
+  private _choiceContainers: Phaser.GameObjects.Container[] = [];
 
   constructor() {
     super({ key: 'EventScene' });
@@ -68,6 +69,7 @@ export class EventScene extends Phaser.Scene {
     const pool = eventsData as EventDef[];
     this.event = Phaser.Utils.Array.GetRandom(pool);
 
+    this._choiceContainers = [];
     this.buildBackground();
     buildSettingsGear(this, 'EventScene');
     this._shardBar = buildCurrencyBar(this, 'shard', () => getShards(), 10, 0);
@@ -302,21 +304,26 @@ export class EventScene extends Phaser.Scene {
       container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
       container.on('pointerover', () => {
+        container.setAlpha(1); // fix: restore alpha if entrance tween was interrupted
         drawBg(true);
         this.tweens.killTweensOf(container);
         this.tweens.add({ targets: container, x: cx + 4, duration: 100 });
       });
       container.on('pointerout', () => {
+        container.setAlpha(1);
         drawBg(false);
         this.tweens.killTweensOf(container);
         this.tweens.add({ targets: container, x: cx, duration: 100 });
       });
       container.on('pointerdown', () => {
         (this.registry.get('audio') as import('@/systems/AudioSystem').AudioSystem | null)?.playButtonClick();
-        container.disableInteractive();
+        // Disable ALL choice buttons to prevent multi-select
+        for (const c of this._choiceContainers) c.disableInteractive();
         this.processOutcome(choice.outcome);
       });
     }
+
+    this._choiceContainers.push(container);
 
     // Entrance animation
     this.tweens.add({
@@ -589,7 +596,7 @@ export class EventScene extends Phaser.Scene {
     this.refreshHUD();
 
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000)
-      .setDepth(20).setAlpha(0);
+      .setDepth(20).setAlpha(0).setInteractive();
     this.tweens.add({ targets: veil, alpha: 0.6, duration: 300 });
 
     const panel = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2).setDepth(21).setAlpha(0);

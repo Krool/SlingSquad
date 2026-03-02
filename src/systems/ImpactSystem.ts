@@ -12,6 +12,7 @@ import {
   IMPACT_RADIUS_ROGUE, IMPACT_RADIUS_PALADIN, IMPACT_RADIUS_DRUID,
   CHAIN_LIGHTNING_DAMAGE_MULT,
   BLOCK_CRUSH_SPEED_THRESHOLD, BLOCK_CRUSH_RADIUS, BLOCK_CRUSH_DAMAGE,
+  ICE_IMPACT_VULNERABILITY, MAGE_ICE_BONUS,
 } from '@/config/constants';
 import { getRelicModifiers } from '@/systems/RunState';
 
@@ -97,10 +98,11 @@ export class ImpactSystem {
       const bx = b.body.position.x, by = b.body.position.y;
       const d = Math.hypot(bx - x, by - y);
       if (d > IMPACT_RADIUS_WARRIOR) continue;
-      // Stone damage bonus relic
+      // Stone damage bonus relic + ICE fragility
       const matBonus = b.material === 'STONE' ? this.relicMods.stoneDamageBonus : 0;
+      const iceV = b.material === 'ICE' ? ICE_IMPACT_VULNERABILITY : 1;
       const mult = stats.impactDamageBonus * this.relicMods.warriorImpactMult;
-      const dealt = dmg * mult * (1 - d / IMPACT_RADIUS_WARRIOR) * (1 + matBonus);
+      const dealt = dmg * mult * (1 - d / IMPACT_RADIUS_WARRIOR) * (1 + matBonus) * iceV;
       b.applyDamage(dealt);
       hero.battleBlockDamage += dealt;
       this.emitDamage(bx, by, dealt);
@@ -139,7 +141,8 @@ export class ImpactSystem {
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < IMPACT_RADIUS_RANGER) {
-        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_RANGER);
+        const iceV = b.material === 'ICE' ? ICE_IMPACT_VULNERABILITY : 1;
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_RANGER) * iceV;
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -200,7 +203,8 @@ export class ImpactSystem {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < r) {
         const matBonus = b.material === 'STONE' ? this.relicMods.stoneDamageBonus : 0;
-        const dealt = mageDmg * (1 - d / r) * (1 + matBonus);
+        const iceV = b.material === 'ICE' ? ICE_IMPACT_VULNERABILITY * (1 + MAGE_ICE_BONUS) : 1;
+        const dealt = mageDmg * (1 - d / r) * (1 + matBonus) * iceV;
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -268,7 +272,8 @@ export class ImpactSystem {
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < IMPACT_RADIUS_PRIEST) {
-        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PRIEST);
+        const iceV = b.material === 'ICE' ? ICE_IMPACT_VULNERABILITY : 1;
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PRIEST) * iceV;
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -320,7 +325,8 @@ export class ImpactSystem {
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < 80) {
-        const dealt = crashDmg * (1 - d / 80);
+        const iceV = b.material === 'ICE' ? ICE_IMPACT_VULNERABILITY : 1;
+        const dealt = crashDmg * (1 - d / 80) * iceV;
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -387,7 +393,8 @@ export class ImpactSystem {
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < IMPACT_RADIUS_ROGUE) {
-        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_ROGUE);
+        const iceV = b.material === 'ICE' ? ICE_IMPACT_VULNERABILITY : 1;
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_ROGUE) * iceV;
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -422,7 +429,8 @@ export class ImpactSystem {
     for (const b of blocks) {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < IMPACT_RADIUS_PALADIN) {
-        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PALADIN);
+        const iceV = b.material === 'ICE' ? ICE_IMPACT_VULNERABILITY : 1;
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_PALADIN) * iceV;
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);
@@ -464,7 +472,8 @@ export class ImpactSystem {
       const d = Math.hypot(b.body.position.x - x, b.body.position.y - y);
       if (d < IMPACT_RADIUS_DRUID) {
         const woodBonus = b.material === 'WOOD' ? 1.3 : 1.0;
-        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_DRUID) * woodBonus;
+        const iceV = b.material === 'ICE' ? ICE_IMPACT_VULNERABILITY : 1;
+        const dealt = crashDmg * (1 - d / IMPACT_RADIUS_DRUID) * woodBonus * iceV;
         b.applyDamage(dealt);
         hero.battleBlockDamage += dealt;
         this.emitDamage(b.body.position.x, b.body.position.y, dealt);

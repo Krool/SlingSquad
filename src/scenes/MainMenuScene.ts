@@ -91,6 +91,13 @@ export class MainMenuScene extends Phaser.Scene {
     buildSettingsGear(this, 'MainMenuScene', 20);
     this.buildButtons();
 
+    // Build version stamp (auto-updates each compile)
+    const buildTime = typeof __BUILD_TIME__ === 'string' ? __BUILD_TIME__ : '';
+    const short = buildTime.replace(/T/, ' ').replace(/\.\d+Z$/, '');
+    this.add.text(GAME_WIDTH - 8, GAME_HEIGHT - 6, `build ${short}`, {
+      fontSize: '10px', fontFamily: 'monospace', color: '#555555',
+    }).setOrigin(1, 1).setDepth(100).setAlpha(0.5);
+
     this.events.on('resume', this.onResume, this);
   }
 

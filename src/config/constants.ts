@@ -420,6 +420,8 @@ export const POISON_TICK_COUNT = 2;  // repeat param = 2 means 3 ticks total
 export const IMPACT_FORCE_CAP = 70;
 export const IMPACT_FORCE_FLOOR = 20;
 export const IMPACT_FORCE_MULT = 0.4;
+export const ICE_IMPACT_VULNERABILITY = 1.5;   // ICE shatters easily — all heroes deal +50% impact damage
+export const MAGE_ICE_BONUS = 0.6;             // Mage fire magic melts ice — additional +60% on top
 export const IMPACT_RADIUS_WARRIOR = 80;
 export const IMPACT_RADIUS_RANGER = 70;
 export const IMPACT_RADIUS_PRIEST = 90;

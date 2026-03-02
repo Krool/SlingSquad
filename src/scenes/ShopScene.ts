@@ -371,11 +371,13 @@ export class ShopScene extends Phaser.Scene {
       container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
       container.on('pointerover', () => {
+        container.setAlpha(1); // fix: restore alpha if entrance tween was interrupted
         this.tweens.killTweensOf(container);
         this.tweens.add({ targets: container, y: baseY - 10, duration: 120, ease: 'Power2' });
         drawCardBg(true);
       });
       container.on('pointerout', () => {
+        container.setAlpha(1);
         this.tweens.killTweensOf(container);
         this.tweens.add({ targets: container, y: baseY, duration: 120, ease: 'Power2' });
         drawCardBg(false);
@@ -465,7 +467,12 @@ export class ShopScene extends Phaser.Scene {
     const container = this.cardContainers[idx];
     if (!container) return;
     container.disableInteractive();
-    this.tweens.add({ targets: container, alpha: 0.35, duration: 200 });
+    // Dark overlay inside the card to dim all bright internal styling
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.55);
+    overlay.fillRoundedRect(-140, -155, 280, 310, 12);
+    container.add(overlay);
+    this.tweens.add({ targets: container, alpha: 0.5, duration: 200 });
   }
 
   private refreshCardAffordability() {

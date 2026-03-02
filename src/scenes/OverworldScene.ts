@@ -831,13 +831,17 @@ export class OverworldScene extends Phaser.Scene {
       const targetAlpha = onCooldown ? 0.3 : 1.0;
 
       const sprite = this.add.sprite(hx, hy, `${charKey}_idle_1`)
-        .setDisplaySize(44, 44)
         .setDepth(4)
-        .setAlpha(0)
-        .setScale(0.5);
+        .setAlpha(0);
 
-      // Play idle animation
+      // Play animation FIRST so frame dimensions are established
       try { sprite.play(`${charKey}_idle`); } catch { /* anim may not exist */ }
+
+      // THEN set display size (scale is computed against the current anim frame)
+      sprite.setDisplaySize(44, 44);
+      const targetSX = sprite.scaleX;
+      const targetSY = sprite.scaleY;
+      sprite.setScale(targetSX * 0.5, targetSY * 0.5);
 
       if (onCooldown) {
         sprite.setTint(0x444444);
@@ -865,10 +869,11 @@ export class OverworldScene extends Phaser.Scene {
       this.tweens.add({
         targets: sprite,
         alpha: targetAlpha,
-        scaleX: 1, scaleY: 1,
+        scaleX: targetSX, scaleY: targetSY,
         duration: 300,
         ease: 'Back.easeOut',
         delay: this.entranceDelay + i * 60,
+        onComplete: () => { sprite.setDisplaySize(44, 44); },
       });
 
       this.heroSprites.push(sprite);
