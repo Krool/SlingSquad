@@ -151,7 +151,7 @@
       "name": "Warlord Krag",
       "x": 1220, "y": 310,
       "next": [],
-      "enemies": ["BOSS_GRUNT", "GRUNT", "SHIELD", "RANGED", "RANGED", "HEALER"],
+      "enemies": ["BOSS_GRUNT", "GRUNT", "GRUNT", "SHIELD", "SHIELD", "RANGED", "RANGED", "HEALER", "BOMBER"],
       "gold": 80,
       "difficulty": 5
     }

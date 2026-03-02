@@ -330,7 +330,7 @@ export class LaunchSystem {
 
     // Mage: draw AoE impact preview at projected landing point
     if (this.currentHero?.heroClass === 'MAGE') {
-      const mageAoeRadius = 150 + this.relicMods.mageAoeRadiusBonus + (this.currentHero?.skillMods?.aoeRadiusBonus ?? 0);
+      const mageAoeRadius = HERO_STATS.MAGE.aoeRadius + this.relicMods.mageAoeRadiusBonus + (this.currentHero?.skillMods?.aoeRadiusBonus ?? 0);
       this.trajectoryGraphics.fillStyle(0x8e44ad, 0.10);
       this.trajectoryGraphics.fillCircle(landX, landY, mageAoeRadius);
       this.trajectoryGraphics.lineStyle(2, 0x8e44ad, 0.50);

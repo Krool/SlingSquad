@@ -49,11 +49,12 @@ const registry: Record<string, Record<number, TemplateFn[]>> = {
 };
 
 /**
- * Pick a random template for the given zone and difficulty.
+ * Pick a template for the given zone and difficulty.
+ * If `seed` > 0, the selection is deterministic (same seed → same template).
  * Falls back to nearest difficulty if exact match unavailable.
  * Falls back to goblin_wastes if zone is unknown.
  */
-export function pickTemplate(zone: string, difficulty: number): TemplateFn {
+export function pickTemplate(zone: string, difficulty: number, seed = 0): TemplateFn {
   const zoneTemplates = registry[zone] ?? registry['goblin_wastes'];
 
   // Try exact match first
@@ -76,7 +77,10 @@ export function pickTemplate(zone: string, difficulty: number): TemplateFn {
     templates = registry['goblin_wastes'][1];
   }
 
-  return templates[Math.floor(Math.random() * templates.length)];
+  const idx = seed > 0
+    ? seed % templates.length
+    : Math.floor(Math.random() * templates.length);
+  return templates[idx];
 }
 
 export type { TemplateFn, ZoneId };

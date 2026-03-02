@@ -62,6 +62,9 @@ export interface RunState {
   totalFloors: number;           // total floors in this run
   floorMapIds: string[];         // ordered map IDs for each floor
   completedFloors: number[];     // floor indices already cleared
+  // Battle retry fields
+  battleSeed: number;     // deterministic seed for structure template + enemy jitter (0 = unset)
+  retriesUsed: number;    // how many times the player has retried the current node
   // Meta bonuses carried through the run for systems that need them
   metaGoldGainPct: number;
   metaDamagePct: number;
@@ -151,6 +154,8 @@ export function newRun(
     totalFloors,
     floorMapIds,
     completedFloors: [],
+    battleSeed: 0,
+    retriesUsed: 0,
     metaGoldGainPct: meta?.goldGainPct ?? 0,
     metaDamagePct: damageMult,
     metaLaunchPowerPct: meta?.launchPowerPct ?? 0,
@@ -220,6 +225,8 @@ export function completeNode(nodeId: number) {
 export function selectNode(nodeId: number) {
   const s = getRunState();
   s.currentNodeId = nodeId;
+  s.battleSeed = 0;
+  s.retriesUsed = 0;
 
   // For every parent that leads to this node, lock any sibling branches not chosen
   for (const parent of s.nodeMap) {
@@ -490,6 +497,25 @@ export function getPendingLevelUps(): Array<{ heroClass: HeroClass; tier: 1 | 2 
   return pending;
 }
 
+// ─── Battle Retry API ────────────────────────────────────────────────────────
+
+/** Ensure a deterministic battle seed is set. Returns the seed. */
+export function ensureBattleSeed(): number {
+  const s = getRunState();
+  if (s.battleSeed === 0) {
+    s.battleSeed = Math.floor(Math.random() * 2_147_483_647) + 1;
+    saveRun();
+  }
+  return s.battleSeed;
+}
+
+/** Increment the retry counter for the current node. */
+export function incrementRetries() {
+  const s = getRunState();
+  s.retriesUsed++;
+  saveRun();
+}
+
 // ─── Cost Scaling ────────────────────────────────────────────────────────────
 
 /** Progressive cost multiplier: +8% per completed node. */
@@ -577,6 +603,8 @@ export function loadRun(): boolean {
       totalFloors:       data.totalFloors        ?? 1,
       floorMapIds:       data.floorMapIds        ?? [data.currentMapId ?? 'goblin_wastes'],
       completedFloors:   data.completedFloors    ?? [],
+      battleSeed:        data.battleSeed         ?? 0,
+      retriesUsed:       data.retriesUsed        ?? 0,
       metaGoldGainPct:   data.metaGoldGainPct   ?? 0,
       metaDamagePct:     data.metaDamagePct      ?? 0,
       metaLaunchPowerPct: data.metaLaunchPowerPct ?? 0,

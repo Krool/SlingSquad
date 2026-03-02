@@ -1,5 +1,5 @@
 import type { TemplateFn } from '../types';
-import { raisedPlatform, tunnel } from '../shared';
+import { raisedPlatform, tunnel, treasuryRoom, capBlock } from '../shared';
 
 // ─── "The Citadel" — multi-wing palace (migrated boss template) ─────────────
 export const theCitadel: TemplateFn = (ctx) => {
@@ -329,9 +329,310 @@ export const siegeBreaker: TemplateFn = (ctx) => {
   ctx.coin(FX + 50, ff1 - 6 - 18, 5);            // risky — near compound barrel
 };
 
+// ─── "The Grand Stockade" — massive palisade + courtyard + grand hall + treasury (~68 blocks) ──
+export const grandStockade: TemplateFn = (ctx) => {
+  const { groundY } = ctx;
+  const b = ctx.block.bind(ctx);
+  const eR = 20;
+
+  // ── Front Palisade: 2 STONE gateposts + lintel ──
+  const GX = 420;
+  const gateH = 90;
+  b(GX, groundY - gateH / 2, 20, gateH, 'STONE');       // left gatepost
+  b(GX + 70, groundY - gateH / 2, 20, gateH, 'STONE');  // right gatepost
+  b(GX + 35, groundY - gateH - 6, 90, 14, 'STONE');      // lintel
+  capBlock(ctx, GX, groundY - gateH - 6, 'STONE', 24);   // left battlement
+  capBlock(ctx, GX + 70, groundY - gateH - 6, 'STONE', 24); // right battlement
+
+  // ── Left Watchtower (2 levels) ──
+  const LTX = 380;
+  const ltSpan = 60;
+  // Level 1
+  b(LTX - ltSpan / 2, groundY - 70 / 2, 14, 70, 'WOOD');
+  b(LTX + ltSpan / 2, groundY - 70 / 2, 14, 70, 'WOOD');
+  const ltf1 = groundY - 70 - 6;
+  b(LTX, ltf1, ltSpan + 20, 12, 'STONE');
+  // Level 2
+  b(LTX - 20, ltf1 - 6 - 50 / 2, 14, 50, 'WOOD');
+  b(LTX + 20, ltf1 - 6 - 50 / 2, 14, 50, 'WOOD');
+  const ltf2 = ltf1 - 6 - 50 - 6;
+  b(LTX, ltf2, ltSpan + 10, 12, 'STONE');
+  capBlock(ctx, LTX, ltf2, 'STONE', 24);
+
+  // ── Right Watchtower (2 levels, taller) ──
+  const RTX = 530;
+  // Level 1
+  b(RTX - ltSpan / 2, groundY - 75 / 2, 14, 75, 'WOOD');
+  b(RTX + ltSpan / 2, groundY - 75 / 2, 14, 75, 'WOOD');
+  const rtf1 = groundY - 75 - 6;
+  b(RTX, rtf1, ltSpan + 20, 12, 'STONE');
+  // Level 2
+  b(RTX - 20, rtf1 - 6 - 55 / 2, 14, 55, 'WOOD');
+  b(RTX + 20, rtf1 - 6 - 55 / 2, 14, 55, 'WOOD');
+  const rtf2 = rtf1 - 6 - 55 - 6;
+  b(RTX, rtf2, ltSpan + 10, 12, 'STONE');
+  capBlock(ctx, RTX, rtf2, 'STONE', 24);
+
+  // ── Courtyard: 2 small barracks ──
+  const BX1 = 570;
+  b(BX1, groundY - 50 / 2, 14, 50, 'WOOD');
+  b(BX1 + 60, groundY - 50 / 2, 14, 50, 'WOOD');
+  const bk1f = groundY - 50 - 6;
+  b(BX1 + 30, bk1f, 80, 10, 'WOOD');
+
+  const BX2 = 640;
+  b(BX2, groundY - 55 / 2, 14, 55, 'WOOD');
+  b(BX2 + 60, groundY - 55 / 2, 14, 55, 'WOOD');
+  const bk2f = groundY - 55 - 6;
+  b(BX2 + 30, bk2f, 80, 10, 'WOOD');
+
+  // ── Grand Hall (centerpiece): 4 levels ──
+  const HX = 720;
+  const hallSpan = 160;
+  // Level 1 — 6 pillars (wide STONE base)
+  b(HX - hallSpan / 2, groundY - 80 / 2, 18, 80, 'STONE');
+  b(HX - hallSpan / 4, groundY - 80 / 2, 14, 80, 'WOOD');
+  b(HX, groundY - 80 / 2, 14, 80, 'WOOD');
+  b(HX + hallSpan / 4, groundY - 80 / 2, 14, 80, 'WOOD');
+  b(HX + hallSpan / 2, groundY - 80 / 2, 18, 80, 'STONE');
+  b(HX + hallSpan / 6, groundY - 80 / 2, 14, 80, 'WOOD');
+  const hf1 = groundY - 80 - 6;
+  b(HX, hf1, hallSpan + 40, 14, 'STONE');
+  // Level 2 — narrower
+  b(HX - hallSpan / 3, hf1 - 6 - 65 / 2, 14, 65, 'WOOD');
+  b(HX, hf1 - 6 - 65 / 2, 14, 65, 'WOOD');
+  b(HX + hallSpan / 3, hf1 - 6 - 65 / 2, 14, 65, 'WOOD');
+  const hf2 = hf1 - 6 - 65 - 6;
+  b(HX, hf2, hallSpan + 20, 12, 'STONE');
+  // Level 3 — narrower still
+  b(HX - 40, hf2 - 6 - 55 / 2, 14, 55, 'WOOD');
+  b(HX + 40, hf2 - 6 - 55 / 2, 14, 55, 'WOOD');
+  const hf3 = hf2 - 6 - 55 - 6;
+  b(HX, hf3, 120, 12, 'STONE');
+  // Level 4 — throne platform
+  b(HX, hf3 - 6 - 40 / 2, 14, 40, 'WOOD');
+  const throneF = hf3 - 6 - 40 - 6;
+  b(HX, throneF, 80, 12, 'STONE');
+  b(HX - 25, throneF - 6 - 14, 40, 24, 'STONE');
+  b(HX + 25, throneF - 6 - 14, 40, 24, 'STONE');
+
+  // ── Rear Treasury Tower (3 levels, STONE) ──
+  const TX = 940;
+  const tSpan = 70;
+  // Level 1
+  b(TX - tSpan / 2, groundY - 70 / 2, 16, 70, 'STONE');
+  b(TX + tSpan / 2, groundY - 70 / 2, 16, 70, 'STONE');
+  const tf1 = groundY - 70 - 6;
+  b(TX, tf1, tSpan + 20, 12, 'STONE');
+  // Level 2
+  b(TX - 25, tf1 - 6 - 55 / 2, 14, 55, 'WOOD');
+  b(TX + 25, tf1 - 6 - 55 / 2, 14, 55, 'WOOD');
+  const tf2 = tf1 - 6 - 55 - 6;
+  b(TX, tf2, tSpan + 10, 12, 'STONE');
+  // Level 3
+  b(TX, tf2 - 6 - 40 / 2, 14, 40, 'WOOD');
+  const tf3 = tf2 - 6 - 40 - 6;
+  b(TX, tf3, 50, 12, 'STONE');
+  capBlock(ctx, TX, tf3, 'STONE', 24);
+
+  // Treasury room inside rear tower base
+  treasuryRoom(ctx, TX, groundY, 60, 50, 'WOOD', 6);
+
+  // ── WOOD bridges connecting watchtowers to hall ──
+  b((RTX + HX - hallSpan / 2) / 2, rtf1, 70, 10, 'WOOD');   // right tower → hall
+  b((LTX + GX) / 2, ltf1, 50, 10, 'WOOD');                   // left tower → gate
+
+  // ── Raised platform in courtyard ──
+  raisedPlatform(ctx, 620, groundY, 100, 20);
+
+  // ── Barrels (7) ──
+  ctx.barrel(GX + 35, groundY - 18);          // under gate
+  ctx.barrel(BX1 + 30, groundY - 18);         // barracks 1
+  ctx.barrel(BX2 + 30, groundY - 18);         // barracks 2
+  ctx.barrel(HX - hallSpan / 4, groundY - 18); // hall ground left
+  ctx.barrel(HX + hallSpan / 4, hf1 - 6 - 18); // hall level 1
+  ctx.barrel(TX, groundY - 18);               // treasury ground
+  ctx.barrel(HX, hf2 - 6 - 18);              // hall level 2
+
+  // ── Spike traps (3) ──
+  ctx.hazard('SPIKE_TRAP', BX1 + 30, groundY - 5);
+  ctx.hazard('SPIKE_TRAP', HX - 60, groundY - 5);
+  ctx.hazard('SPIKE_TRAP', TX - 50, groundY - 5);
+
+  // ── Enemy Slots (10) ──
+  ctx.enemySlots.push(
+    { x: LTX, y: ltf2 - 6 - 24 - eR },            // left watchtower top
+    { x: RTX, y: rtf1 - 6 - eR },                  // right watchtower level 1
+    { x: BX1 + 30, y: bk1f - 6 - eR },             // barracks 1
+    { x: BX2 + 30, y: bk2f - 6 - eR },             // barracks 2
+    { x: HX - hallSpan / 3, y: hf1 - 6 - eR },     // hall level 1 left
+    { x: HX + hallSpan / 3, y: hf1 - 6 - eR },     // hall level 1 right
+    { x: HX, y: hf2 - 6 - eR },                    // hall level 2
+    { x: HX, y: throneF - 6 - 24 - eR },           // throne (boss)
+    { x: TX, y: tf1 - 6 - eR },                    // treasury level 1
+    { x: TX, y: tf3 - 6 - 24 - eR },               // treasury top
+  );
+
+  // ── Coins (~45g) ──
+  ctx.coin(400, 260, 4);                            // approach — arc path
+  ctx.coin(HX, throneF - 40, 7);                   // treasury — throne platform
+  ctx.coin(TX, tf3 - 30, 6);                       // treasury — rear tower pinnacle
+  ctx.coin(LTX, ltf2 - 30, 5);                     // structure — left watchtower top
+  ctx.coin(RTX, rtf2 - 30, 5);                     // structure — right watchtower top
+  ctx.coin(HX, hf3 - 20, 5);                       // structure — hall level 3
+  ctx.coin(GX + 35, groundY - 18, 4);              // risky — near gate barrel
+  ctx.coin(BX2 + 30, groundY - 18, 4);             // risky — near barracks barrel
+  ctx.coin(HX - hallSpan / 4, groundY - 18, 5);    // risky — near hall barrel
+};
+
+// ─── "The War Machine" — siege tower + flanking bunkers + walkways (~71 blocks) ──
+export const warMachine: TemplateFn = (ctx) => {
+  const { groundY } = ctx;
+  const b = ctx.block.bind(ctx);
+  const eR = 20;
+
+  // ── Approach Ramp ──
+  const RMP = 410;
+  b(RMP, groundY - 35 / 2, 50, 35, 'STONE');
+  b(RMP + 40, groundY - 25 / 2, 40, 25, 'STONE');
+  capBlock(ctx, RMP, groundY - 35, 'STONE', 20);
+
+  // ── Left Bunker (2 levels, wide) ──
+  const LBX = 480;
+  const bunkerW = 110;
+  // Level 1 — 3 pillars
+  b(LBX, groundY - 75 / 2, 16, 75, 'STONE');
+  b(LBX + bunkerW / 2, groundY - 75 / 2, 14, 75, 'WOOD');
+  b(LBX + bunkerW, groundY - 75 / 2, 16, 75, 'STONE');
+  const lbf1 = groundY - 75 - 6;
+  b(LBX + bunkerW / 2, lbf1, bunkerW + 30, 14, 'STONE');
+  // Level 2
+  b(LBX + 15, lbf1 - 6 - 55 / 2, 14, 55, 'WOOD');
+  b(LBX + bunkerW - 15, lbf1 - 6 - 55 / 2, 14, 55, 'WOOD');
+  const lbf2 = lbf1 - 6 - 55 - 6;
+  b(LBX + bunkerW / 2, lbf2, bunkerW + 10, 12, 'STONE');
+  // Battlements
+  capBlock(ctx, LBX + 20, lbf2, 'STONE', 22);
+  capBlock(ctx, LBX + bunkerW - 20, lbf2, 'STONE', 22);
+
+  // ── Central Siege Tower (5 levels — the showpiece, reaches y≈260) ──
+  const CTX = 700;
+  const towerSpan = 100;
+  // Level 1 — heavy STONE base
+  b(CTX - towerSpan / 2, groundY - 80 / 2, 18, 80, 'STONE');
+  b(CTX, groundY - 80 / 2, 14, 80, 'STONE');
+  b(CTX + towerSpan / 2, groundY - 80 / 2, 18, 80, 'STONE');
+  const tf1 = groundY - 80 - 6;
+  b(CTX, tf1, towerSpan + 30, 14, 'STONE');
+  // Level 2
+  b(CTX - towerSpan / 2 + 5, tf1 - 6 - 65 / 2, 14, 65, 'WOOD');
+  b(CTX + towerSpan / 2 - 5, tf1 - 6 - 65 / 2, 14, 65, 'WOOD');
+  b(CTX, tf1 - 6 - 65 / 2, 14, 65, 'WOOD');
+  const tf2 = tf1 - 6 - 65 - 6;
+  b(CTX, tf2, towerSpan + 20, 12, 'STONE');
+  // Level 3
+  b(CTX - 35, tf2 - 6 - 55 / 2, 14, 55, 'WOOD');
+  b(CTX + 35, tf2 - 6 - 55 / 2, 14, 55, 'WOOD');
+  const tf3 = tf2 - 6 - 55 - 6;
+  b(CTX, tf3, towerSpan + 10, 12, 'STONE');
+  // Level 4
+  b(CTX - 25, tf3 - 6 - 45 / 2, 14, 45, 'WOOD');
+  b(CTX + 25, tf3 - 6 - 45 / 2, 14, 45, 'WOOD');
+  const tf4 = tf3 - 6 - 45 - 6;
+  b(CTX, tf4, 80, 12, 'STONE');
+  // Level 5 — pinnacle
+  b(CTX, tf4 - 6 - 35 / 2, 14, 35, 'WOOD');
+  const tf5 = tf4 - 6 - 35 - 6;
+  b(CTX, tf5, 60, 12, 'STONE');
+  b(CTX - 18, tf5 - 6 - 14, 28, 24, 'STONE');
+  b(CTX + 18, tf5 - 6 - 14, 28, 24, 'STONE');
+
+  // ── Right Bunker (2 levels, slightly taller) ──
+  const RBX = 850;
+  // Level 1
+  b(RBX, groundY - 80 / 2, 16, 80, 'STONE');
+  b(RBX + bunkerW / 2, groundY - 80 / 2, 14, 80, 'WOOD');
+  b(RBX + bunkerW, groundY - 80 / 2, 16, 80, 'STONE');
+  const rbf1 = groundY - 80 - 6;
+  b(RBX + bunkerW / 2, rbf1, bunkerW + 30, 14, 'STONE');
+  // Level 2
+  b(RBX + 15, rbf1 - 6 - 60 / 2, 14, 60, 'WOOD');
+  b(RBX + bunkerW - 15, rbf1 - 6 - 60 / 2, 14, 60, 'WOOD');
+  const rbf2 = rbf1 - 6 - 60 - 6;
+  b(RBX + bunkerW / 2, rbf2, bunkerW + 10, 12, 'STONE');
+  // Battlements
+  capBlock(ctx, RBX + 20, rbf2, 'STONE', 22);
+  capBlock(ctx, RBX + bunkerW - 20, rbf2, 'STONE', 22);
+
+  // ── Elevated WOOD Walkways (connecting bunkers to siege tower at level 1) ──
+  const lwalkCX = (LBX + bunkerW + CTX - towerSpan / 2) / 2;
+  const lwalkW = (CTX - towerSpan / 2) - (LBX + bunkerW);
+  b(lwalkCX, lbf1, Math.max(lwalkW, 50), 10, 'WOOD');
+  b(lwalkCX, groundY - 75 / 2, 14, 75, 'WOOD');         // walkway support
+
+  const rwalkCX = (CTX + towerSpan / 2 + RBX) / 2;
+  const rwalkW = RBX - (CTX + towerSpan / 2);
+  b(rwalkCX, rbf1, Math.max(rwalkW, 50), 10, 'WOOD');
+  b(rwalkCX, groundY - 80 / 2, 14, 80, 'WOOD');         // walkway support
+
+  // ── Rear Guard Post (2 levels) ──
+  const GPX = 990;
+  b(GPX, groundY - 60 / 2, 14, 60, 'WOOD');
+  b(GPX + 55, groundY - 60 / 2, 14, 60, 'WOOD');
+  const gpf1 = groundY - 60 - 6;
+  b(GPX + 27, gpf1, 75, 10, 'STONE');
+  b(GPX + 27, gpf1 - 6 - 40 / 2, 14, 40, 'WOOD');
+  const gpf2 = gpf1 - 6 - 40 - 6;
+  b(GPX + 27, gpf2, 55, 10, 'STONE');
+  capBlock(ctx, GPX + 27, gpf2, 'STONE', 22);
+
+  // ── Crenellation caps on all rooftops ──
+  capBlock(ctx, CTX - 20, tf5, 'STONE', 20);
+  capBlock(ctx, CTX + 20, tf5, 'STONE', 20);
+
+  // ── Barrels (6) ──
+  ctx.barrel(LBX + bunkerW / 2, groundY - 18);    // left bunker ground
+  ctx.barrel(CTX - 30, groundY - 18);             // siege tower ground left
+  ctx.barrel(CTX + 30, tf1 - 6 - 18);             // siege tower level 1
+  ctx.barrel(RBX + bunkerW / 2, groundY - 18);    // right bunker ground
+  ctx.barrel(GPX + 27, groundY - 18);             // rear guard post
+  ctx.barrel(CTX, tf2 - 6 - 18);                  // siege tower level 2
+
+  // ── Spike traps (2) ──
+  ctx.hazard('SPIKE_TRAP', lwalkCX, groundY - 5);
+  ctx.hazard('SPIKE_TRAP', rwalkCX, groundY - 5);
+
+  // ── Enemy Slots (10) ──
+  ctx.enemySlots.push(
+    { x: LBX + bunkerW / 2, y: lbf1 - 6 - eR },       // left bunker level 1
+    { x: LBX + bunkerW / 2, y: lbf2 - 6 - 22 - eR },  // left bunker top
+    { x: CTX, y: tf1 - 6 - eR },                       // siege tower level 1
+    { x: CTX, y: tf2 - 6 - eR },                       // siege tower level 2
+    { x: CTX, y: tf4 - 6 - eR },                       // siege tower level 4
+    { x: CTX, y: tf5 - 6 - 24 - eR },                  // siege tower pinnacle (boss)
+    { x: RBX + bunkerW / 2, y: rbf1 - 6 - eR },       // right bunker level 1
+    { x: RBX + bunkerW / 2, y: rbf2 - 6 - 22 - eR },  // right bunker top
+    { x: GPX + 27, y: gpf1 - 6 - eR },                // rear guard level 1
+    { x: lwalkCX, y: lbf1 - 6 - eR },                  // left walkway
+  );
+
+  // ── Coins (~48g) ──
+  ctx.coin(390, 250, 4);                              // approach — arc path
+  ctx.coin(CTX, tf5 - 30, 7);                         // treasury — siege tower pinnacle
+  ctx.coin(CTX, tf3 - 20, 6);                         // structure — siege tower level 3
+  ctx.coin(LBX + bunkerW / 2, lbf2 - 30, 5);         // structure — left bunker top
+  ctx.coin(RBX + bunkerW / 2, rbf2 - 30, 5);         // structure — right bunker top
+  ctx.coin(GPX + 27, gpf2 - 30, 5);                   // structure — rear guard post top
+  ctx.coin(LBX + bunkerW / 2, groundY - 18, 5);       // risky — near left barrel
+  ctx.coin(CTX - 30, groundY - 18, 5);                // risky — near siege tower barrel
+  ctx.coin(RBX + bunkerW / 2, groundY - 18, 6);       // risky — near right barrel
+};
+
 export const diff5Templates: TemplateFn[] = [
   theCitadel,
   theGauntlet,
   goblinThrone,
   siegeBreaker,
+  grandStockade,
+  warMachine,
 ];

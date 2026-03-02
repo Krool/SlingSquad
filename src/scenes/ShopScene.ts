@@ -260,32 +260,42 @@ export class ShopScene extends Phaser.Scene {
     const bg = this.add.graphics();
     const drawCardBg = (hovered: boolean) => {
       bg.clear();
-      bg.fillStyle(hovered ? bgColor + 0x0d0d0d : bgColor, canAfford ? 1 : 0.7);
-      bg.fillRoundedRect(-w / 2, -h / 2, w, h, 12);
-      bg.lineStyle(hovered ? 2 : 1, accentColor, canAfford ? (hovered ? 1 : 0.7) : 0.25);
-      bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 12);
+      if (canAfford) {
+        bg.fillStyle(hovered ? bgColor + 0x0d0d0d : bgColor, 1);
+        bg.fillRoundedRect(-w / 2, -h / 2, w, h, 12);
+        bg.lineStyle(hovered ? 2.5 : 1.5, accentColor, hovered ? 1 : 0.8);
+        bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 12);
+        // Left accent bar — visual cue that this card is affordable
+        bg.fillStyle(accentColor, hovered ? 0.8 : 0.5);
+        bg.fillRoundedRect(-w / 2, -h / 2 + 34, 4, h - 40, 2);
+      } else {
+        bg.fillStyle(0x0a0a10, 0.7);
+        bg.fillRoundedRect(-w / 2, -h / 2, w, h, 12);
+        bg.lineStyle(1, 0x3a3a40, 0.3);
+        bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 12);
+      }
     };
     drawCardBg(false);
     container.add(bg);
 
     // ── Rarity banner ────────────────────────────────────────────────────────
     const banner = this.add.graphics();
-    banner.fillStyle(accentColor, canAfford ? 0.75 : 0.25);
+    banner.fillStyle(canAfford ? accentColor : 0x2a2a30, canAfford ? 0.75 : 0.5);
     banner.fillRoundedRect(-w / 2, -h / 2, w, 30, { tl: 12, tr: 12, bl: 0, br: 0 });
     container.add(banner);
 
     const rarityLabel = this.add.text(0, -h / 2 + 15, rarity.toUpperCase(), {
       fontSize: '15px', fontFamily: 'Nunito, sans-serif',
-      color: '#fff', stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5).setAlpha(canAfford ? 1 : 0.65);
+      color: canAfford ? '#fff' : '#5a5a6a', stroke: '#000', strokeThickness: 2,
+    }).setOrigin(0.5);
     container.add(rarityLabel);
 
     // ── Icon circle ──────────────────────────────────────────────────────────
     const iconCX = 0, iconCY = -h / 2 + 82;
     const icon = this.add.graphics();
-    icon.fillStyle(accentColor, canAfford ? 0.2 : 0.07);
+    icon.fillStyle(canAfford ? accentColor : 0x2a2a30, canAfford ? 0.2 : 0.15);
     icon.fillCircle(iconCX, iconCY, 32);
-    icon.lineStyle(1, accentColor, canAfford ? 0.55 : 0.15);
+    icon.lineStyle(1, canAfford ? accentColor : 0x3a3a40, canAfford ? 0.55 : 0.3);
     icon.strokeCircle(iconCX, iconCY, 32);
     container.add(icon);
 
@@ -308,7 +318,7 @@ export class ShopScene extends Phaser.Scene {
     container.add(
       this.add.text(0, -h / 2 + 132, relic.name, {
         fontSize: '21px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
-        color: canAfford ? '#e8e0d0' : '#8a8a9a',
+        color: canAfford ? '#e8e0d0' : '#5a5a6a',
         stroke: '#000', strokeThickness: 3,
         wordWrap: { width: w - 24 }, align: 'center',
       }).setOrigin(0.5),
@@ -320,7 +330,7 @@ export class ShopScene extends Phaser.Scene {
       container.add(
         this.add.text(0, -h / 2 + 155, preview, {
           fontSize: '16px', fontFamily: 'Nunito, sans-serif',
-          color: canAfford ? '#' + accentColor.toString(16).padStart(6, '0') : '#6a6a7a',
+          color: canAfford ? '#' + accentColor.toString(16).padStart(6, '0') : '#4a4a5a',
         }).setOrigin(0.5),
       );
     }
@@ -329,7 +339,7 @@ export class ShopScene extends Phaser.Scene {
     container.add(
       this.add.text(0, -h / 2 + 190, relic.desc, {
         fontSize: '16px', fontFamily: 'Nunito, sans-serif',
-        color: canAfford ? '#8a9aaa' : '#6a6a7a',
+        color: canAfford ? '#8a9aaa' : '#3a3a4a',
         wordWrap: { width: w - 40 }, align: 'center',
       }).setOrigin(0.5),
     );
@@ -351,7 +361,7 @@ export class ShopScene extends Phaser.Scene {
     container.add(
       this.add.text(0, btnY, btnLabel, {
         fontSize: '17px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
-        color: canAfford ? '#fff' : '#6a6a7a',
+        color: canAfford ? '#fff' : '#4a4a5a',
       }).setOrigin(0.5),
     );
 

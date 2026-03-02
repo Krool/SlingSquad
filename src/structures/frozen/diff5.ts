@@ -1,5 +1,5 @@
 import type { TemplateFn } from '../types';
-import { raisedPlatform, tunnel } from '../shared';
+import { raisedPlatform, tunnel, treasuryRoom, capBlock } from '../shared';
 
 // ─── "Frost Throne" — massive ice palace with central throne room ──────────
 export const frostThrone: TemplateFn = (ctx) => {
@@ -332,9 +332,294 @@ export const frozenGauntlet: TemplateFn = (ctx) => {
   tunnel(ctx, 900, 980, groundY, 45, 'ICE', 'ICE');
 };
 
+// ─── "The Glacier Cathedral" — twin spires + central nave + crypt (~71 blocks) ──
+export const glacierCathedral: TemplateFn = (ctx) => {
+  const { groundY } = ctx;
+  const b = ctx.block.bind(ctx);
+  const eR = 20;
+
+  // ── Narthex Entrance (ICE gateposts) ──
+  const NX = 410;
+  b(NX, groundY - 80 / 2, 20, 80, 'ICE');
+  b(NX + 60, groundY - 80 / 2, 20, 80, 'ICE');
+  b(NX + 30, groundY - 80 - 6, 80, 12, 'ICE');
+  capBlock(ctx, NX, groundY - 80 - 6, 'STONE', 22);
+  capBlock(ctx, NX + 60, groundY - 80 - 6, 'STONE', 22);
+
+  // ── Left Spire (5 levels — tallest, reaches y≈285) ──
+  const LSX = 500;
+  const spireSpan = 60;
+  // Level 1
+  b(LSX - spireSpan / 2, groundY - 75 / 2, 16, 75, 'ICE');
+  b(LSX + spireSpan / 2, groundY - 75 / 2, 16, 75, 'ICE');
+  const ls1 = groundY - 75 - 6;
+  b(LSX, ls1, spireSpan + 20, 12, 'STONE');
+  // Level 2
+  b(LSX - 20, ls1 - 6 - 60 / 2, 14, 60, 'ICE');
+  b(LSX + 20, ls1 - 6 - 60 / 2, 14, 60, 'ICE');
+  const ls2 = ls1 - 6 - 60 - 6;
+  b(LSX, ls2, spireSpan + 10, 12, 'ICE');
+  // Level 3
+  b(LSX - 15, ls2 - 6 - 50 / 2, 14, 50, 'ICE');
+  b(LSX + 15, ls2 - 6 - 50 / 2, 14, 50, 'ICE');
+  const ls3 = ls2 - 6 - 50 - 6;
+  b(LSX, ls3, spireSpan, 12, 'STONE');
+  // Level 4
+  b(LSX, ls3 - 6 - 40 / 2, 14, 40, 'ICE');
+  const ls4 = ls3 - 6 - 40 - 6;
+  b(LSX, ls4, 45, 12, 'ICE');
+  // Level 5 — pinnacle
+  b(LSX, ls4 - 6 - 30 / 2, 14, 30, 'ICE');
+  const ls5 = ls4 - 6 - 30 - 6;
+  b(LSX, ls5, 35, 10, 'STONE');
+  capBlock(ctx, LSX, ls5, 'STONE', 20);
+
+  // ── Central Nave (wide hall, 3 levels + apex shrine) ──
+  const CX = 700;
+  const naveSpan = 260;
+  // Level 1 — wide base with 4 pillars
+  b(CX - naveSpan / 2, groundY - 80 / 2, 18, 80, 'ICE');
+  b(CX - naveSpan / 4, groundY - 80 / 2, 14, 80, 'WOOD');
+  b(CX + naveSpan / 4, groundY - 80 / 2, 14, 80, 'WOOD');
+  b(CX + naveSpan / 2, groundY - 80 / 2, 18, 80, 'ICE');
+  const nf1 = groundY - 80 - 6;
+  b(CX, nf1, naveSpan + 30, 14, 'STONE');
+  // Level 2
+  b(CX - naveSpan / 3, nf1 - 6 - 65 / 2, 14, 65, 'ICE');
+  b(CX, nf1 - 6 - 65 / 2, 14, 65, 'ICE');
+  b(CX + naveSpan / 3, nf1 - 6 - 65 / 2, 14, 65, 'ICE');
+  const nf2 = nf1 - 6 - 65 - 6;
+  b(CX, nf2, naveSpan, 12, 'ICE');
+  // Level 3
+  b(CX - 50, nf2 - 6 - 50 / 2, 14, 50, 'ICE');
+  b(CX + 50, nf2 - 6 - 50 / 2, 14, 50, 'ICE');
+  const nf3 = nf2 - 6 - 50 - 6;
+  b(CX, nf3, 140, 12, 'STONE');
+  // Apex Shrine
+  b(CX, nf3 - 6 - 35 / 2, 14, 35, 'ICE');
+  const apexF = nf3 - 6 - 35 - 6;
+  b(CX, apexF, 80, 12, 'STONE');
+  b(CX - 20, apexF - 6 - 14, 36, 24, 'STONE');
+  b(CX + 20, apexF - 6 - 14, 36, 24, 'STONE');
+
+  // ── ICE Buttresses (bracing nave from outside) ──
+  b(CX - naveSpan / 2 - 30, groundY - 60 / 2, 22, 60, 'ICE');
+  b(CX + naveSpan / 2 + 30, groundY - 60 / 2, 22, 60, 'ICE');
+
+  // ── Right Spire (4 levels) ──
+  const RSX = 920;
+  // Level 1
+  b(RSX - spireSpan / 2, groundY - 75 / 2, 16, 75, 'ICE');
+  b(RSX + spireSpan / 2, groundY - 75 / 2, 16, 75, 'ICE');
+  const rs1 = groundY - 75 - 6;
+  b(RSX, rs1, spireSpan + 20, 12, 'STONE');
+  // Level 2
+  b(RSX - 20, rs1 - 6 - 60 / 2, 14, 60, 'ICE');
+  b(RSX + 20, rs1 - 6 - 60 / 2, 14, 60, 'ICE');
+  const rs2 = rs1 - 6 - 60 - 6;
+  b(RSX, rs2, spireSpan + 10, 12, 'ICE');
+  // Level 3
+  b(RSX, rs2 - 6 - 50 / 2, 14, 50, 'ICE');
+  const rs3 = rs2 - 6 - 50 - 6;
+  b(RSX, rs3, 50, 12, 'STONE');
+  // Level 4 — cap
+  b(RSX, rs3 - 6 - 35 / 2, 14, 35, 'ICE');
+  const rs4 = rs3 - 6 - 35 - 6;
+  b(RSX, rs4, 40, 10, 'STONE');
+  capBlock(ctx, RSX, rs4, 'STONE', 20);
+
+  // ── Long ICE Bridge connecting spires at level 3 ──
+  const bridgeCX = (LSX + RSX) / 2;
+  const bridgeW = RSX - LSX - spireSpan;
+  b(bridgeCX, ls3, bridgeW, 10, 'ICE');
+  // Bridge support pillars (must reach from ground to bridge deck)
+  const bridgePH = groundY - ls3 - 6;
+  b(bridgeCX - bridgeW / 4, groundY - bridgePH / 2, 12, bridgePH, 'ICE');
+  b(bridgeCX + bridgeW / 4, groundY - bridgePH / 2, 12, bridgePH, 'ICE');
+
+  // ── Crypt (treasuryRoom) behind right spire ──
+  treasuryRoom(ctx, RSX + 70, groundY, 70, 55, 'ICE', 6);
+
+  // ── Barrels (6) ──
+  ctx.barrel(NX + 30, groundY - 18);                // narthex
+  ctx.barrel(CX - naveSpan / 4, groundY - 18);      // nave ground left
+  ctx.barrel(CX + naveSpan / 4, groundY - 18);      // nave ground right
+  ctx.barrel(CX, nf1 - 6 - 18);                     // nave level 1
+  ctx.barrel(LSX, groundY - 18);                     // left spire ground
+  ctx.barrel(RSX, groundY - 18);                     // right spire ground
+
+  // ── ICE_PATCHes (3) ──
+  ctx.hazard('ICE_PATCH', CX - 80, groundY - 10);
+  ctx.hazard('ICE_PATCH', CX + 80, groundY - 10);
+  ctx.hazard('ICE_PATCH', bridgeCX, groundY - 10);
+
+  // ── Enemy Slots (10) ──
+  ctx.enemySlots.push(
+    { x: NX + 30, y: groundY - 80 - 6 - 6 - eR },     // narthex top
+    { x: LSX, y: ls1 - 6 - eR },                       // left spire level 1
+    { x: LSX, y: ls3 - 6 - eR },                       // left spire level 3
+    { x: CX - naveSpan / 3, y: nf1 - 6 - eR },        // nave level 1 left
+    { x: CX + naveSpan / 3, y: nf1 - 6 - eR },        // nave level 1 right
+    { x: CX, y: nf2 - 6 - eR },                        // nave level 2
+    { x: CX, y: apexF - 6 - 24 - eR },                // nave apex (boss)
+    { x: RSX, y: rs1 - 6 - eR },                       // right spire level 1
+    { x: RSX, y: rs3 - 6 - eR },                       // right spire level 3
+    { x: bridgeCX, y: ls3 - 6 - eR },                  // bridge between spires
+  );
+
+  // ── Coins (~46g) ──
+  ctx.coin(390, 260, 4);                              // approach — arc path
+  ctx.coin(CX, apexF - 40, 7);                       // treasury — nave apex shrine
+  ctx.coin(LSX, ls5 - 20, 6);                         // structure — left spire pinnacle
+  ctx.coin(RSX, rs4 - 20, 5);                         // structure — right spire top
+  ctx.coin(CX, nf3 - 20, 5);                          // structure — nave level 3
+  ctx.coin(NX + 30, groundY - 18, 4);                 // risky — near narthex barrel
+  ctx.coin(CX - naveSpan / 4, groundY - 18, 5);       // risky — near nave barrel
+  ctx.coin(LSX, groundY - 18, 5);                     // risky — near left spire barrel
+  ctx.coin(RSX + 70, groundY - 30, 5);                // structure — crypt hidden coin
+};
+
+// ─── "The Frozen Rampart" — 3 progressive walls + grand keep + watchtower (~70 blocks) ──
+export const frozenRampart: TemplateFn = (ctx) => {
+  const { groundY } = ctx;
+  const b = ctx.block.bind(ctx);
+  const eR = 20;
+
+  // ── Wall 1 (shortest, h=80) ──
+  const W1X = 430;
+  b(W1X, groundY - 80 / 2, 22, 80, 'ICE');
+  b(W1X, groundY - 80 - 6 - 14, 30, 28, 'STONE');   // battlement
+  // Small structure behind wall 1
+  b(W1X + 50, groundY - 45 / 2, 14, 45, 'ICE');
+  b(W1X + 90, groundY - 45 / 2, 14, 45, 'ICE');
+  const w1sf = groundY - 45 - 6;
+  b(W1X + 70, w1sf, 60, 10, 'ICE');
+
+  // ── ICE walkway on wall 1 ──
+  b(W1X + 30, groundY - 80 - 6, 50, 10, 'ICE');
+
+  // ── Wall 2 (medium, h=95) ──
+  const W2X = 560;
+  b(W2X, groundY - 95 / 2, 24, 95, 'ICE');
+  b(W2X, groundY - 95 - 6 - 14, 32, 28, 'STONE');   // battlement
+  // Kill zone structure between wall 1 and 2
+  b(W2X - 50, groundY - 55 / 2, 14, 55, 'ICE');
+  b(W2X - 90, groundY - 55 / 2, 14, 55, 'ICE');
+  const kz1f = groundY - 55 - 6;
+  b(W2X - 70, kz1f, 60, 10, 'WOOD');
+
+  // ── ICE walkway on wall 2 ──
+  b(W2X + 30, groundY - 95 - 6, 50, 10, 'ICE');
+
+  // ── Wall 3 (tallest wall, h=110) ──
+  const W3X = 690;
+  b(W3X, groundY - 110 / 2, 26, 110, 'ICE');
+  b(W3X, groundY - 110 - 6 - 14, 34, 28, 'STONE');  // battlement
+  // Kill zone structure between wall 2 and 3
+  b(W3X - 50, groundY - 60 / 2, 14, 60, 'ICE');
+  b(W3X - 90, groundY - 60 / 2, 14, 60, 'ICE');
+  const kz2f = groundY - 60 - 6;
+  b(W3X - 70, kz2f, 60, 10, 'WOOD');
+
+  // ── ICE walkways connecting wall tops ──
+  // wall 1 → wall 2 (lower walkway)
+  const walk12CX = (W1X + W2X) / 2;
+  b(walk12CX, groundY - 80 - 6, (W2X - W1X) - 20, 10, 'ICE');
+  // wall 2 → wall 3 (mid walkway)
+  const walk23CX = (W2X + W3X) / 2;
+  b(walk23CX, groundY - 95 - 6, (W3X - W2X) - 20, 10, 'ICE');
+
+  // ── Grand Keep behind wall 3 (4 levels, reaches y≈305) ──
+  const KX = 820;
+  const keepSpan = 120;
+  // Level 1 — wide ICE base
+  b(KX - keepSpan / 2, groundY - 80 / 2, 18, 80, 'ICE');
+  b(KX, groundY - 80 / 2, 14, 80, 'ICE');
+  b(KX + keepSpan / 2, groundY - 80 / 2, 18, 80, 'ICE');
+  const kf1 = groundY - 80 - 6;
+  b(KX, kf1, keepSpan + 30, 14, 'STONE');
+  // Level 2
+  b(KX - keepSpan / 3, kf1 - 6 - 65 / 2, 14, 65, 'ICE');
+  b(KX + keepSpan / 3, kf1 - 6 - 65 / 2, 14, 65, 'ICE');
+  const kf2 = kf1 - 6 - 65 - 6;
+  b(KX, kf2, keepSpan + 10, 12, 'ICE');
+  // Level 3
+  b(KX - 30, kf2 - 6 - 50 / 2, 14, 50, 'ICE');
+  b(KX + 30, kf2 - 6 - 50 / 2, 14, 50, 'ICE');
+  const kf3 = kf2 - 6 - 50 - 6;
+  b(KX, kf3, 100, 12, 'STONE');
+  // Level 4 — throne
+  b(KX, kf3 - 6 - 40 / 2, 14, 40, 'ICE');
+  const kf4 = kf3 - 6 - 40 - 6;
+  b(KX, kf4, 70, 12, 'STONE');
+  b(KX - 20, kf4 - 6 - 14, 36, 24, 'STONE');
+  b(KX + 20, kf4 - 6 - 14, 36, 24, 'STONE');
+
+  // ── Rear Watchtower (2 levels) ──
+  const WTX = 970;
+  b(WTX, groundY - 65 / 2, 14, 65, 'ICE');
+  b(WTX + 55, groundY - 65 / 2, 14, 65, 'ICE');
+  const wtf1 = groundY - 65 - 6;
+  b(WTX + 27, wtf1, 75, 10, 'STONE');
+  b(WTX + 27, wtf1 - 6 - 45 / 2, 14, 45, 'ICE');
+  const wtf2 = wtf1 - 6 - 45 - 6;
+  b(WTX + 27, wtf2, 55, 10, 'STONE');
+  capBlock(ctx, WTX + 27, wtf2, 'STONE', 22);
+
+  // ── STONE battlements on every wall ──
+  capBlock(ctx, W1X + 30, groundY - 80 - 6, 'STONE', 20);
+  capBlock(ctx, W2X + 30, groundY - 95 - 6, 'STONE', 20);
+
+  // ── Barrels (7) ──
+  ctx.barrel(W1X + 70, groundY - 18);              // behind wall 1
+  ctx.barrel(W2X - 70, groundY - 18);              // kill zone 1
+  ctx.barrel(W3X - 70, groundY - 18);              // kill zone 2
+  ctx.barrel(KX - keepSpan / 3, groundY - 18);     // keep ground left
+  ctx.barrel(KX + keepSpan / 3, groundY - 18);     // keep ground right
+  ctx.barrel(KX, kf1 - 6 - 18);                    // keep level 1
+  ctx.barrel(WTX + 27, groundY - 18);              // watchtower ground
+
+  // ── ICE_PATCHes (4) ──
+  ctx.hazard('ICE_PATCH', W1X + 50, groundY - 10);
+  ctx.hazard('ICE_PATCH', W2X - 40, groundY - 10);
+  ctx.hazard('ICE_PATCH', W3X - 40, groundY - 10);
+  ctx.hazard('ICE_PATCH', KX, groundY - 10);
+
+  // ── Enemy Slots (10) ──
+  ctx.enemySlots.push(
+    { x: W1X, y: groundY - 80 - 6 - 28 - eR },        // wall 1 battlement
+    { x: W1X + 70, y: w1sf - 6 - eR },                // behind wall 1 structure
+    { x: W2X, y: groundY - 95 - 6 - 28 - eR },        // wall 2 battlement
+    { x: W2X - 70, y: kz1f - 6 - eR },                // kill zone 1 structure
+    { x: W3X, y: groundY - 110 - 6 - 28 - eR },       // wall 3 battlement
+    { x: KX, y: kf1 - 6 - eR },                        // keep level 1
+    { x: KX, y: kf2 - 6 - eR },                        // keep level 2
+    { x: KX, y: kf4 - 6 - 24 - eR },                  // keep throne (boss)
+    { x: WTX + 27, y: wtf1 - 6 - eR },                // watchtower level 1
+    { x: W3X - 70, y: kz2f - 6 - eR },                // kill zone 2 structure
+  );
+
+  // ── Coins (~47g) ──
+  ctx.coin(400, 260, 4);                              // approach — arc path
+  ctx.coin(KX, kf4 - 40, 7);                          // treasury — keep throne
+  ctx.coin(KX, kf3 - 20, 5);                          // structure — keep level 3
+  ctx.coin(WTX + 27, wtf2 - 30, 5);                   // structure — watchtower top
+  ctx.coin(W3X, groundY - 110 - 40, 5);               // structure — wall 3 top
+  ctx.coin(W1X + 70, groundY - 18, 4);                // risky — near wall 1 barrel
+  ctx.coin(W2X - 70, groundY - 18, 4);                // risky — near kill zone 1 barrel
+  ctx.coin(KX - keepSpan / 3, groundY - 18, 5);       // risky — near keep barrel
+  ctx.coin(W3X - 70, groundY - 18, 4);                // risky — near kill zone 2 barrel
+  ctx.coin(W2X, groundY - 95 - 40, 4);                // structure — wall 2 battlement
+
+  // Terrain — raised ground behind wall 3
+  raisedPlatform(ctx, 780, groundY, 80, 18);
+};
+
 export const diff5Templates: TemplateFn[] = [
   frostThrone,
   glacierCitadel,
   iceQueenLair,
   frozenGauntlet,
+  glacierCathedral,
+  frozenRampart,
 ];

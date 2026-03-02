@@ -482,13 +482,15 @@ export class ImpactSystem {
       }
     }
 
-    // Spawn wolf minions — emitted to BattleScene for entity creation
+    // Spawn wolf minions — staggered to avoid frame spike
     const wolfCount = stats.wolfCount + this.relicMods.druidWolfBonus + (hero.skillMods?.wolfCountBonus ?? 0);
     const wolfDmg = stats.wolfDamage + (hero.skillMods?.wolfDamageBonus ?? 0);
     for (let i = 0; i < wolfCount; i++) {
-      const wx = x + Phaser.Math.Between(-40, 40);
-      const wy = y - Phaser.Math.Between(10, 30);
-      this.scene.events.emit('spawnWolf', wx, wy, wolfDmg, stats.wolfHp, hero);
+      this.scene.time.delayedCall(i * 150, () => {
+        const wx = x + Phaser.Math.Between(-40, 40);
+        const wy = y - Phaser.Math.Between(10, 30);
+        this.scene.events.emit('spawnWolf', wx, wy, wolfDmg, stats.wolfHp, hero);
+      });
     }
 
     this.spawnImpactParticles(x, y, 0x16a085, 10);

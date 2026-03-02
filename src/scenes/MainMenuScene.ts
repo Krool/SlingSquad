@@ -3,6 +3,8 @@ import {
   GAME_WIDTH, GAME_HEIGHT,
   CAMP_SHOOTING_STAR_MIN_INTERVAL, CAMP_SHOOTING_STAR_MAX_INTERVAL,
   CAMP_SHOOTING_STAR_COLOR, HERO_STATS, HERO_PASSIVES,
+  MAX_DRAG_DISTANCE, LAUNCH_POWER_MULTIPLIER, GRAVITY_PER_FRAME, HERO_FRICTION_AIR,
+  TRAJECTORY_POINTS, TRAJECTORY_SIM_FRAMES, TRAJECTORY_DOT_EVERY,
 } from '@/config/constants';
 import type { HeroClass } from '@/config/constants';
 import {
@@ -52,12 +54,12 @@ export class MainMenuScene extends Phaser.Scene {
   private _slingHero: HeroWalkState | null = null;
   private _slingHitZone: Phaser.GameObjects.Rectangle | null = null;
   private _dragging = false;
-  private _dragStartX = 0;
-  private _dragStartY = 0;
   private _slingWaitStart = 0;
   private _buildingHitZones: BuildingHitZone[] = [];
   private _tooltipContainer: Phaser.GameObjects.Container | null = null;
   private _tooltipTimer: Phaser.Time.TimerEvent | null = null;
+  private _trajectoryGfx: Phaser.GameObjects.Graphics | null = null;
+  private _flyingHeroes: { hw: HeroWalkState; vx: number; vy: number }[] = [];
 
   constructor() {
     super({ key: 'MainMenuScene' });
@@ -94,8 +96,36 @@ export class MainMenuScene extends Phaser.Scene {
 
   update(_time: number, _delta: number) {
     const now = this.time.now;
+    const heroRestY = LAYER_CFG.mid.y - 16;
+
+    // Physics loop for flying heroes
+    for (let i = this._flyingHeroes.length - 1; i >= 0; i--) {
+      const f = this._flyingHeroes[i];
+      f.vx *= (1 - HERO_FRICTION_AIR);
+      f.vy *= (1 - HERO_FRICTION_AIR);
+      f.vy += GRAVITY_PER_FRAME;
+      f.hw.sprite.x += f.vx;
+      f.hw.sprite.y += f.vy;
+      f.hw.sprite.angle += f.vx * 3; // spin
+
+      // Off-screen check — teleport back to ground
+      if (f.hw.sprite.x < -100 || f.hw.sprite.x > GAME_WIDTH + 100 || f.hw.sprite.y > GAME_HEIGHT + 100) {
+        const landX = Phaser.Math.Between(200, 1100);
+        f.hw.sprite.x = landX;
+        f.hw.sprite.y = heroRestY;
+        f.hw.sprite.angle = 0;
+        f.hw.sprite.setFlipX(false);
+        f.hw.slingState = 'none';
+        this.spawnDust(landX, heroRestY);
+        const idleAnim = `${f.hw.key}_idle`;
+        if (this.anims.exists(idleAnim)) f.hw.sprite.play(idleAnim);
+        f.hw.pauseUntil = now + Phaser.Math.Between(500, 1500);
+        this._flyingHeroes.splice(i, 1);
+      }
+    }
+
     for (const h of this._heroStates) {
-      // Skip flying heroes — tween controls them
+      // Skip flying heroes — physics loop controls them
       if (h.slingState === 'flying') continue;
 
       // Handle waiting-at-sling state
@@ -163,8 +193,10 @@ export class MainMenuScene extends Phaser.Scene {
     this._slingOccupied = false;
     this._slingHero = null;
     this._dragging = false;
+    this._flyingHeroes = [];
     if (this._slingBands) { this._slingBands.destroy(); this._slingBands = null; }
     if (this._slingHitZone) { this._slingHitZone.destroy(); this._slingHitZone = null; }
+    if (this._trajectoryGfx) { this._trajectoryGfx.destroy(); this._trajectoryGfx = null; }
     // Destroy and rebuild camp layers (sling post is in _layerGfx)
     for (const g of this._layerGfx) { this.tweens.killTweensOf(g); g.destroy(); }
     this._layerGfx = [];
@@ -185,6 +217,7 @@ export class MainMenuScene extends Phaser.Scene {
       h.sprite.destroy();
     }
     this._heroStates = [];
+    this._flyingHeroes = [];
     this._slingOccupied = false;
     this._slingHero = null;
     this._dragging = false;
@@ -453,42 +486,58 @@ export class MainMenuScene extends Phaser.Scene {
     // Band graphics (depth between structure and heroes)
     this._slingBands = this.add.graphics().setDepth(3.5);
 
+    // Trajectory preview graphics (between bands and heroes)
+    this._trajectoryGfx = this.add.graphics().setDepth(3.6);
+
     // Hit zone — invisible interactive area (active only when hero waiting)
     this._slingHitZone = this.add.rectangle(CAMP_SLING_X, heroY, 80, 80, 0x000000, 0)
       .setDepth(4.5);
-    this._slingHitZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    this._slingHitZone.on('pointerdown', () => {
       if (!this._slingHero || this._slingHero.slingState !== 'waiting') return;
       this._dragging = true;
-      this._dragStartX = pointer.x;
-      this._dragStartY = pointer.y;
     });
   }
 
   private setupSlingInput() {
-    const heroY = LAYER_CFG.mid.y - 16;
+    const heroRestY = LAYER_CFG.mid.y - 16;
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (!this._dragging || !this._slingHero) return;
       const h = this._slingHero;
-      const dx = pointer.x - this._dragStartX;
-      const dy = pointer.y - this._dragStartY;
-      h.sprite.x = Phaser.Math.Clamp(CAMP_SLING_X + dx, CAMP_SLING_X - 80, CAMP_SLING_X);
-      h.sprite.y = Phaser.Math.Clamp(heroY + dy, heroY - 40, heroY + 40);
-      this.drawSlingBands(h.sprite.x, h.sprite.y);
+      // Follow pointer directly (like combat sling)
+      h.sprite.x = pointer.x;
+      h.sprite.y = pointer.y;
+      this.drawCampTrajectory(pointer, h);
     });
 
-    this.input.on('pointerup', () => {
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
       if (!this._dragging || !this._slingHero) return;
       this._dragging = false;
       const h = this._slingHero;
-      const dragDist = CAMP_SLING_X - h.sprite.x;
-      if (dragDist > 10) {
-        this.launchCampHero(h, dragDist);
-      } else {
+
+      // Calculate launch velocity using LaunchSystem formula
+      const dx = CAMP_SLING_X - pointer.x;
+      const dy = heroRestY - pointer.y;
+      const mag = Math.hypot(dx, dy);
+      if (mag < 1) {
+        h.sprite.x = CAMP_SLING_X;
+        h.sprite.y = heroRestY;
+        this.drawSlingBands(h.sprite.x, h.sprite.y);
+        this._trajectoryGfx?.clear();
+        return;
+      }
+      const dist = Math.min(mag, MAX_DRAG_DISTANCE);
+      const vx = (dx / mag) * dist * LAUNCH_POWER_MULTIPLIER;
+      const vy = (dy / mag) * dist * LAUNCH_POWER_MULTIPLIER;
+
+      if (Math.hypot(vx, vy) < 0.3) {
         // Snap back — not enough drag
         h.sprite.x = CAMP_SLING_X;
-        h.sprite.y = heroY;
+        h.sprite.y = heroRestY;
         this.drawSlingBands(h.sprite.x, h.sprite.y);
+        this._trajectoryGfx?.clear();
+      } else {
+        this.launchCampHero(h, vx, vy);
       }
     });
   }
@@ -508,44 +557,95 @@ export class MainMenuScene extends Phaser.Scene {
     this._slingBands.fillCircle(heroX, heroY, 3);
   }
 
-  private launchCampHero(h: HeroWalkState, dragDist: number) {
+  private drawCampTrajectory(pointer: Phaser.Input.Pointer, h: HeroWalkState) {
+    if (!this._trajectoryGfx) return;
+    this._trajectoryGfx.clear();
+
+    const heroRestY = LAYER_CFG.mid.y - 16;
+    const midY = LAYER_CFG.mid.y;
+    const leftTip = { x: CAMP_SLING_X - 14, y: midY - 50 };
+    const rightTip = { x: CAMP_SLING_X + 14, y: midY - 50 };
+
+    // Rubber band lines from fork tips to drag point
+    const stretch = Math.hypot(CAMP_SLING_X - pointer.x, heroRestY - pointer.y);
+    const thickness = 2 + Math.min(stretch, MAX_DRAG_DISTANCE) * 0.015;
+    this._trajectoryGfx.lineStyle(thickness, 0x8b6914, 0.85);
+    this._trajectoryGfx.lineBetween(leftTip.x, leftTip.y, pointer.x, pointer.y);
+    this._trajectoryGfx.lineBetween(rightTip.x, rightTip.y, pointer.x, pointer.y);
+    // Pouch
+    this._trajectoryGfx.fillStyle(0x8b6914, 0.6);
+    this._trajectoryGfx.fillCircle(pointer.x, pointer.y, 3);
+
+    // Calculate launch velocity
+    const dx = CAMP_SLING_X - pointer.x;
+    const dy = heroRestY - pointer.y;
+    const mag = Math.hypot(dx, dy);
+    if (mag < 1) return;
+    const dist = Math.min(mag, MAX_DRAG_DISTANCE);
+    const vx = (dx / mag) * dist * LAUNCH_POWER_MULTIPLIER;
+    const vy = (dy / mag) * dist * LAUNCH_POWER_MULTIPLIER;
+    if (Math.hypot(vx, vy) < 0.3) return;
+
+    // Frame-by-frame simulation (same as LaunchSystem)
+    let px = CAMP_SLING_X, py = heroRestY;
+    let pvx = vx, pvy = vy;
+    let dotsDrawn = 0;
+
+    // Class-colored dots
+    const cls = h.key.toUpperCase() as import('@/config/constants').HeroClass;
+    const dotColor = HERO_STATS[cls]?.color ?? 0xf39c12;
+
+    for (let frame = 0; frame < TRAJECTORY_SIM_FRAMES && dotsDrawn < TRAJECTORY_POINTS; frame++) {
+      pvx *= (1 - HERO_FRICTION_AIR);
+      pvy *= (1 - HERO_FRICTION_AIR);
+      pvy += GRAVITY_PER_FRAME;
+      px += pvx;
+      py += pvy;
+
+      if (frame % TRAJECTORY_DOT_EVERY === 0) {
+        const alpha = (1 - dotsDrawn / TRAJECTORY_POINTS) * 0.85;
+        const size = Math.max(2, 4.5 - dotsDrawn * 0.1);
+        this._trajectoryGfx.fillStyle(dotColor, alpha);
+        this._trajectoryGfx.fillCircle(px, py, size);
+        dotsDrawn++;
+      }
+
+      if (py > GAME_HEIGHT + 20) break;
+    }
+
+    // Power bar indicator below sling
+    const power = Math.min(dist / MAX_DRAG_DISTANCE, 1);
+    const barW = 40, barH = 4;
+    const barX = CAMP_SLING_X - barW / 2;
+    const barY = midY + 8;
+    this._trajectoryGfx.fillStyle(0x333333, 0.5);
+    this._trajectoryGfx.fillRect(barX, barY, barW, barH);
+    const r = Math.floor(255 * power);
+    const g = Math.floor(255 * (1 - power));
+    const fillColor = Phaser.Display.Color.GetColor(r, g, 0);
+    this._trajectoryGfx.fillStyle(fillColor, 0.8);
+    this._trajectoryGfx.fillRect(barX, barY, barW * power, barH);
+
+    // Also draw band graphics (clear default resting bands since trajectory gfx draws them)
+    if (this._slingBands) this._slingBands.clear();
+  }
+
+  private launchCampHero(h: HeroWalkState, vx: number, vy: number) {
     h.slingState = 'flying';
-    const heroY = LAYER_CFG.mid.y - 16;
-    const startY = h.sprite.y;
-    const power = Phaser.Math.Clamp(dragDist / 80, 0, 1);
-    const landX = CAMP_SLING_X + 300 + power * 500;
-    const duration = 800 + power * 400;
-    const peakHeight = 80 + power * 60;
+
+    // Place sprite at launch origin
+    h.sprite.x = CAMP_SLING_X;
+    h.sprite.y = LAYER_CFG.mid.y - 16;
 
     this._slingBands?.clear();
+    this._trajectoryGfx?.clear();
     this._slingHitZone?.disableInteractive();
 
-    const walkAnim = `${h.key}_walk`;
-    if (this.anims.exists(walkAnim)) h.sprite.play(walkAnim);
+    this._slingOccupied = false;
+    this._slingHero = null;
 
-    this.tweens.add({
-      targets: h.sprite,
-      x: landX,
-      duration,
-      ease: 'Sine.easeOut',
-      onUpdate: (_tween: Phaser.Tweens.Tween) => {
-        const p = _tween.progress;
-        h.sprite.y = startY + (heroY - startY) * p - peakHeight * Math.sin(p * Math.PI);
-        h.sprite.angle = p * (720 + power * 720);
-      },
-      onComplete: () => {
-        h.sprite.angle = 0;
-        h.sprite.y = heroY;
-        h.sprite.setFlipX(false);
-        h.slingState = 'none';
-        this._slingOccupied = false;
-        this._slingHero = null;
-        this.spawnDust(landX, heroY);
-        const idleAnim = `${h.key}_idle`;
-        if (this.anims.exists(idleAnim)) h.sprite.play(idleAnim);
-        h.pauseUntil = this.time.now + Phaser.Math.Between(500, 1500);
-      },
-    });
+    // Push to flying heroes array for physics update loop
+    this._flyingHeroes.push({ hw: h, vx, vy });
   }
 
   private spawnDust(x: number, y: number) {

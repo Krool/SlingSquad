@@ -186,9 +186,11 @@ export class SquadSelectScene extends Phaser.Scene {
     container.add(dropZone);
     container.setData('dropZone', dropZone);
 
-    // Click empty slot → fill with first available
+    // Click slot → empty: fill with first available, filled: show hero info
     dropZone.on('pointerdown', () => {
-      if (!slot.heroClass) {
+      if (slot.heroClass) {
+        this.showHeroTooltip(slot.heroClass, container.x, container.y, false);
+      } else {
         const next = this.getFirstAvailableClass();
         if (next) this.fillSlot(index, next);
       }
@@ -434,7 +436,7 @@ export class SquadSelectScene extends Phaser.Scene {
         container.add(inSquad);
       }
 
-      // Interactive — click to add to first empty slot (unlocked only)
+      // Interactive — all heroes are clickable
       if (!isLocked && !isSlotted) {
         const hit = this.add.rectangle(0, 0, cardW, cardH, 0, 0)
           .setInteractive({ useHandCursor: true, draggable: true });
@@ -464,13 +466,13 @@ export class SquadSelectScene extends Phaser.Scene {
         // Drag support
         hit.setData('heroClass', cls);
         this.input.setDraggable(hit);
-      } else if (isLocked) {
-        // Locked hero — click to show info tooltip
+      } else {
+        // Locked or already slotted — click to show info tooltip
         const hit = this.add.rectangle(0, 0, cardW, cardH, 0, 0)
-          .setInteractive();
+          .setInteractive({ useHandCursor: true });
         container.add(hit);
         hit.on('pointerdown', () => {
-          this.showLockedHeroTooltip(cls, rx, ry);
+          this.showHeroTooltip(cls, rx, ry, isLocked);
         });
       }
 
@@ -781,19 +783,13 @@ export class SquadSelectScene extends Phaser.Scene {
     });
   }
 
-  // ── Locked hero tooltip ────────────────────────────────────────────────
-  private showLockedHeroTooltip(cls: HeroClass, anchorX: number, anchorY: number) {
+  // ── Hero info tooltip (works for all heroes: unlocked, slotted, locked) ──
+  private showHeroTooltip(cls: HeroClass, anchorX: number, anchorY: number, isLocked: boolean) {
     this.dismissTooltip();
 
     const stats = HERO_STATS[cls];
     const passive = HERO_PASSIVES[cls];
     if (!stats) return;
-
-    // Find unlock upgrade for this class
-    const upgrades = getAllUpgrades();
-    const unlockUpgrade = upgrades.find(
-      u => u.effect === 'UNLOCK_HERO' && u.value === cls,
-    );
 
     const PW = 280, pr = 8;
     const borderColor = stats.color ?? 0xc0a060;
@@ -816,7 +812,7 @@ export class SquadSelectScene extends Phaser.Scene {
       fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#7a9ab8',
     }).setOrigin(0.5, 0));
 
-    // Passive description — measure actual wrapped height
+    // Passive description
     let nextY = 58;
     if (passive) {
       const passiveText = this.add.text(0, nextY, `${passive.name} — ${passive.desc}`, {
@@ -828,31 +824,77 @@ export class SquadSelectScene extends Phaser.Scene {
     }
 
     // Divider
-    const div = this.add.graphics();
-    div.lineStyle(1, 0x3a5070, 0.3);
-    div.lineBetween(-PW / 2 + 16, nextY, PW / 2 - 16, nextY);
-    contentItems.push(div);
+    const div1 = this.add.graphics();
+    div1.lineStyle(1, 0x3a5070, 0.3);
+    div1.lineBetween(-PW / 2 + 16, nextY, PW / 2 - 16, nextY);
+    contentItems.push(div1);
     nextY += 8;
 
-    // Unlock info
-    contentItems.push(this.add.text(0, nextY, 'Unlock via Camp Upgrades', {
-      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
-    }).setOrigin(0.5, 0));
-    nextY += 22;
+    // Stats — two columns
+    const statLines: { label: string; value: string }[] = [
+      { label: 'HP', value: `${stats.hp}` },
+      { label: 'Melee', value: `${stats.combatDamage} dmg` },
+      { label: 'Atk Speed', value: `${(stats.combatSpeed / 1000).toFixed(1)}s` },
+      { label: 'Impact', value: `${stats.impactMultiplier}x` },
+    ];
 
-    if (unlockUpgrade) {
-      const shards = getShards();
-      const costText = `${unlockUpgrade.name} — ${unlockUpgrade.shardCost} \u25c6`;
-      contentItems.push(this.add.text(0, nextY, costText, {
+    // Class-specific stats
+    if ('aoeRadius' in stats) statLines.push({ label: 'AoE Radius', value: `${(stats as typeof HERO_STATS.MAGE).aoeRadius}` });
+    if ('arrowCount' in stats) statLines.push({ label: 'Arrows', value: `${(stats as typeof HERO_STATS.RANGER).arrowCount}` });
+    if ('healAmount' in stats) statLines.push({ label: 'Heal', value: `${(stats as typeof HERO_STATS.PRIEST).healAmount}` });
+    if ('charmRadius' in stats) statLines.push({ label: 'Charm', value: `${((stats as typeof HERO_STATS.BARD).charmDurationMs / 1000).toFixed(1)}s` });
+    if ('shieldWallBlocks' in stats) statLines.push({ label: 'Shield Wall', value: `${(stats as typeof HERO_STATS.PALADIN).shieldWallBlocks} blocks` });
+    if ('wolfCount' in stats) statLines.push({ label: 'Wolves', value: `${(stats as typeof HERO_STATS.DRUID).wolfCount}` });
+    if ('clusterCount' in stats) statLines.push({ label: 'Clusters', value: `${(stats as typeof HERO_STATS.MAGE).clusterCount}` });
+    if ('damageReduction' in stats) statLines.push({ label: 'Dmg Reduce', value: `${Math.round((stats as typeof HERO_STATS.PALADIN).damageReduction * 100)}%` });
+
+    const colW = (PW - 32) / 2;
+    for (let si = 0; si < statLines.length; si++) {
+      const col = si % 2;
+      const row = Math.floor(si / 2);
+      const sx = col === 0 ? -PW / 2 + 16 : 4;
+      const sy = nextY + row * 18;
+      contentItems.push(this.add.text(sx, sy, statLines[si].label, {
+        fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a7a9a',
+      }).setOrigin(0, 0));
+      contentItems.push(this.add.text(sx + colW - 4, sy, statLines[si].value, {
+        fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#c0d0e0',
+      }).setOrigin(1, 0));
+    }
+    nextY += Math.ceil(statLines.length / 2) * 18 + 6;
+
+    // Locked heroes: show unlock info
+    if (isLocked) {
+      const div2 = this.add.graphics();
+      div2.lineStyle(1, 0x3a5070, 0.3);
+      div2.lineBetween(-PW / 2 + 16, nextY, PW / 2 - 16, nextY);
+      contentItems.push(div2);
+      nextY += 8;
+
+      const upgrades = getAllUpgrades();
+      const unlockUpgrade = upgrades.find(
+        u => u.effect === 'UNLOCK_HERO' && u.value === cls,
+      );
+
+      contentItems.push(this.add.text(0, nextY, 'Unlock via Camp Upgrades', {
         fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
       }).setOrigin(0.5, 0));
+      nextY += 22;
 
-      if (shards < unlockUpgrade.shardCost) {
-        const need = unlockUpgrade.shardCost - shards;
-        contentItems.push(this.add.text(0, nextY + 18, `(need ${need} more)`, {
-          fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#8a4040',
+      if (unlockUpgrade) {
+        const shards = getShards();
+        const costText = `${unlockUpgrade.name} — ${unlockUpgrade.shardCost} \u25c6`;
+        contentItems.push(this.add.text(0, nextY, costText, {
+          fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#7ec8e3',
         }).setOrigin(0.5, 0));
-        nextY += 18;
+
+        if (shards < unlockUpgrade.shardCost) {
+          const need = unlockUpgrade.shardCost - shards;
+          contentItems.push(this.add.text(0, nextY + 18, `(need ${need} more)`, {
+            fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#8a4040',
+          }).setOrigin(0.5, 0));
+          nextY += 18;
+        }
       }
     }
 
@@ -864,7 +906,7 @@ export class SquadSelectScene extends Phaser.Scene {
     const container = this.add.container(tx, ty).setDepth(30).setAlpha(0);
     this._tooltipContainer = container;
 
-    // Background — drawn after measuring content
+    // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x0a1220, 0.96);
     bg.fillRoundedRect(-PW / 2, 0, PW, PH, pr);
@@ -872,7 +914,6 @@ export class SquadSelectScene extends Phaser.Scene {
     bg.strokeRoundedRect(-PW / 2, 0, PW, PH, pr);
     container.add(bg);
 
-    // Add all content items to container (on top of bg)
     for (const item of contentItems) container.add(item);
 
     this.tweens.add({ targets: container, alpha: 1, duration: 150 });

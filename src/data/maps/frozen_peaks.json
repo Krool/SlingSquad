@@ -75,7 +75,7 @@
     {
       "id": 15, "type": "BOSS", "name": "The Frost Wyrm",
       "x": 1220, "y": 310, "next": [],
-      "enemies": ["YETI", "YETI", "ICE_MAGE", "ICE_MAGE", "FROST_ARCHER", "FROST_ARCHER"], "gold": 90, "difficulty": 5
+      "enemies": ["YETI", "YETI", "YETI", "ICE_MAGE", "ICE_MAGE", "ICE_MAGE", "FROST_ARCHER", "FROST_ARCHER", "FROST_ARCHER"], "gold": 90, "difficulty": 5
     }
   ]
 }

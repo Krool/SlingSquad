@@ -1,5 +1,5 @@
 import type { TemplateFn } from '../types';
-import { raisedPlatform, treasuryRoom } from '../shared';
+import { raisedPlatform, treasuryRoom, capBlock } from '../shared';
 
 // ─── "Infernal Throne" — demon lord's throne room with lava moat ────────────
 export const infernalThrone: TemplateFn = (ctx) => {
@@ -475,6 +475,296 @@ export const demonKingFortress: TemplateFn = (ctx) => {
   raisedPlatform(ctx, 900, groundY, 100, 20);
 };
 
+// ─── "The Hellfire Citadel" — gatehouse + twin towers + altar complex + outpost (~75 blocks) ──
+export const hellfireCitadel: TemplateFn = (ctx) => {
+  const { groundY } = ctx;
+  const b = ctx.block.bind(ctx);
+  const eR = 20;
+
+  // ── Approach Gatehouse: 2 massive OBSIDIAN gateposts ──
+  const GX = 400;
+  const gateH = 100;
+  b(GX, groundY - gateH / 2, 24, gateH, 'OBSIDIAN');
+  b(GX + 80, groundY - gateH / 2, 24, gateH, 'OBSIDIAN');
+  b(GX + 40, groundY - gateH - 6, 100, 14, 'OBSIDIAN');
+  capBlock(ctx, GX, groundY - gateH - 6, 'OBSIDIAN', 24);
+  capBlock(ctx, GX + 80, groundY - gateH - 6, 'OBSIDIAN', 24);
+
+  // ── Left Tower (4 levels) ──
+  const LTX = 520;
+  const ltSpan = 70;
+  // Level 1
+  b(LTX - ltSpan / 2, groundY - 80 / 2, 16, 80, 'OBSIDIAN');
+  b(LTX + ltSpan / 2, groundY - 80 / 2, 16, 80, 'OBSIDIAN');
+  const lt1 = groundY - 80 - 6;
+  b(LTX, lt1, ltSpan + 20, 12, 'OBSIDIAN');
+  // Level 2
+  b(LTX - 25, lt1 - 6 - 60 / 2, 14, 60, 'STONE');
+  b(LTX + 25, lt1 - 6 - 60 / 2, 14, 60, 'STONE');
+  const lt2 = lt1 - 6 - 60 - 6;
+  b(LTX, lt2, ltSpan + 10, 12, 'OBSIDIAN');
+  // Level 3
+  b(LTX - 20, lt2 - 6 - 50 / 2, 14, 50, 'WOOD');
+  b(LTX + 20, lt2 - 6 - 50 / 2, 14, 50, 'WOOD');
+  const lt3 = lt2 - 6 - 50 - 6;
+  b(LTX, lt3, ltSpan, 12, 'STONE');
+  // Level 4
+  b(LTX, lt3 - 6 - 35 / 2, 14, 35, 'WOOD');
+  const lt4 = lt3 - 6 - 35 - 6;
+  b(LTX, lt4, 50, 10, 'OBSIDIAN');
+  capBlock(ctx, LTX, lt4, 'OBSIDIAN', 22);
+
+  // ── Central Altar Complex (wide nave, 3 levels + altar pinnacle) ──
+  const CX = 700;
+  const altarSpan = 200;
+  // Level 1 — heavy OBSIDIAN base
+  b(CX - altarSpan / 2, groundY - 85 / 2, 18, 85, 'OBSIDIAN');
+  b(CX - altarSpan / 4, groundY - 85 / 2, 14, 85, 'STONE');
+  b(CX + altarSpan / 4, groundY - 85 / 2, 14, 85, 'STONE');
+  b(CX + altarSpan / 2, groundY - 85 / 2, 18, 85, 'OBSIDIAN');
+  const af1 = groundY - 85 - 6;
+  b(CX, af1, altarSpan + 30, 14, 'OBSIDIAN');
+  // Level 2
+  b(CX - altarSpan / 3, af1 - 6 - 65 / 2, 14, 65, 'OBSIDIAN');
+  b(CX, af1 - 6 - 65 / 2, 14, 65, 'WOOD');
+  b(CX + altarSpan / 3, af1 - 6 - 65 / 2, 14, 65, 'OBSIDIAN');
+  const af2 = af1 - 6 - 65 - 6;
+  b(CX, af2, altarSpan, 12, 'OBSIDIAN');
+  // Level 3
+  b(CX - 45, af2 - 6 - 50 / 2, 14, 50, 'WOOD');
+  b(CX + 45, af2 - 6 - 50 / 2, 14, 50, 'WOOD');
+  const af3 = af2 - 6 - 50 - 6;
+  b(CX, af3, 130, 12, 'OBSIDIAN');
+  // Altar Pinnacle
+  b(CX, af3 - 6 - 40 / 2, 14, 40, 'STONE');
+  const altarF = af3 - 6 - 40 - 6;
+  b(CX, altarF, 80, 12, 'OBSIDIAN');
+  b(CX - 22, altarF - 6 - 14, 36, 24, 'OBSIDIAN');
+  b(CX + 22, altarF - 6 - 14, 36, 24, 'OBSIDIAN');
+
+  // ── Right Tower (5 levels — tallest, reaches y≈270) ──
+  const RTX = 900;
+  const rtSpan = 70;
+  // Level 1 — heaviest OBSIDIAN
+  b(RTX - rtSpan / 2, groundY - 80 / 2, 18, 80, 'OBSIDIAN');
+  b(RTX + rtSpan / 2, groundY - 80 / 2, 18, 80, 'OBSIDIAN');
+  const rt1 = groundY - 80 - 6;
+  b(RTX, rt1, rtSpan + 20, 14, 'OBSIDIAN');
+  // Level 2
+  b(RTX - 25, rt1 - 6 - 65 / 2, 14, 65, 'OBSIDIAN');
+  b(RTX + 25, rt1 - 6 - 65 / 2, 14, 65, 'OBSIDIAN');
+  const rt2 = rt1 - 6 - 65 - 6;
+  b(RTX, rt2, rtSpan + 10, 12, 'OBSIDIAN');
+  // Level 3
+  b(RTX - 20, rt2 - 6 - 55 / 2, 14, 55, 'STONE');
+  b(RTX + 20, rt2 - 6 - 55 / 2, 14, 55, 'STONE');
+  const rt3 = rt2 - 6 - 55 - 6;
+  b(RTX, rt3, rtSpan, 12, 'STONE');
+  // Level 4
+  b(RTX, rt3 - 6 - 45 / 2, 14, 45, 'WOOD');
+  const rt4 = rt3 - 6 - 45 - 6;
+  b(RTX, rt4, 55, 12, 'OBSIDIAN');
+  // Level 5 — pinnacle
+  b(RTX, rt4 - 6 - 30 / 2, 14, 30, 'WOOD');
+  const rt5 = rt4 - 6 - 30 - 6;
+  b(RTX, rt5, 40, 10, 'OBSIDIAN');
+  capBlock(ctx, RTX, rt5, 'OBSIDIAN', 20);
+
+  // ── WOOD Bridges connecting all sections (intentional weak points) ──
+  // Gate → left tower
+  b((GX + 80 + LTX - ltSpan / 2) / 2, lt1, 50, 10, 'WOOD');
+  // Left tower → altar complex
+  b((LTX + ltSpan / 2 + CX - altarSpan / 2) / 2, af1, 60, 10, 'WOOD');
+  // Altar → right tower
+  b((CX + altarSpan / 2 + RTX - rtSpan / 2) / 2, af1, 50, 10, 'WOOD');
+
+  // ── Rear Outpost with treasuryRoom ──
+  treasuryRoom(ctx, 1010, groundY, 80, 55, 'OBSIDIAN', 6);
+
+  // ── Barrels (7) ──
+  ctx.barrel(GX + 40, groundY - 18);              // under gate
+  ctx.barrel(LTX, groundY - 18);                  // left tower ground
+  ctx.barrel(CX - altarSpan / 4, groundY - 18);   // altar ground left
+  ctx.barrel(CX + altarSpan / 4, groundY - 18);   // altar ground right
+  ctx.barrel(CX, af1 - 6 - 18);                   // altar level 1
+  ctx.barrel(RTX, groundY - 18);                  // right tower ground
+  ctx.barrel(RTX, rt1 - 6 - 18);                  // right tower level 1
+
+  // ── Hazards ──
+  ctx.hazard('LAVA_PIT', GX + 40, groundY - 10);
+  ctx.hazard('LAVA_PIT', CX, groundY - 10);
+  ctx.hazard('LAVA_PIT', RTX + 50, groundY - 10);
+  ctx.hazard('FIRE_GEYSER', LTX + 50, groundY - 10);
+  ctx.hazard('FIRE_GEYSER', CX + altarSpan / 3, groundY - 10);
+
+  // ── Enemy Slots (10) ──
+  ctx.enemySlots.push(
+    { x: GX + 40, y: groundY - gateH - 6 - 6 - eR },   // gatehouse top
+    { x: LTX, y: lt1 - 6 - eR },                        // left tower level 1
+    { x: LTX, y: lt3 - 6 - eR },                        // left tower level 3
+    { x: CX - altarSpan / 3, y: af1 - 6 - eR },        // altar level 1 left
+    { x: CX + altarSpan / 3, y: af1 - 6 - eR },        // altar level 1 right
+    { x: CX, y: af2 - 6 - eR },                         // altar level 2
+    { x: RTX, y: rt1 - 6 - eR },                        // right tower level 1
+    { x: RTX, y: rt3 - 6 - eR },                        // right tower level 3
+    { x: RTX, y: rt5 - 6 - 20 - eR },                  // right tower pinnacle (boss)
+    { x: CX, y: altarF - 6 - 24 - eR },                // altar pinnacle
+  );
+
+  // ── Coins (~48g) ──
+  ctx.coin(380, 250, 4);                              // approach — arc path
+  ctx.coin(RTX, rt5 - 30, 7);                         // treasury — right tower pinnacle
+  ctx.coin(CX, altarF - 40, 6);                       // treasury — altar pinnacle
+  ctx.coin(LTX, lt4 - 30, 5);                         // structure — left tower top
+  ctx.coin(GX + 40, groundY - gateH - 30, 5);         // structure — above gatehouse
+  ctx.coin(GX + 40, groundY - 40, 5);                 // risky — near lava at gate
+  ctx.coin(CX, groundY - 40, 5);                      // risky — near lava under altar
+  ctx.coin(RTX, groundY - 18, 5);                     // risky — near right tower barrel
+  ctx.coin(1010, groundY - 30, 6);                    // structure — outpost treasury
+};
+
+// ─── "The Obsidian Ziggurat" — stepped pyramid + guard towers + chambers (~70 blocks) ──
+export const obsidianZiggurat: TemplateFn = (ctx) => {
+  const { groundY } = ctx;
+  const b = ctx.block.bind(ctx);
+  const eR = 20;
+
+  // ── Left Guard Tower (3 levels) ──
+  const LGX = 420;
+  const gtSpan = 60;
+  b(LGX - gtSpan / 2, groundY - 70 / 2, 16, 70, 'OBSIDIAN');
+  b(LGX + gtSpan / 2, groundY - 70 / 2, 16, 70, 'OBSIDIAN');
+  const lg1 = groundY - 70 - 6;
+  b(LGX, lg1, gtSpan + 20, 12, 'OBSIDIAN');
+  b(LGX - 20, lg1 - 6 - 50 / 2, 14, 50, 'STONE');
+  b(LGX + 20, lg1 - 6 - 50 / 2, 14, 50, 'STONE');
+  const lg2 = lg1 - 6 - 50 - 6;
+  b(LGX, lg2, gtSpan + 10, 12, 'OBSIDIAN');
+  b(LGX, lg2 - 6 - 35 / 2, 14, 35, 'WOOD');
+  const lg3 = lg2 - 6 - 35 - 6;
+  b(LGX, lg3, 50, 10, 'OBSIDIAN');
+  capBlock(ctx, LGX, lg3, 'OBSIDIAN', 22);
+
+  // ── Approach Ramp ──
+  b(490, groundY - 30 / 2, 50, 30, 'STONE');
+  capBlock(ctx, 490, groundY - 30, 'OBSIDIAN', 20);
+
+  // ── Ziggurat — 5 stepped tiers (base=440px → apex=80px) ──
+  const ZCX = 720;
+
+  // Tier 1 (base) — widest, 440px span
+  const t1W = 440;
+  b(ZCX - t1W / 2, groundY - 55 / 2, 20, 55, 'OBSIDIAN');
+  b(ZCX - t1W / 4, groundY - 55 / 2, 14, 55, 'STONE');
+  b(ZCX, groundY - 55 / 2, 14, 55, 'STONE');
+  b(ZCX + t1W / 4, groundY - 55 / 2, 14, 55, 'STONE');
+  b(ZCX + t1W / 2, groundY - 55 / 2, 20, 55, 'OBSIDIAN');
+  const z1 = groundY - 55 - 6;
+  b(ZCX, z1, t1W + 20, 14, 'OBSIDIAN');
+  // Decorative cap blocks on tier 1 edges
+  capBlock(ctx, ZCX - t1W / 2, z1, 'OBSIDIAN', 20);
+  capBlock(ctx, ZCX + t1W / 2, z1, 'OBSIDIAN', 20);
+
+  // Interior chambers inside tier 1 (treasuryRooms with hidden coins)
+  treasuryRoom(ctx, ZCX - 100, groundY, 50, 40, 'WOOD', 5);
+  treasuryRoom(ctx, ZCX + 100, groundY, 50, 40, 'WOOD', 5);
+
+  // Tier 2 — 340px
+  const t2W = 340;
+  b(ZCX - t2W / 2, z1 - 6 - 55 / 2, 16, 55, 'OBSIDIAN');
+  b(ZCX, z1 - 6 - 55 / 2, 14, 55, 'STONE');
+  b(ZCX + t2W / 2, z1 - 6 - 55 / 2, 16, 55, 'OBSIDIAN');
+  const z2 = z1 - 6 - 55 - 6;
+  b(ZCX, z2, t2W + 10, 12, 'OBSIDIAN');
+  capBlock(ctx, ZCX - t2W / 2, z2, 'OBSIDIAN', 18);
+  capBlock(ctx, ZCX + t2W / 2, z2, 'OBSIDIAN', 18);
+
+  // Tier 3 — 240px
+  const t3W = 240;
+  b(ZCX - t3W / 2, z2 - 6 - 50 / 2, 14, 50, 'OBSIDIAN');
+  b(ZCX + t3W / 2, z2 - 6 - 50 / 2, 14, 50, 'OBSIDIAN');
+  const z3 = z2 - 6 - 50 - 6;
+  b(ZCX, z3, t3W + 10, 12, 'STONE');
+  capBlock(ctx, ZCX - t3W / 2, z3, 'OBSIDIAN', 18);
+  capBlock(ctx, ZCX + t3W / 2, z3, 'OBSIDIAN', 18);
+
+  // Tier 4 — 160px
+  const t4W = 160;
+  b(ZCX - t4W / 2, z3 - 6 - 45 / 2, 14, 45, 'WOOD');
+  b(ZCX + t4W / 2, z3 - 6 - 45 / 2, 14, 45, 'WOOD');
+  const z4 = z3 - 6 - 45 - 6;
+  b(ZCX, z4, t4W + 10, 12, 'OBSIDIAN');
+  capBlock(ctx, ZCX - t4W / 2, z4, 'OBSIDIAN', 18);
+  capBlock(ctx, ZCX + t4W / 2, z4, 'OBSIDIAN', 18);
+
+  // Tier 5 — apex (80px)
+  const t5W = 80;
+  b(ZCX, z4 - 6 - 40 / 2, 14, 40, 'STONE');
+  const z5 = z4 - 6 - 40 - 6;
+  b(ZCX, z5, t5W + 10, 12, 'OBSIDIAN');
+  b(ZCX - 20, z5 - 6 - 14, 32, 24, 'OBSIDIAN');
+  b(ZCX + 20, z5 - 6 - 14, 32, 24, 'OBSIDIAN');
+
+  // ── Right Guard Tower (2 levels) ──
+  const RGX = 1000;
+  b(RGX - gtSpan / 2, groundY - 65 / 2, 16, 65, 'OBSIDIAN');
+  b(RGX + gtSpan / 2, groundY - 65 / 2, 16, 65, 'OBSIDIAN');
+  const rg1 = groundY - 65 - 6;
+  b(RGX, rg1, gtSpan + 20, 12, 'OBSIDIAN');
+  b(RGX, rg1 - 6 - 45 / 2, 14, 45, 'STONE');
+  const rg2 = rg1 - 6 - 45 - 6;
+  b(RGX, rg2, 55, 10, 'OBSIDIAN');
+  capBlock(ctx, RGX, rg2, 'OBSIDIAN', 22);
+
+  // ── WOOD Bridges from guard towers to ziggurat tier 1 ──
+  b((LGX + gtSpan / 2 + ZCX - t1W / 2) / 2, z1, 60, 10, 'WOOD');
+  b((ZCX + t1W / 2 + RGX - gtSpan / 2) / 2, z1, 60, 10, 'WOOD');
+
+  // ── Barrels (6) ──
+  ctx.barrel(LGX, groundY - 18);                  // left guard tower ground
+  ctx.barrel(ZCX - t1W / 4, groundY - 18);        // ziggurat tier 1 left
+  ctx.barrel(ZCX + t1W / 4, groundY - 18);        // ziggurat tier 1 right
+  ctx.barrel(ZCX, z1 - 6 - 18);                   // ziggurat tier 1 top
+  ctx.barrel(RGX, groundY - 18);                  // right guard tower ground
+  ctx.barrel(ZCX, z2 - 6 - 18);                   // ziggurat tier 2
+
+  // ── Hazards ──
+  ctx.hazard('LAVA_PIT', ZCX - t1W / 3, groundY - 10);
+  ctx.hazard('LAVA_PIT', ZCX + t1W / 3, groundY - 10);
+  ctx.hazard('LAVA_PIT', LGX - 40, groundY - 10);
+  ctx.hazard('FIRE_GEYSER', ZCX - 60, groundY - 10);
+  ctx.hazard('FIRE_GEYSER', ZCX + 60, groundY - 10);
+
+  // ── Enemy Slots (10) ──
+  ctx.enemySlots.push(
+    { x: LGX, y: lg1 - 6 - eR },                     // left guard level 1
+    { x: LGX, y: lg3 - 6 - 22 - eR },                // left guard top
+    { x: ZCX - t2W / 3, y: z1 - 6 - eR },            // ziggurat tier 1 left
+    { x: ZCX + t2W / 3, y: z1 - 6 - eR },            // ziggurat tier 1 right
+    { x: ZCX, y: z2 - 6 - eR },                       // ziggurat tier 2
+    { x: ZCX, y: z3 - 6 - eR },                       // ziggurat tier 3
+    { x: ZCX, y: z4 - 6 - eR },                       // ziggurat tier 4
+    { x: ZCX, y: z5 - 6 - 24 - eR },                 // ziggurat apex (boss)
+    { x: RGX, y: rg1 - 6 - eR },                     // right guard level 1
+    { x: RGX, y: rg2 - 6 - 22 - eR },                // right guard top
+  );
+
+  // ── Coins (~50g) ──
+  ctx.coin(390, 250, 4);                              // approach — arc path
+  ctx.coin(ZCX, z5 - 30, 8);                          // treasury — ziggurat apex
+  ctx.coin(LGX, lg3 - 30, 5);                         // structure — left guard top
+  ctx.coin(RGX, rg2 - 30, 5);                         // structure — right guard top
+  ctx.coin(ZCX, z3 - 20, 5);                          // structure — ziggurat tier 3
+  ctx.coin(ZCX - t1W / 4, groundY - 18, 5);           // risky — near ziggurat barrel
+  ctx.coin(ZCX + t1W / 4, groundY - 18, 5);           // risky — near ziggurat barrel
+  ctx.coin(LGX, groundY - 18, 4);                     // risky — near left guard barrel
+  ctx.coin(ZCX, z4 - 20, 5);                          // structure — ziggurat tier 4
+  ctx.coin(RGX, groundY - 18, 4);                     // risky — near right guard barrel
+
+  // Terrain — volcanic mound near approach
+  raisedPlatform(ctx, 500, groundY, 90, 20);
+};
+
 export const diff5Templates: TemplateFn[] = [
   infernalThrone,
   demonLordLair,
@@ -482,4 +772,6 @@ export const diff5Templates: TemplateFn[] = [
   hellfireGauntlet,
   volcanicPalace,
   demonKingFortress,
+  hellfireCitadel,
+  obsidianZiggurat,
 ];

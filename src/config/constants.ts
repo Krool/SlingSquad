@@ -32,6 +32,7 @@ export const STALL_WARN_MS = 5000;
 // ─── Squad ────────────────────────────────────────────────────────────────────
 export const STARTER_SQUAD_SIZE = 4;
 export const MAX_SQUAD_SIZE = 6;
+export const MAX_RETRIES_PER_BATTLE = 1;
 
 // ─── Combat vs Blocks ────────────────────────────────────────────────────────
 // Melee combat damage is multiplied by this when hitting blocks (both heroes & enemies)
@@ -119,17 +120,17 @@ export const HERO_STATS = {
   MAGE: {
     hp: 70,
     mass: 1.8,
-    aoeRadius: 150,
-    aoeDamage: 55,
-    impactMultiplier: 3.0,
+    aoeRadius: 130,
+    aoeDamage: 40,
+    impactMultiplier: 2.0,
     combatDamage: 14,
     combatRange: 200,
     combatSpeed: 700,
     walkSpeed: 0.9,
     color: 0x8e44ad,
     radius: 20,
-    clusterCount: 5,            // bomblets spawned on impact
-    clusterDamage: 18,          // damage per bomblet hit
+    clusterCount: 4,            // bomblets spawned on impact
+    clusterDamage: 14,          // damage per bomblet hit
     label: 'Mage',
   },
   PRIEST: {

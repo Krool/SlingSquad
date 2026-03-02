@@ -75,7 +75,7 @@
     {
       "id": 15, "type": "BOSS", "name": "Infernal Lord",
       "x": 1220, "y": 310, "next": [],
-      "enemies": ["INFERNAL_BOSS", "DEMON_KNIGHT", "DEMON_KNIGHT", "FIRE_IMP", "FIRE_IMP", "HEALER"], "gold": 100, "difficulty": 5
+      "enemies": ["INFERNAL_BOSS", "DEMON_KNIGHT", "DEMON_KNIGHT", "DEMON_KNIGHT", "FIRE_IMP", "FIRE_IMP", "FIRE_IMP", "FIRE_IMP", "HEALER"], "gold": 100, "difficulty": 5
     }
   ]
 }

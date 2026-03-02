@@ -35,7 +35,7 @@ import { isScreenShakeEnabled } from '@/systems/GameplaySettings';
 import {
   getRunState, hasRunState, completeNode, syncSquadHp, newRun, getRelicModifiers, loadRun,
   addRelic, ensureActiveHero, getHeroesOnCooldown,
-  addHeroBattleXP, getPendingLevelUps,
+  addHeroBattleXP, getPendingLevelUps, ensureBattleSeed,
   type NodeDef, type RelicDef,
 } from '@/systems/RunState';
 import { AudioSystem } from '@/systems/AudioSystem';
@@ -859,7 +859,10 @@ export class BattleScene extends Phaser.Scene {
     const run = getRunState();
     const zone = run.currentMapId;
     const diff = this.activeNode.difficulty ?? 1;
-    const template = pickTemplate(zone, diff);
+
+    // Deterministic seed: set on first visit, reused on retry
+    const seed = ensureBattleSeed();
+    const template = pickTemplate(zone, diff, seed);
 
     const templateCoins: Array<[number, number, number]> = [];
     const terrainBodies: Array<{ x: number; y: number; w: number; h: number }> = [];
@@ -911,9 +914,13 @@ export class BattleScene extends Phaser.Scene {
     const bossExtra = this.activeNode.type === 'BOSS' ? ascMods.bossHpMult : ascMods.enemyHpMult;
     const hpMult = baseHpMult * bossExtra;
 
+    // Seeded jitter: use battleSeed so retries produce identical placement
+    const seed = run.battleSeed;
     enemyList.forEach((cls, i) => {
       const slot = slots[i % slots.length];
-      const jitter = i >= slots.length ? Phaser.Math.Between(-30, 30) : 0;
+      const jitter = i >= slots.length
+        ? ((((seed * 16807 + i * 48271) & 0x7fffffff) % 61) - 30)  // seeded ±30
+        : 0;
       // Slots use eR=20 for y placement; adjust for enemies with different radii
       const actualRadius = ENEMY_STATS[cls as EnemyClass]?.radius ?? 20;
       const yAdjust = 20 - actualRadius;
@@ -1619,9 +1626,13 @@ export class BattleScene extends Phaser.Scene {
 
     let wolfHp = hp;
     let attackTimer = 0;
-    const wolfSpeed = 1.5;
+    const wolfSpeed = 3;          // faster per-tick to compensate for slower tick rate
+    const TICK_MS = 150;          // update every 150ms instead of 50ms (6.7/sec vs 20/sec)
 
-    // Wolf AI: runs toward nearest living enemy, attacks periodically
+    // Cache target to avoid scanning every tick
+    let cachedTarget: Enemy | null = null;
+    let targetScanTimer = 0;
+
     const wolfUpdate = () => {
       if (wolfHp <= 0 || this.battleEnded) {
         wolf.destroy();
@@ -1629,19 +1640,22 @@ export class BattleScene extends Phaser.Scene {
         return;
       }
 
-      // Find nearest living enemy
-      let nearest: Enemy | null = null;
-      let nearestDist = Infinity;
-      for (const e of this.enemies) {
-        if (e.state === 'dead') continue;
-        const d = Math.hypot(e.x - wolf.x, e.y - wolf.y);
-        if (d < nearestDist) { nearestDist = d; nearest = e; }
+      // Re-scan for nearest enemy every ~450ms instead of every tick
+      targetScanTimer += TICK_MS;
+      if (!cachedTarget || cachedTarget.state === 'dead' || targetScanTimer >= 450) {
+        targetScanTimer = 0;
+        cachedTarget = null;
+        let nearestDist = Infinity;
+        for (const e of this.enemies) {
+          if (e.state === 'dead') continue;
+          const d = Math.hypot(e.x - wolf.x, e.y - wolf.y);
+          if (d < nearestDist) { nearestDist = d; cachedTarget = e; }
+        }
       }
 
-      if (nearest) {
-        // Move toward enemy
-        const dx = nearest.x - wolf.x;
-        const dy = nearest.y - wolf.y;
+      if (cachedTarget) {
+        const dx = cachedTarget.x - wolf.x;
+        const dy = cachedTarget.y - wolf.y;
         const dist = Math.hypot(dx, dy);
         if (dist > 20) {
           wolf.x += (dx / dist) * wolfSpeed;
@@ -1649,16 +1663,14 @@ export class BattleScene extends Phaser.Scene {
         }
 
         // Attack if close enough
-        attackTimer += 50; // update runs every 50ms
+        attackTimer += TICK_MS;
         if (dist < 30 && attackTimer >= 1000) {
           attackTimer = 0;
-          nearest.applyDamage(dmg, undefined, druid);
+          cachedTarget.applyDamage(dmg, undefined, druid);
           if (druid) druid.battleDamageDealt += dmg;
-          DamageNumber.damage(this, nearest.x, nearest.y, dmg);
-          // Wolf takes counter-damage
+          DamageNumber.damage(this, cachedTarget.x, cachedTarget.y, dmg);
           wolfHp -= 5;
           if (wolfHp <= 0) {
-            // Death burst
             this.tweens.add({
               targets: wolf, alpha: 0, scaleX: 1.5, scaleY: 1.5,
               duration: 200, onComplete: () => wolf.destroy(),
@@ -1669,7 +1681,7 @@ export class BattleScene extends Phaser.Scene {
     };
 
     const updateEvent = this.time.addEvent({
-      delay: 50, callback: wolfUpdate, loop: true,
+      delay: TICK_MS, callback: wolfUpdate, loop: true,
     });
 
     // Auto-expire after 10 seconds
