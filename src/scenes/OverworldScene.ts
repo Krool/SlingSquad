@@ -400,8 +400,8 @@ export class OverworldScene extends Phaser.Scene {
       clearInner = 0x3a2a1a;
       bossClear  = 0x3a1010; // dark red
     } else {
-      clearOuter = TERRAIN_LIGHT;
-      clearInner = TERRAIN_LIGHT;
+      clearOuter = 0x0e2a0a; // very dark green ring
+      clearInner = 0x1a3a12; // dark earthy clearing
       bossClear  = 0x3a2020;
     }
 
@@ -411,12 +411,12 @@ export class OverworldScene extends Phaser.Scene {
       const isBoss = node.type === 'BOSS';
       const radius = isBoss ? 80 : 55;
 
-      // Outer soft glow (larger, more transparent)
-      bg.fillStyle(clearOuter, 0.2);
-      bg.fillCircle(nx, ny, radius + 15);
+      // Dark border ring — reads as tree-line edge around the clearing
+      bg.fillStyle(clearOuter, 0.5);
+      bg.fillCircle(nx, ny, radius + 18);
 
-      // Inner clearing
-      bg.fillStyle(isBoss ? bossClear : clearInner, 0.4);
+      // Inner clearing — darker ground exposed beneath canopy
+      bg.fillStyle(isBoss ? bossClear : clearInner, 0.65);
       bg.fillCircle(nx, ny, radius);
     }
   }
@@ -453,10 +453,10 @@ export class OverworldScene extends Phaser.Scene {
   }
 
   private drawGoblinWastes(g: Phaser.GameObjects.Graphics, rand: () => number, W: number, H: number) {
-    const NODE_CLEAR = 70;
+    const NODE_CLEAR = 90;
 
     // Dense tree canopy clusters — ellipses for 3/4 perspective
-    for (let i = 0; i < 65; i++) {
+    for (let i = 0; i < 50; i++) {
       const cx = rand() * W;
       const cy = rand() * H;
       if (this.isNearNode(cx, cy, NODE_CLEAR)) continue;
