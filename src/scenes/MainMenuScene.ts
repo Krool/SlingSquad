@@ -113,10 +113,9 @@ export class MainMenuScene extends Phaser.Scene {
 
   private onShutdown() {
     unsubscribeFromChat();
-    if (this._chatInput) {
-      this._chatInput.remove();
-      this._chatInput = null;
-    }
+    if (this._chatInputBar) { this._chatInputBar.remove(); this._chatInputBar = null; }
+    if (this._chatInput) { this._chatInput.remove(); this._chatInput = null; }
+    this._chatPlaceholder = null;
   }
 
   update(_time: number, _delta: number) {
@@ -1336,9 +1335,11 @@ export class MainMenuScene extends Phaser.Scene {
 
     const panelX = 10;
     const panelY = 82; // below gear+profile buttons
-    const panelW = 240;
-    const panelH = 320;
-    const msgAreaH = panelH - 36; // reserve 36px for input row
+    const panelW = 300;
+    const panelH = 380;
+    const headerH = 28;
+    const inputBarH = 44;
+    const msgAreaH = panelH - headerH - inputBarH;
     const depth = 15;
 
     const container = this.add.container(panelX, panelY).setDepth(depth).setAlpha(0);
@@ -1347,49 +1348,45 @@ export class MainMenuScene extends Phaser.Scene {
     // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x0a1220, 0.8);
-    bg.fillRoundedRect(0, 0, panelW, panelH, 8);
+    bg.fillRoundedRect(0, 0, panelW, panelH, 10);
     bg.lineStyle(1, 0x3a5070, 0.4);
-    bg.strokeRoundedRect(0, 0, panelW, panelH, 8);
+    bg.strokeRoundedRect(0, 0, panelW, panelH, 10);
     container.add(bg);
 
     // Header
-    container.add(this.add.text(panelW / 2, 6, 'CHAT', {
-      fontSize: '9px', fontFamily: 'Nunito, sans-serif',
-      color: '#c0a060', letterSpacing: 2,
+    container.add(this.add.text(panelW / 2, 8, 'CHAT', {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif',
+      color: '#c0a060', letterSpacing: 3,
     }).setOrigin(0.5, 0));
 
-    // Message area — we'll use a container for messages that gets rebuilt on update
-    const msgContainer = this.add.container(0, 22);
+    // Message area container
+    const msgContainer = this.add.container(0, headerH);
     container.add(msgContainer);
 
     // Input background bar
     const inputBg = this.add.graphics();
     inputBg.fillStyle(0x060b12, 0.9);
-    inputBg.fillRoundedRect(4, panelH - 32, panelW - 8, 28, 6);
+    inputBg.fillRoundedRect(6, panelH - inputBarH + 4, panelW - 12, inputBarH - 8, 8);
     inputBg.lineStyle(1, 0x3a5070, 0.3);
-    inputBg.strokeRoundedRect(4, panelH - 32, panelW - 8, 28, 6);
+    inputBg.strokeRoundedRect(6, panelH - inputBarH + 4, panelW - 12, inputBarH - 8, 8);
     container.add(inputBg);
 
     // Placeholder text (visible when input not focused)
-    const placeholder = this.add.text(panelW / 2, panelH - 18, 'Click to type...', {
-      fontSize: '11px', fontFamily: 'Nunito, sans-serif', color: '#3a5070',
+    const placeholder = this.add.text(panelW / 2, panelH - inputBarH / 2, 'Tap to chat...', {
+      fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#3a5a7a',
     }).setOrigin(0.5);
     container.add(placeholder);
 
-    // Click zone for input area
-    const inputHit = this.add.rectangle(panelW / 2, panelH - 18, panelW - 8, 28, 0, 0)
+    // Click zone for input area (large touch target)
+    const inputHit = this.add.rectangle(panelW / 2, panelH - inputBarH / 2, panelW - 12, inputBarH, 0, 0)
       .setInteractive({ useHandCursor: true });
     container.add(inputHit);
 
-    // Create the DOM input (hidden until clicked)
-    this.createChatInput(panelX, panelY, panelW, panelH, placeholder, msgContainer, msgAreaH);
+    // Create the DOM input bar (full-width bottom overlay on mobile)
+    this.createChatInput(placeholder);
 
     inputHit.on('pointerdown', () => {
-      if (this._chatInput) {
-        this._chatInput.style.display = 'block';
-        this._chatInput.focus();
-        placeholder.setVisible(false);
-      }
+      this.showChatInput();
     });
 
     // Render helper
@@ -1398,7 +1395,7 @@ export class MainMenuScene extends Phaser.Scene {
       msgContainer.removeAll(true);
 
       const msgs = this._chatMessages;
-      const lineH = 22;
+      const lineH = 34;
       const maxVisible = Math.floor(msgAreaH / lineH);
       const visible = msgs.slice(-maxVisible);
 
@@ -1407,7 +1404,7 @@ export class MainMenuScene extends Phaser.Scene {
         // Avatar
         const avKey = `${msg.avatarKey || 'warrior'}_idle_1`;
         if (this.textures.exists(avKey)) {
-          const av = this.add.image(12, my + lineH / 2, avKey).setDisplaySize(14, 14);
+          const av = this.add.image(16, my + 12, avKey).setDisplaySize(20, 20);
           const upper = (msg.avatarKey || 'warrior').toUpperCase();
           const tint = (Hero.CLASS_TINT as Record<string, number>)[upper]
             ?? (Enemy.CLASS_TINT as Record<string, number>)[upper];
@@ -1416,23 +1413,23 @@ export class MainMenuScene extends Phaser.Scene {
         }
 
         // Name
-        const shortName = (msg.name || '???').slice(0, 10);
-        msgContainer.add(this.add.text(22, my + 1, shortName, {
-          fontSize: '9px', fontFamily: 'Nunito, sans-serif', color: '#c0a060', fontStyle: 'bold',
+        const shortName = (msg.name || '???').slice(0, 12);
+        msgContainer.add(this.add.text(30, my, shortName, {
+          fontSize: '12px', fontFamily: 'Nunito, sans-serif', color: '#c0a060', fontStyle: 'bold',
         }));
 
         // Timestamp (local timezone)
         const date = new Date(msg.timestamp);
         const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        msgContainer.add(this.add.text(panelW - 14, my + 1, timeStr, {
-          fontSize: '8px', fontFamily: 'Nunito, sans-serif', color: '#4a5a6a',
+        msgContainer.add(this.add.text(panelW - 14, my, timeStr, {
+          fontSize: '10px', fontFamily: 'Nunito, sans-serif', color: '#4a6a7a',
         }).setOrigin(1, 0));
 
-        // Message text (wrap manually)
+        // Message text
         const msgText = (msg.message || '').slice(0, 80);
-        msgContainer.add(this.add.text(22, my + 11, msgText, {
-          fontSize: '10px', fontFamily: 'Nunito, sans-serif', color: '#b0c8e0',
-          wordWrap: { width: panelW - 36 },
+        msgContainer.add(this.add.text(30, my + 15, msgText, {
+          fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#b0c8e0',
+          wordWrap: { width: panelW - 48 },
           maxLines: 1,
         }));
 
@@ -1451,80 +1448,125 @@ export class MainMenuScene extends Phaser.Scene {
     this.tweens.add({ targets: container, alpha: 1, duration: 400, delay: 800 });
   }
 
-  private createChatInput(
-    panelX: number, panelY: number, panelW: number, panelH: number,
-    placeholder: Phaser.GameObjects.Text,
-    msgContainer: Phaser.GameObjects.Container,
-    _msgAreaH: number,
-  ) {
-    // Remove old input if any
-    if (this._chatInput) {
-      this._chatInput.remove();
-      this._chatInput = null;
-    }
+  private _chatInputBar: HTMLDivElement | null = null;
+  private _chatPlaceholder: Phaser.GameObjects.Text | null = null;
+
+  private showChatInput() {
+    if (!this._chatInput || !this._chatInputBar) return;
+    this._chatInputBar.style.display = 'flex';
+    this._chatInput.focus();
+    if (this._chatPlaceholder?.active) this._chatPlaceholder.setVisible(false);
+  }
+
+  private hideChatInput() {
+    if (this._chatInputBar) this._chatInputBar.style.display = 'none';
+    if (this._chatPlaceholder?.active) this._chatPlaceholder.setVisible(true);
+  }
+
+  private createChatInput(placeholder: Phaser.GameObjects.Text) {
+    this._chatPlaceholder = placeholder;
+
+    // Remove old elements
+    if (this._chatInputBar) { this._chatInputBar.remove(); this._chatInputBar = null; }
+    if (this._chatInput) { this._chatInput.remove(); this._chatInput = null; }
+
+    // Full-width bottom bar container (DOM overlay)
+    const bar = document.createElement('div');
+    bar.style.cssText = `
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(6,11,18,0.97);
+      border-top: 1px solid #3a5070;
+      z-index: 2000;
+      box-sizing: border-box;
+    `;
 
     const input = document.createElement('input');
     input.type = 'text';
     input.maxLength = 80;
     input.placeholder = 'Type a message...';
+    input.autocomplete = 'off';
+    input.autocapitalize = 'sentences';
     input.style.cssText = `
-      position: absolute;
-      display: none;
-      background: rgba(6,11,18,0.95);
+      flex: 1;
+      background: rgba(13,21,38,0.95);
       border: 1px solid #3a5070;
-      border-radius: 6px;
+      border-radius: 8px;
       color: #b0c8e0;
       font-family: 'Nunito', sans-serif;
-      font-size: 12px;
-      padding: 4px 8px;
+      font-size: 16px;
+      padding: 10px 14px;
       outline: none;
-      z-index: 1000;
+      min-height: 44px;
+      box-sizing: border-box;
+      -webkit-appearance: none;
     `;
 
-    // Position the input over the chat input area
-    const repositionInput = () => {
-      const canvas = this.game.canvas;
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = rect.width / GAME_WIDTH;
-      const scaleY = rect.height / GAME_HEIGHT;
+    const sendBtn = document.createElement('button');
+    sendBtn.textContent = 'Send';
+    sendBtn.style.cssText = `
+      background: #c0a060;
+      border: none;
+      border-radius: 8px;
+      color: #0a1220;
+      font-family: 'Nunito', sans-serif;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 10px 20px;
+      min-height: 44px;
+      cursor: pointer;
+      -webkit-appearance: none;
+    `;
 
-      const left = rect.left + (panelX + 4) * scaleX;
-      const top = rect.top + (panelY + panelH - 32) * scaleY;
-      const width = (panelW - 8) * scaleX;
-      const height = 28 * scaleY;
-
-      input.style.left = `${left}px`;
-      input.style.top = `${top}px`;
-      input.style.width = `${width}px`;
-      input.style.height = `${height}px`;
-      input.style.fontSize = `${Math.max(10, 12 * scaleY)}px`;
+    const doSend = () => {
+      const text = input.value.trim();
+      if (!text) return;
+      sendBtn.disabled = true;
+      sendChatMessage(text).then((ok) => {
+        if (ok) {
+          input.value = '';
+          input.blur();
+          this.hideChatInput();
+        }
+        sendBtn.disabled = false;
+      });
     };
 
-    repositionInput();
-    this.scale.on('resize', repositionInput);
+    sendBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      doSend();
+    });
 
     input.addEventListener('keydown', (e) => {
-      e.stopPropagation(); // prevent Phaser from capturing keys
+      e.stopPropagation();
       if (e.key === 'Enter') {
-        const text = input.value.trim();
-        if (text) {
-          sendChatMessage(text).then((ok) => {
-            if (ok) input.value = '';
-          });
-        }
+        e.preventDefault();
+        doSend();
       }
       if (e.key === 'Escape') {
         input.blur();
+        this.hideChatInput();
       }
     });
 
     input.addEventListener('blur', () => {
-      input.style.display = 'none';
-      if (placeholder.active) placeholder.setVisible(true);
+      // Delay hide so send button click can register first
+      setTimeout(() => {
+        if (document.activeElement !== sendBtn && document.activeElement !== input) {
+          this.hideChatInput();
+        }
+      }, 150);
     });
 
-    document.body.appendChild(input);
+    bar.appendChild(input);
+    bar.appendChild(sendBtn);
+    document.body.appendChild(bar);
     this._chatInput = input;
+    this._chatInputBar = bar;
   }
 
   // ── Shard earned badge (animated +N popup) ──────────────────────────
