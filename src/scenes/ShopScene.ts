@@ -8,6 +8,8 @@ import { discoverRelic } from '@/systems/DiscoveryLog';
 import { checkAchievements } from '@/systems/AchievementSystem';
 import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
+import { createRelicIcon } from '@/ui/RelicIcon';
+import type { AudioSystem } from '@/systems/AudioSystem';
 
 const RARITY_COLOR: Record<string, number> = {
   common:   0x95a5a6,
@@ -64,13 +66,13 @@ function getEffectPreview(effect: string, value: number): string {
   switch (effect) {
     case 'FLAT_HP': return `+${value} HP`;
     case 'COOLDOWN_REDUCE': return `-${value / 1000}s cooldown`;
-    case 'MAGE_AOE_RADIUS': return `+${value}px AoE`;
+    case 'MAGE_AOE_RADIUS': return `+${value} AoE`;
     case 'WARRIOR_IMPACT_BONUS': return `+${Math.round(value * 100)}% impact`;
     case 'RANGER_ARROW_COUNT': return `+${value} arrows`;
-    case 'PRIEST_HEAL_BONUS': return `+${value}px heal range`;
+    case 'PRIEST_HEAL_BONUS': return `+${value} heal range`;
     case 'FLAT_COMBAT_DAMAGE': return `+${value} damage`;
     case 'COMBAT_SPEED_MULT': return `${Math.round((1 - value) * 100)}% faster`;
-    case 'MAX_DRAG_BONUS': return `+${value}px range`;
+    case 'MAX_DRAG_BONUS': return `+${value} range`;
     case 'GOLD_ON_WIN': return `+${value}g per win`;
     case 'AIR_FRICTION_REDUCE': return `-${Math.round(value * 100)}% drag`;
     case 'DAMAGE_REDUCTION': return `-${Math.round(value * 100)}% damage taken`;
@@ -80,7 +82,7 @@ function getEffectPreview(effect: string, value: number): string {
     case 'DEATH_SAVE': return `Cheat death 1x`;
     case 'EXTRA_LAUNCH': return `+${value} launch`;
     case 'GOLD_ON_KILL': return `+${value}g per kill`;
-    case 'WARRIOR_KNOCKBACK': return `Knockback ${value}px`;
+    case 'WARRIOR_KNOCKBACK': return `Knockback ${value}`;
     case 'MAGE_CHAIN': return `Chain to ${value}`;
     case 'RANGER_POISON': return `${value} poison dmg`;
     case 'PRIEST_RESURRECT': return `Revive ${Math.round(value * 100)}% HP`;
@@ -279,21 +281,28 @@ export class ShopScene extends Phaser.Scene {
     container.add(rarityLabel);
 
     // ── Icon circle ──────────────────────────────────────────────────────────
+    const iconCX = 0, iconCY = -h / 2 + 82;
     const icon = this.add.graphics();
     icon.fillStyle(accentColor, canAfford ? 0.2 : 0.07);
-    icon.fillCircle(0, -h / 2 + 82, 32);
+    icon.fillCircle(iconCX, iconCY, 32);
     icon.lineStyle(1, accentColor, canAfford ? 0.55 : 0.15);
-    icon.strokeCircle(0, -h / 2 + 82, 32);
+    icon.strokeCircle(iconCX, iconCY, 32);
     container.add(icon);
 
-    const iconSymbol = EFFECT_ICON[relic.effect] ?? RARITY_ICON[rarity] ?? '\u25cf';
-    container.add(
-      this.add.text(0, -h / 2 + 82, iconSymbol, {
-        fontSize: '28px', fontFamily: 'Nunito, sans-serif',
-        color: canAfford ? '#' + accentColor.toString(16).padStart(6, '0') : '#6a6a7a',
-        stroke: '#000', strokeThickness: 2,
-      }).setOrigin(0.5),
-    );
+    const relicImg = createRelicIcon(this, relic, iconCX, iconCY, 40);
+    if (relicImg) {
+      if (!canAfford) relicImg.setAlpha(0.4);
+      container.add(relicImg);
+    } else {
+      const iconSymbol = EFFECT_ICON[relic.effect] ?? RARITY_ICON[rarity] ?? '\u25cf';
+      container.add(
+        this.add.text(iconCX, iconCY, iconSymbol, {
+          fontSize: '28px', fontFamily: 'Nunito, sans-serif',
+          color: canAfford ? '#' + accentColor.toString(16).padStart(6, '0') : '#6a6a7a',
+          stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5),
+      );
+    }
 
     // ── Relic name ───────────────────────────────────────────────────────────
     container.add(
@@ -384,6 +393,9 @@ export class ShopScene extends Phaser.Scene {
     addRelic(relic);
     discoverRelic(relic.id);
     checkAchievements({ relicCount: getRunState().relics.length });
+    const audio = this.registry.get('audio') as AudioSystem | null;
+    audio?.playRelicPickup();
+    if (!this.isFree) audio?.playPurchase();
     this.cameras.main.flash(260, 255, 240, 180, false);
 
     this.soldSet.add(idx);

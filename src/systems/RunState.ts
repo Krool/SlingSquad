@@ -28,6 +28,7 @@ export interface RelicDef {
   cost?: number;       // gold cost in shop (undefined = free on REWARD node)
   rarity?: 'common' | 'uncommon' | 'rare';
   curse?: boolean;     // true = negative relic (curse)
+  icon?: string;       // icon path relative to icon base folder (e.g. "shield/shield_01.png")
 }
 
 // ─── Persistent hero data across battles ─────────────────────────────────────

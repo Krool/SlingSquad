@@ -181,6 +181,7 @@ export class ImpactSystem {
       this.combatSystem.addProjectile(p);
     }
 
+    (this.scene.registry.get('audio') as import('@/systems/AudioSystem').AudioSystem | null)?.playArrowFire();
     this.spawnImpactParticles(x, y, 0x27ae60, 6);
   }
 
@@ -239,6 +240,7 @@ export class ImpactSystem {
       }
     }
 
+    (this.scene.registry.get('audio') as import('@/systems/AudioSystem').AudioSystem | null)?.playMagicCast();
     this.scene.events.emit('mageExplosion', x, y, r);
 
     // Cluster grenade: spawn bomblets that radiate outward from impact point
@@ -282,6 +284,7 @@ export class ImpactSystem {
 
     const healRadius = stats.healRadius + this.relicMods.priestHealRadiusBonus + (hero.skillMods?.healRadiusBonus ?? 0);
     const healAmount = stats.healAmount + this.relicMods.priestHealBonus + (hero.skillMods?.healAmountBonus ?? 0);
+    (this.scene.registry.get('audio') as import('@/systems/AudioSystem').AudioSystem | null)?.playHealAura();
     this.scene.events.emit('priestHealAura', x, y, healRadius, healAmount, hero);
     this.spawnHealAura(x, y, healRadius);
 

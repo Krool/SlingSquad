@@ -4,6 +4,7 @@ dist/
 assets/sprites/
 assets/ui/
 assets/music/
+assets/sfx/
 *.log
 *.jpg
 *.png

@@ -6,7 +6,8 @@
     "effect": "DAMAGE_REDUCTION",
     "value": -0.15,
     "rarity": "common",
-    "curse": true
+    "curse": true,
+    "icon": "material/material_008.png"
   },
   {
     "id": "heavy_pockets",
@@ -15,7 +16,8 @@
     "effect": "LAUNCH_POWER_CURSE",
     "value": -0.10,
     "rarity": "common",
-    "curse": true
+    "curse": true,
+    "icon": "drops/drops_05.png"
   },
   {
     "id": "slow_hands",
@@ -24,7 +26,8 @@
     "effect": "COOLDOWN_REDUCE",
     "value": -500,
     "rarity": "common",
-    "curse": true
+    "curse": true,
+    "icon": "glove/glove_05.png"
   },
   {
     "id": "thin_skin",
@@ -33,7 +36,8 @@
     "effect": "FLAT_HP",
     "value": -20,
     "rarity": "common",
-    "curse": true
+    "curse": true,
+    "icon": "armor/armor_08.png"
   },
   {
     "id": "greed_tax",
@@ -42,7 +46,8 @@
     "effect": "GOLD_TAX_PCT",
     "value": 0.20,
     "rarity": "uncommon",
-    "curse": true
+    "curse": true,
+    "icon": "drops/drops_06.png"
   },
   {
     "id": "foggy_aim",
@@ -51,7 +56,8 @@
     "effect": "TRAJECTORY_REDUCE",
     "value": 15,
     "rarity": "common",
-    "curse": true
+    "curse": true,
+    "icon": "accessory/accessory_18.png"
   },
   {
     "id": "brittle_arms",
@@ -60,7 +66,8 @@
     "effect": "WARRIOR_IMPACT_BONUS",
     "value": -0.25,
     "rarity": "uncommon",
-    "curse": true
+    "curse": true,
+    "icon": "weapon/weapon_sword_05.png"
   },
   {
     "id": "dull_arrows",
@@ -69,7 +76,8 @@
     "effect": "RANGER_ARROW_COUNT",
     "value": -1,
     "rarity": "uncommon",
-    "curse": true
+    "curse": true,
+    "icon": "weapon/weapon_arrow_05.png"
   },
   {
     "id": "mana_drain",
@@ -78,7 +86,8 @@
     "effect": "MAGE_AOE_RADIUS",
     "value": -40,
     "rarity": "uncommon",
-    "curse": true
+    "curse": true,
+    "icon": "skill/skill_011.png"
   },
   {
     "id": "faithless",
@@ -87,6 +96,7 @@
     "effect": "PRIEST_HEAL_BONUS",
     "value": -40,
     "rarity": "uncommon",
-    "curse": true
+    "curse": true,
+    "icon": "quest/quest_008.png"
   }
 ]

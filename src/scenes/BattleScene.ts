@@ -981,7 +981,7 @@ export class BattleScene extends Phaser.Scene {
 
   // ─── Systems ────────────────────────────────────────────────────────────
   private buildSystems() {
-    this.audio = new AudioSystem();
+    this.audio = this.registry.get('audio') as AudioSystem ?? new AudioSystem();
     this.registry.set('audio', this.audio); // shared with SettingsScene
 
     this.combatSystem = new CombatSystem(this, this.heroes, this.enemies);

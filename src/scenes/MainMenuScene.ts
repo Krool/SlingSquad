@@ -1004,12 +1004,21 @@ export class MainMenuScene extends Phaser.Scene {
     const labelColor = enabled ? accentHex : '#6a6a7a';
 
     if (icon) {
-      // Icon above label layout — icon offset up, label offset down
-      container.add(
-        this.add.text(0, -18, icon, {
-          fontSize: `${iconSize}px`, fontFamily: 'Nunito, sans-serif',
-        }).setOrigin(0.5),
-      );
+      // Try sprite icon first, fall back to Unicode text
+      const uiKey = `ui_${label.toLowerCase()}`;
+      if (this.textures.exists(uiKey)) {
+        const spriteIcon = this.add.image(0, -16, uiKey)
+          .setDisplaySize(iconSize + 4, iconSize + 4)
+          .setOrigin(0.5);
+        if (!enabled) spriteIcon.setAlpha(0.4);
+        container.add(spriteIcon);
+      } else {
+        container.add(
+          this.add.text(0, -18, icon, {
+            fontSize: `${iconSize}px`, fontFamily: 'Nunito, sans-serif',
+          }).setOrigin(0.5),
+        );
+      }
       container.add(
         this.add.text(0, 24, label, {
           fontSize: `${labelSize}px`, fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
@@ -1037,7 +1046,10 @@ export class MainMenuScene extends Phaser.Scene {
         drawBg(false);
         this.tweens.add({ targets: container, scaleX: 1, scaleY: 1, duration: 70 });
       });
-      hit.on('pointerdown', onClick);
+      hit.on('pointerdown', () => {
+        (this.registry.get('audio') as import('@/systems/AudioSystem').AudioSystem | null)?.playButtonClick();
+        onClick();
+      });
     }
   }
 
@@ -1108,7 +1120,10 @@ export class MainMenuScene extends Phaser.Scene {
     parent.add(hit);
     hit.on('pointerover', () => drawBg(true));
     hit.on('pointerout', () => drawBg(false));
-    hit.on('pointerdown', onClick);
+    hit.on('pointerdown', () => {
+      (this.registry.get('audio') as import('@/systems/AudioSystem').AudioSystem | null)?.playButtonClick();
+      onClick();
+    });
   }
 
   // ── Navigate to Squad Select ──────────────────────────────────────────

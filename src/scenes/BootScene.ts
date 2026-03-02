@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
 import { MusicSystem } from '@/systems/MusicSystem';
+import { AudioSystem } from '@/systems/AudioSystem';
+import relicsData from '@/data/relics.json';
+import cursesData from '@/data/curses.json';
+import { relicTextureKey } from '@/ui/RelicIcon';
 
 interface CharAnim {
   name: string;
@@ -273,9 +277,34 @@ export class BootScene extends Phaser.Scene {
       icon_tab_heroes:   `${iconBase}/skill/skill_010.png`,
       icon_tab_bestiary: `${iconBase}/skill/skill_012.png`,
       icon_tab_relics:   `${iconBase}/accessory/accessory_01.png`,
+      icon_tab_history:  `${iconBase}/quest/quest_005.png`,
     };
     for (const [key, path] of Object.entries(ICON_MAP)) {
       this.load.image(key, path);
+    }
+
+    // ── UI icons (Area730) ──────────────────────────────────────────────────
+    const uiIconBase = 'sprites/area730/icons';
+    const UI_ICONS: Record<string, string> = {
+      ui_camp:     `${uiIconBase}/forge_ic.png`,
+      ui_codex:    `${uiIconBase}/messages_letter_ic.png`,
+      ui_continue: `${uiIconBase}/play_arrow_right_ic.png`,
+      ui_fresh:    `${uiIconBase}/sword_shield_ic.png`,
+      ui_settings: `${uiIconBase}/settings_ic_1.png`,
+      ui_coin:     `${uiIconBase}/coin_ic_1.png`,
+      ui_gem:      `${uiIconBase}/gems_ic.png`,
+      ui_star:     `${uiIconBase}/star_ic_1.png`,
+    };
+    for (const [key, path] of Object.entries(UI_ICONS)) {
+      this.load.image(key, path);
+    }
+
+    // ── Relic & curse icon sprites ────────────────────────────────────────────
+    const allRelicData = [...relicsData, ...cursesData] as { id: string; icon?: string }[];
+    for (const r of allRelicData) {
+      if (r.icon) {
+        this.load.image(relicTextureKey(r.id), `${iconBase}/${r.icon}`);
+      }
     }
   }
 
@@ -296,7 +325,7 @@ export class BootScene extends Phaser.Scene {
     }
 
     // Set nearest-neighbor filtering on icon textures for crisp pixel art
-    const iconKeys = this.textures.getTextureKeys().filter(k => k.startsWith('icon_'));
+    const iconKeys = this.textures.getTextureKeys().filter(k => k.startsWith('icon_') || k.startsWith('relic_') || k.startsWith('ui_'));
     for (const key of iconKeys) {
       const src = this.textures.get(key).getSourceImage();
       if (src instanceof HTMLImageElement) {
@@ -305,9 +334,11 @@ export class BootScene extends Phaser.Scene {
       this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
 
-    // Instantiate MusicSystem once and share via registry (cross-scene singleton)
+    // Instantiate MusicSystem + AudioSystem once and share via registry (cross-scene singletons)
     const music = new MusicSystem();
     this.registry.set('music', music);
+    const audio = new AudioSystem();
+    this.registry.set('audio', audio);
 
     // Wait for Google Fonts to load before starting first scene
     // (Phaser canvas text caches the font on first render — must be ready)

@@ -14,6 +14,7 @@ import { getGlobalStats } from '@/systems/RunHistory';
 import { getMapById } from '@/data/maps/index';
 import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildBackButton, buildCurrencyBar } from '@/ui/TopBar';
+import { createRelicIcon } from '@/ui/RelicIcon';
 import { Hero } from '@/entities/Hero';
 import { Enemy } from '@/entities/Enemy';
 
@@ -437,13 +438,18 @@ export class CodexScene extends Phaser.Scene {
         iconG.fillRoundedRect(iconX - 16, cy - 16, 32, 32, 4);
         iconG.lineStyle(1, isCurse ? 0x8a2020 : rarityCol, 0.5);
         iconG.strokeRoundedRect(iconX - 16, cy - 16, 32, 32, 4);
-        // Curse skull or relic diamond symbol
         container.add(iconG);
-        container.add(
-          this.add.text(iconX, cy, isCurse ? '\u2620' : '\u25c6', {
-            fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: isCurse ? '#aa3333' : '#' + rarityCol.toString(16).padStart(6, '0'),
-          }).setOrigin(0.5),
-        );
+        // Sprite icon or Unicode fallback
+        const relicImg = createRelicIcon(this, relic, iconX, cy, 26);
+        if (relicImg) {
+          container.add(relicImg);
+        } else {
+          container.add(
+            this.add.text(iconX, cy, isCurse ? '\u2620' : '\u25c6', {
+              fontSize: '16px', fontFamily: 'Nunito, sans-serif', color: isCurse ? '#aa3333' : '#' + rarityCol.toString(16).padStart(6, '0'),
+            }).setOrigin(0.5),
+          );
+        }
       } else {
         iconG.fillStyle(0x111111, 1);
         iconG.fillRoundedRect(iconX - 16, cy - 16, 32, 32, 4);
@@ -512,7 +518,7 @@ export class CodexScene extends Phaser.Scene {
       ['Enemies Slain',   `${stats.totalEnemiesKilled}`],
       ['Blocks Destroyed',`${stats.totalBlocksDestroyed}`],
       ['Gold Earned',     `${stats.totalGoldEarned}`],
-      ['Best Launch DMG', `${stats.bestDamageInOneLaunch}`],
+      ['Best Launch DMG', `${Math.round(stats.bestDamageInOneLaunch)}`],
     ];
 
     const gridCols = 4, gridGapX = 14, gridGapY = 8;
@@ -565,18 +571,20 @@ export class CodexScene extends Phaser.Scene {
       }).setOrigin(0.5, 0));
       cy += 30;
     } else {
-      const cardW2 = scrollW - 20, cardH2 = 64, cardGap = 8;
+      const cardW2 = scrollW - 20, cardH2 = 64, floorsExtraH = 20, cardGap = 8;
 
       for (const run of stats.recentRuns) {
+        const hasFloors = (run as { floorsCompleted?: number }).floorsCompleted !== undefined;
+        const thisCardH = hasFloors ? cardH2 + floorsExtraH : cardH2;
         const rcx = scrollW / 2;
 
         const runBg = this.add.graphics();
         const bgCol = run.victory ? 0x0e1a12 : 0x1a0e0e;
         const borderCol = run.victory ? 0x2ecc71 : 0xe74c3c;
         runBg.fillStyle(bgCol, 1);
-        runBg.fillRoundedRect(rcx - cardW2 / 2, cy, cardW2, cardH2, 6);
+        runBg.fillRoundedRect(rcx - cardW2 / 2, cy, cardW2, thisCardH, 6);
         runBg.lineStyle(1, borderCol, 0.4);
-        runBg.strokeRoundedRect(rcx - cardW2 / 2, cy, cardW2, cardH2, 6);
+        runBg.strokeRoundedRect(rcx - cardW2 / 2, cy, cardW2, thisCardH, 6);
         container.add(runBg);
 
         // Victory/Defeat badge
@@ -611,7 +619,9 @@ export class CodexScene extends Phaser.Scene {
         });
 
         // Stats summary
-        const summary = `${run.nodesCleared} nodes  |  ${run.gold}g  |  ${run.relicCount} relics`;
+        const nodeWord = run.nodesCleared === 1 ? 'node' : 'nodes';
+        const relicWord = run.relicCount === 1 ? 'relic' : 'relics';
+        const summary = `${run.nodesCleared} ${nodeWord}  |  ${run.gold}g  |  ${run.relicCount} ${relicWord}`;
         container.add(this.add.text(rcx + cardW2 / 2 - 14, cy + 38, summary, {
           fontSize: '13px', fontFamily: 'Nunito, sans-serif', color: '#5a6a7a',
         }).setOrigin(1, 0));
@@ -624,7 +634,7 @@ export class CodexScene extends Phaser.Scene {
           }).setOrigin(0.5, 0));
         }
 
-        cy += cardH2 + cardGap;
+        cy += thisCardH + cardGap;
       }
     }
 

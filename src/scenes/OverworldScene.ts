@@ -8,6 +8,7 @@ import { getMapById } from '@/data/maps/index';
 import { finalizeRun } from '@/systems/RunHistory';
 import { getShards } from '@/systems/MetaState';
 import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
+import { createRelicIcon } from '@/ui/RelicIcon';
 import { Hero } from '@/entities/Hero';
 
 const MAP_SPREAD = 2.0;       // Horizontal spread factor for node positions
@@ -909,6 +910,7 @@ export class OverworldScene extends Phaser.Scene {
   private onNodeClick(nodeId: number) {
     const node = this.nodeMap.find(n => n.id === nodeId);
     if (!node) return;
+    (this.registry.get('audio') as import('@/systems/AudioSystem').AudioSystem | null)?.playNodeSelect();
     selectNode(nodeId); // locks sibling branches
 
     const c = this.nodeContainers.get(nodeId);
@@ -986,12 +988,17 @@ export class OverworldScene extends Phaser.Scene {
       drawBadge(false);
       this.relicRow.add(badge);
 
-      // Icon symbol
-      const iconText = this.add.text(badgeX + BADGE / 2, 0, iconChar, {
-        fontSize: '18px', fontFamily: 'Nunito, sans-serif',
-        color: colHex, stroke: '#000', strokeThickness: 1,
-      }).setOrigin(0.5);
-      this.relicRow.add(iconText);
+      // Icon — sprite if available, else Unicode fallback
+      const relicImg = createRelicIcon(this, relic, badgeX + BADGE / 2, 0, 30);
+      if (relicImg) {
+        this.relicRow.add(relicImg);
+      } else {
+        const iconText = this.add.text(badgeX + BADGE / 2, 0, iconChar, {
+          fontSize: '18px', fontFamily: 'Nunito, sans-serif',
+          color: colHex, stroke: '#000', strokeThickness: 1,
+        }).setOrigin(0.5);
+        this.relicRow.add(iconText);
+      }
 
       // Hit area for click + hover
       const hitRect = this.add.rectangle(
@@ -1072,10 +1079,15 @@ export class OverworldScene extends Phaser.Scene {
     iconGfx.strokeCircle(PW / 2, 78, 28);
     panel.add(iconGfx);
 
-    panel.add(this.add.text(PW / 2, 78, iconChar, {
-      fontSize: '22px', fontFamily: 'Nunito, sans-serif',
-      color: colHex, stroke: '#000', strokeThickness: 2,
-    }).setOrigin(0.5));
+    const detailIcon = createRelicIcon(this, relic, PW / 2, 78, 36);
+    if (detailIcon) {
+      panel.add(detailIcon);
+    } else {
+      panel.add(this.add.text(PW / 2, 78, iconChar, {
+        fontSize: '22px', fontFamily: 'Nunito, sans-serif',
+        color: colHex, stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5));
+    }
 
     // Relic name
     panel.add(this.add.text(PW / 2, 122, relic.name, {
@@ -1128,13 +1140,13 @@ export class OverworldScene extends Phaser.Scene {
     switch (effect) {
       case 'FLAT_HP':              return `${sign}${v} Max HP`;
       case 'COOLDOWN_REDUCE':      return `${v > 0 ? '-' : '+'}${Math.abs(v) / 1000}s cooldown`;
-      case 'MAGE_AOE_RADIUS':      return `${sign}${v}px AoE radius`;
+      case 'MAGE_AOE_RADIUS':      return `${sign}${v} AoE radius`;
       case 'WARRIOR_IMPACT_BONUS': return `${sign}${Math.round(v * 100)}% impact`;
       case 'RANGER_ARROW_COUNT':   return `${sign}${v} arrow${Math.abs(v) !== 1 ? 's' : ''}`;
-      case 'PRIEST_HEAL_BONUS':    return `${sign}${v}px heal range`;
+      case 'PRIEST_HEAL_BONUS':    return `${sign}${v} heal range`;
       case 'FLAT_COMBAT_DAMAGE':   return `${sign}${v} combat damage`;
       case 'COMBAT_SPEED_MULT':    return `${Math.round((1 - v) * 100)}% faster attacks`;
-      case 'MAX_DRAG_BONUS':       return `${sign}${v}px sling range`;
+      case 'MAX_DRAG_BONUS':       return `${sign}${v} sling range`;
       case 'GOLD_ON_WIN':          return `${sign}${v}g per win`;
       case 'GOLD_ON_KILL':         return `${sign}${v}g per kill`;
       case 'AIR_FRICTION_REDUCE':  return `${sign}${Math.round(v * 100)}% less air drag`;
@@ -1144,7 +1156,7 @@ export class OverworldScene extends Phaser.Scene {
       case 'IMPACT_DAMAGE_BONUS':  return `${sign}${Math.round(v * 100)}% impact damage`;
       case 'DEATH_SAVE':           return `Cheat death ${v}x`;
       case 'EXTRA_LAUNCH':         return `${sign}${v} extra launch`;
-      case 'WARRIOR_KNOCKBACK':    return `${sign}${v}px knockback`;
+      case 'WARRIOR_KNOCKBACK':    return `${sign}${v} knockback`;
       case 'MAGE_CHAIN':           return `Chain to ${v} targets`;
       case 'RANGER_POISON':        return `${v} poison/sec`;
       case 'PRIEST_RESURRECT':     return `Revive at ${Math.round(v * 100)}% HP`;

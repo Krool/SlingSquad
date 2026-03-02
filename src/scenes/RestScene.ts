@@ -303,6 +303,7 @@ export class RestScene extends Phaser.Scene {
         this.tweens.add({ targets: container, y: cy, duration: 120, ease: 'Power2' });
       });
       container.on('pointerdown', () => {
+        (this.registry.get('audio') as import('@/systems/AudioSystem').AudioSystem | null)?.playButtonClick();
         container.disableInteractive();
         const result = opt.action();
         this.showResult(result);

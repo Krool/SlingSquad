@@ -305,6 +305,7 @@ export class EventScene extends Phaser.Scene {
         this.tweens.add({ targets: container, x: cx, duration: 100 });
       });
       container.on('pointerdown', () => {
+        (this.registry.get('audio') as import('@/systems/AudioSystem').AudioSystem | null)?.playButtonClick();
         container.disableInteractive();
         this.processOutcome(choice.outcome);
       });

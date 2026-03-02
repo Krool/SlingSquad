@@ -6,7 +6,8 @@
     "effect": "FLAT_HP",
     "value": 20,
     "cost": 30,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "shield/shield_01.png"
   },
   {
     "id": "war_drum",
@@ -15,7 +16,8 @@
     "effect": "COOLDOWN_REDUCE",
     "value": 300,
     "cost": 35,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "quest/quest_003.png"
   },
   {
     "id": "explosion_rune",
@@ -24,7 +26,8 @@
     "effect": "MAGE_AOE_RADIUS",
     "value": 30,
     "cost": 30,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "skill/skill_006.png"
   },
   {
     "id": "steel_boots",
@@ -33,7 +36,8 @@
     "effect": "WARRIOR_IMPACT_BONUS",
     "value": 0.25,
     "cost": 35,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "boot/boot_01.png"
   },
   {
     "id": "quiver",
@@ -42,7 +46,8 @@
     "effect": "RANGER_ARROW_COUNT",
     "value": 2,
     "cost": 35,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "weapon/weapon_arrow_01.png"
   },
   {
     "id": "tome_of_healing",
@@ -51,7 +56,8 @@
     "effect": "PRIEST_HEAL_BONUS",
     "value": 40,
     "cost": 40,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "skill/skill_008.png"
   },
   {
     "id": "blood_crystal",
@@ -60,7 +66,8 @@
     "effect": "FLAT_COMBAT_DAMAGE",
     "value": 4,
     "cost": 35,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "material/material_005.png"
   },
   {
     "id": "banner_of_rage",
@@ -69,7 +76,8 @@
     "effect": "COMBAT_SPEED_MULT",
     "value": 0.85,
     "cost": 45,
-    "rarity": "rare"
+    "rarity": "rare",
+    "icon": "quest/quest_001.png"
   },
   {
     "id": "giant_sling",
@@ -78,7 +86,8 @@
     "effect": "MAX_DRAG_BONUS",
     "value": 25,
     "cost": 30,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "weapon/weapon_bow_01.png"
   },
   {
     "id": "lucky_coin",
@@ -87,7 +96,8 @@
     "effect": "GOLD_ON_WIN",
     "value": 3,
     "cost": 25,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "drops/drops_03.png"
   },
   {
     "id": "featherweight_charm",
@@ -96,7 +106,8 @@
     "effect": "AIR_FRICTION_REDUCE",
     "value": 0.20,
     "cost": 30,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "accessory/accessory_12.png"
   },
   {
     "id": "thick_hide",
@@ -105,7 +116,8 @@
     "effect": "DAMAGE_REDUCTION",
     "value": 0.15,
     "cost": 35,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "armor/armor_01.png"
   },
   {
     "id": "thorn_mail",
@@ -114,7 +126,8 @@
     "effect": "THORNS",
     "value": 5,
     "cost": 35,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "armor/armor_03.png"
   },
   {
     "id": "critical_eye",
@@ -123,7 +136,8 @@
     "effect": "CRIT_CHANCE",
     "value": 0.15,
     "cost": 40,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "accessory/accessory_08.png"
   },
   {
     "id": "impact_rune",
@@ -132,7 +146,8 @@
     "effect": "IMPACT_DAMAGE_BONUS",
     "value": 0.20,
     "cost": 40,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "skill/skill_013.png"
   },
   {
     "id": "phoenix_feather",
@@ -141,7 +156,8 @@
     "effect": "DEATH_SAVE",
     "value": 1,
     "cost": 50,
-    "rarity": "rare"
+    "rarity": "rare",
+    "icon": "accessory/accessory_24.png"
   },
   {
     "id": "fifth_sling",
@@ -150,7 +166,8 @@
     "effect": "EXTRA_LAUNCH",
     "value": 1,
     "cost": 55,
-    "rarity": "rare"
+    "rarity": "rare",
+    "icon": "weapon/weapon_bow_03.png"
   },
   {
     "id": "gold_magnet",
@@ -159,7 +176,8 @@
     "effect": "GOLD_ON_KILL",
     "value": 2,
     "cost": 35,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "drops/drops_01.png"
   },
   {
     "id": "warrior_charge",
@@ -168,7 +186,8 @@
     "effect": "WARRIOR_KNOCKBACK",
     "value": 80,
     "cost": 40,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "weapon/weapon_sword_01.png"
   },
   {
     "id": "chain_lightning",
@@ -177,7 +196,8 @@
     "effect": "MAGE_CHAIN",
     "value": 2,
     "cost": 45,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "skill/skill_007.png"
   },
   {
     "id": "poison_arrows",
@@ -186,7 +206,8 @@
     "effect": "RANGER_POISON",
     "value": 8,
     "cost": 40,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "weapon/weapon_arrow_03.png"
   },
   {
     "id": "resurrection_tome",
@@ -195,7 +216,8 @@
     "effect": "PRIEST_RESURRECT",
     "value": 0.50,
     "cost": 50,
-    "rarity": "rare"
+    "rarity": "rare",
+    "icon": "quest/quest_005.png"
   },
   {
     "id": "bard_encore",
@@ -204,7 +226,8 @@
     "effect": "BARD_CHARM_BONUS",
     "value": 2000,
     "cost": 40,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "accessory/accessory_20.png"
   },
   {
     "id": "stone_breaker",
@@ -213,7 +236,8 @@
     "effect": "STONE_DAMAGE_BONUS",
     "value": 0.30,
     "cost": 40,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "weapon/weapon_mace_01.png"
   },
   {
     "id": "berserker_helm",
@@ -222,7 +246,8 @@
     "effect": "LOW_HP_DAMAGE",
     "value": 2.0,
     "cost": 45,
-    "rarity": "rare"
+    "rarity": "rare",
+    "icon": "helmet/helmet_01.png"
   },
   {
     "id": "wolf_totem",
@@ -231,7 +256,8 @@
     "effect": "DRUID_WOLF_BONUS",
     "value": 1,
     "cost": 40,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "accessory/accessory_30.png"
   },
   {
     "id": "shadow_cloak",
@@ -240,7 +266,8 @@
     "effect": "ROGUE_PIERCE_BONUS",
     "value": 1,
     "cost": 40,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "armor/armor_05.png"
   },
   {
     "id": "campfire_kit",
@@ -249,7 +276,8 @@
     "effect": "REST_HP_BONUS",
     "value": 15,
     "cost": 30,
-    "rarity": "common"
+    "rarity": "common",
+    "icon": "food/food_01.png"
   },
   {
     "id": "battle_medic",
@@ -258,7 +286,8 @@
     "effect": "HEAL_ON_KILL",
     "value": 5,
     "cost": 35,
-    "rarity": "uncommon"
+    "rarity": "uncommon",
+    "icon": "potion/potion_003.png"
   },
   {
     "id": "guardian_angel",
@@ -267,6 +296,7 @@
     "effect": "REVIVE_COOLDOWN_REDUCE",
     "value": 1,
     "cost": 45,
-    "rarity": "rare"
+    "rarity": "rare",
+    "icon": "accessory/accessory_14.png"
   }
 ]
