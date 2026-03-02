@@ -53,6 +53,9 @@ export function getFirebaseUid(): string {
   return _auth?.currentUser?.uid ?? '';
 }
 
+/** Get the Firestore instance (null if not initialized). */
+export function getFirestoreDb(): any { return _db; }
+
 /**
  * Submit (or update) a score in the leaderboard.
  * Only updates if the new score is higher than the existing one.
@@ -61,10 +64,17 @@ export async function submitScore(profile: {
   uid: string; name: string; avatarKey: string;
   bestScore: number; bestAscension: number; bestModifiers: string[]; bestFloor: number;
 }): Promise<boolean> {
-  if (!_db || !profile.uid) return false;
+  // Ensure Firebase is initialized before submitting
+  if (!_db) {
+    const ok = await initFirebase();
+    if (!ok || !_db) return false;
+  }
+  // Always use the actual Firebase auth UID for the document ID (must match security rules)
+  const authUid = getFirebaseUid();
+  if (!authUid) return false;
   try {
     const { doc, getDoc, setDoc } = await import('firebase/firestore');
-    const ref = doc(_db, 'leaderboard', profile.uid);
+    const ref = doc(_db, 'leaderboard', authUid);
     const existing = await getDoc(ref);
 
     if (existing.exists() && existing.data().score >= profile.bestScore) {
@@ -72,7 +82,7 @@ export async function submitScore(profile: {
     }
 
     await setDoc(ref, {
-      uid: profile.uid,
+      uid: authUid,
       name: profile.name,
       avatarKey: profile.avatarKey,
       score: profile.bestScore,
@@ -105,12 +115,17 @@ export async function fetchTopScores(limit = 10): Promise<LeaderboardEntry[] | n
   }
 }
 
-/** Fetch the player's rank (1-indexed). Returns null on failure. */
-export async function fetchPlayerRank(uid: string): Promise<number | null> {
-  if (!_db || !uid) return null;
+/** Fetch the player's rank (1-indexed). Uses Firebase auth UID if none provided. */
+export async function fetchPlayerRank(uid?: string): Promise<number | null> {
+  const resolvedUid = uid || getFirebaseUid();
+  if (!resolvedUid) return null;
+  if (!_db) {
+    const ok = await initFirebase();
+    if (!ok || !_db) return null;
+  }
   try {
     const { doc, getDoc, collection, query, where, getCountFromServer } = await import('firebase/firestore');
-    const playerDoc = await getDoc(doc(_db, 'leaderboard', uid));
+    const playerDoc = await getDoc(doc(_db, 'leaderboard', resolvedUid));
     if (!playerDoc.exists()) return null;
 
     const playerScore = playerDoc.data().score;

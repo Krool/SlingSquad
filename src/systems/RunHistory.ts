@@ -42,6 +42,8 @@ function _ensure(): GlobalStats {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       _stats = raw ? JSON.parse(raw) : defaultStats();
+      // Fix legacy saves where Infinity serialized to null
+      if (_stats!.fastestBattleMs == null) _stats!.fastestBattleMs = Number.MAX_SAFE_INTEGER;
     } catch {
       _stats = defaultStats();
     }
@@ -58,7 +60,7 @@ function defaultStats(): GlobalStats {
     totalBlocksDestroyed: 0,
     totalGoldEarned: 0,
     bestDamageInOneLaunch: 0,
-    fastestBattleMs: Infinity,
+    fastestBattleMs: Number.MAX_SAFE_INTEGER,
     bestScore: 0,
     recentRuns: [],
   };

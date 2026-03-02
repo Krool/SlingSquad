@@ -375,7 +375,7 @@ export class ProfileScene extends Phaser.Scene {
 
       // Fetch async
       fetchTopScores(10).then((entries: LeaderboardEntry[] | null) => {
-        if (!this._scrollPanel || !container.active) return;
+        if (!this.scene.isActive() || !this._scrollPanel || !container.active) return;
         loadingText.destroy();
 
         if (!entries || entries.length === 0) {
@@ -414,8 +414,8 @@ export class ProfileScene extends Phaser.Scene {
         });
 
         // Player rank
-        fetchPlayerRank(profile.uid).then((rank: number | null) => {
-          if (!this._scrollPanel || !container.active || rank === null) return;
+        fetchPlayerRank().then((rank: number | null) => {
+          if (!this.scene.isActive() || !this._scrollPanel || !container.active || rank === null) return;
           lbY += 8;
           const divG = this.add.graphics();
           divG.lineStyle(1, ACCENT, 0.15);

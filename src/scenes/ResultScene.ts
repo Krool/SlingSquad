@@ -9,7 +9,6 @@ import { checkAchievements } from '@/systems/AchievementSystem';
 import { calculateRunScore, type ScoreBreakdown } from '@/systems/ScoreSystem';
 import { recordDailyScore, getTodayString } from '@/systems/DailyChallenge';
 import { getSkillOptions, type SkillDef } from '@/data/skills';
-import nodesData from '@/data/nodes.json';
 import { Hero } from '@/entities/Hero';
 
 interface HeroBattleStats {
@@ -79,8 +78,7 @@ export class ResultScene extends Phaser.Scene {
     try {
       const run = getRunState();
       const nodesCompleted = run.completedNodeIds.size;
-      const nodes = nodesData.nodes as NodeDef[];
-      const bossNode = nodes.find((n: NodeDef) => n.type === 'BOSS');
+      const bossNode = run.nodeMap.find((n: NodeDef) => n.type === 'BOSS');
       const killedBoss = bossNode ? run.completedNodeIds.has(bossNode.id) : false;
       shardsEarned = calcShardsEarned({ nodesCompleted, killedBoss, victory, ascensionLevel: run.ascensionLevel });
       // Add bonus shards from TREASURE node shard crystals
@@ -192,9 +190,12 @@ export class ResultScene extends Phaser.Scene {
       this.tweens.add({ targets: rt, alpha: 1, duration: 350, delay: 780 });
     }
 
+    // Track vertical cursor so elements don't overlap
+    let cursorY = reason ? 126 : 106;
+
     // Gold + shards on one compact row (each in its own color)
     if (gold > 0 || shards > 0) {
-      const rewardY = reason ? 130 : 110;
+      const rewardY = cursorY;
       const rc = this.add.container(cx, rewardY).setDepth(15).setAlpha(0).setScale(1.2);
       const items: Phaser.GameObjects.Text[] = [];
       if (gold > 0) {
@@ -221,21 +222,22 @@ export class ResultScene extends Phaser.Scene {
         targets: rc, alpha: 1, scaleX: 1, scaleY: 1,
         duration: 450, ease: 'Back.easeOut', delay: 920,
       });
+      cursorY += 28;
     }
 
     // Treasure relic name display
     if (relicName) {
-      const relicY = (gold > 0 || shards > 0) ? (reason ? 158 : 138) : (reason ? 130 : 110);
-      const rt2 = this.add.text(cx, relicY, `Relic found: ${relicName}`, {
+      const rt2 = this.add.text(cx, cursorY, `Relic found: ${relicName}`, {
         fontSize: '20px', fontFamily: 'Nunito, sans-serif', color: '#f1c40f',
         stroke: '#000', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(15).setAlpha(0);
       this.tweens.add({ targets: rt2, alpha: 1, duration: 350, delay: 1020 });
+      cursorY += 26;
     }
 
     // Score display
     if (scoreBreakdown && scoreBreakdown.final > 0) {
-      const scoreY = 160;
+      const scoreY = cursorY + 4;
       const scoreText = `Score: ${scoreBreakdown.final.toLocaleString()}`;
       const st = this.add.text(cx, scoreY, scoreText, {
         fontSize: '28px', fontFamily: 'Knights Quest, Nunito, sans-serif',
@@ -257,7 +259,9 @@ export class ResultScene extends Phaser.Scene {
       }
     }
 
-    this.buildStatsTable(cx, 195, 880, heroStats, true);
+    // Stats table starts below all header content
+    const tableTop = Math.max(195, cursorY + 40);
+    this.buildStatsTable(cx, tableTop, 880, heroStats, true);
 
     // If there are pending level-ups, show them before the continue button
     if (this.levelUpQueue.length > 0) {

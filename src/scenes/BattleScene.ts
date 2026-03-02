@@ -1539,8 +1539,8 @@ export class BattleScene extends Phaser.Scene {
       coinLayout = layout.filter((_, i) => i % 2 === 0);
     }
 
-    for (const [x, y, value] of coinLayout) {
-      this.coins.push(new Coin(this, x, y, value));
+    for (const [x, y] of coinLayout) {
+      this.coins.push(new Coin(this, x, y, 5));
     }
   }
 

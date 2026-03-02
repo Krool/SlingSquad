@@ -624,7 +624,7 @@ export class SquadSelectScene extends Phaser.Scene {
   private buildRunConfig() {
     const cx = GAME_WIDTH / 2;
     const panelY = 560;
-    const pw = 620, ph = 80, pr = 8;
+    const pw = 700, ph = 80, pr = 8;
 
     // Panel background — centered below roster
     const panel = this.add.graphics().setDepth(10);
@@ -633,8 +633,12 @@ export class SquadSelectScene extends Phaser.Scene {
     panel.lineStyle(1, 0x3a5070, 0.45);
     panel.strokeRoundedRect(cx - pw / 2, panelY, pw, ph, pr);
 
+    // Column centers — map gets more room on the left
+    const divL = cx - 100;   // left divider
+    const divR = cx + 100;   // right divider
+
     // ── Map selection (left column) ──
-    const mapCX = cx - 200;
+    const mapCX = cx - pw / 4 + 10;
     this.add.text(mapCX, panelY + 6, 'MAP', {
       fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
@@ -642,25 +646,34 @@ export class SquadSelectScene extends Phaser.Scene {
     const maps = getAllMaps();
     let mapIdx = maps.findIndex(m => m.id === this._selectedMapId);
     if (mapIdx < 0) mapIdx = 0;
-    const mapLabel = this.add.text(mapCX, panelY + 24, maps[mapIdx].name, {
-      fontSize: '17px', fontFamily: 'Nunito, sans-serif', color: '#f1c40f',
+    const mapTextMaxW = 140;
+    const mapLabel = this.add.text(mapCX, panelY + 26, maps[mapIdx].name, {
+      fontSize: '15px', fontFamily: 'Nunito, sans-serif', color: '#f1c40f',
       stroke: '#000', strokeThickness: 2,
+      maxLines: 1,
     }).setOrigin(0.5, 0).setDepth(11);
+
+    const clampMapLabel = () => {
+      mapLabel.setScale(1);
+      if (mapLabel.width > mapTextMaxW) mapLabel.setScale(mapTextMaxW / mapLabel.width, 1);
+    };
+    clampMapLabel();
 
     const updateMap = () => {
       this._selectedMapId = maps[mapIdx].id;
       mapLabel.setText(maps[mapIdx].name);
+      clampMapLabel();
     };
-    this.buildSmallArrowBtn(mapCX - 80, panelY + 24, '\u25c0', () => {
+    this.buildSmallArrowBtn(mapCX - 100, panelY + 24, '\u25c0', () => {
       mapIdx = (mapIdx - 1 + maps.length) % maps.length; updateMap();
     });
-    this.buildSmallArrowBtn(mapCX + 80, panelY + 24, '\u25b6', () => {
+    this.buildSmallArrowBtn(mapCX + 100, panelY + 24, '\u25b6', () => {
       mapIdx = (mapIdx + 1) % maps.length; updateMap();
     });
 
     // Subtle divider
     panel.lineStyle(1, 0x2a3a50, 0.4);
-    panel.lineBetween(cx - 80, panelY + 8, cx - 80, panelY + ph - 8);
+    panel.lineBetween(divL, panelY + 8, divL, panelY + ph - 8);
 
     // ── Ascension (center column) ──
     const ascCX = cx;
@@ -671,7 +684,7 @@ export class SquadSelectScene extends Phaser.Scene {
     const maxAsc = getUnlockedAscension();
     const locked = maxAsc === 0;
 
-    // Color by ascension level: white(0), yellow(1-3), orange(4-6), red(7-9), purple(10)
+    // Color by ascension level: grey(0), yellow(1-3), orange(4-6), red(7-9), purple(10)
     const ascColor = (lv: number): string => {
       if (lv === 0) return '#5a7a9a';
       if (lv <= 3)  return '#f1c40f';
@@ -681,14 +694,14 @@ export class SquadSelectScene extends Phaser.Scene {
     };
 
     const ascLabelText = (lv: number): string => {
-      if (locked) return '\uD83D\uDD12 Locked';
+      if (locked) return 'Locked';
       if (lv === 0) return '0 — Off';
       const info = ASCENSION_LEVELS[lv - 1];
       return info ? `${lv} — ${info.name}` : `${lv}`;
     };
 
-    const ascLabel = this.add.text(ascCX, panelY + 24, ascLabelText(this._ascensionLevel), {
-      fontSize: '16px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
+    const ascLabel = this.add.text(ascCX, panelY + 26, ascLabelText(this._ascensionLevel), {
+      fontSize: '15px', fontStyle: 'bold', fontFamily: 'Nunito, sans-serif',
       color: locked ? '#3a4a5a' : ascColor(this._ascensionLevel),
       stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5, 0).setDepth(11);
@@ -730,13 +743,13 @@ export class SquadSelectScene extends Phaser.Scene {
       rightArrowGfx.forEach(o => (o as unknown as { setVisible(v: boolean): void }).setVisible(showRight));
     };
 
-    leftArrowGfx.push(...this.buildSmallArrowBtnTracked(ascCX - 50, panelY + 24, '\u25c0', () => {
+    leftArrowGfx.push(...this.buildSmallArrowBtnTracked(ascCX - 68, panelY + 24, '\u25c0', () => {
       if (locked) return;
       this._ascensionLevel = Math.max(0, this._ascensionLevel - 1);
       updateAsc();
       updateArrowVisibility();
     }));
-    rightArrowGfx.push(...this.buildSmallArrowBtnTracked(ascCX + 50, panelY + 24, '\u25b6', () => {
+    rightArrowGfx.push(...this.buildSmallArrowBtnTracked(ascCX + 68, panelY + 24, '\u25b6', () => {
       if (locked) return;
       this._ascensionLevel = Math.min(maxAsc, this._ascensionLevel + 1);
       updateAsc();
@@ -745,10 +758,10 @@ export class SquadSelectScene extends Phaser.Scene {
     updateArrowVisibility();
 
     // Subtle divider
-    panel.lineBetween(cx + 80, panelY + 8, cx + 80, panelY + ph - 8);
+    panel.lineBetween(divR, panelY + 8, divR, panelY + ph - 8);
 
     // ── Modifier toggles (right column) ──
-    const modCX = cx + 200;
+    const modCX = cx + pw / 4 - 10;
     this.add.text(modCX, panelY + 6, 'MODIFIERS', {
       fontSize: '14px', fontFamily: 'Nunito, sans-serif', color: '#4a6a8a', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);

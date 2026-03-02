@@ -6,17 +6,17 @@
     {
       "id": 0, "type": "BATTLE", "name": "Mountain Pass",
       "x": 100, "y": 310, "next": [1, 2],
-      "enemies": ["GRUNT", "FROST_ARCHER"], "gold": 18, "difficulty": 1
+      "enemies": ["GRUNT", "FROST_ARCHER"], "gold": 5, "difficulty": 1
     },
     {
       "id": 1, "type": "BATTLE", "name": "Frozen Watchtower",
       "x": 250, "y": 175, "next": [3],
-      "enemies": ["GRUNT", "ICE_MAGE", "FROST_ARCHER"], "gold": 24, "difficulty": 2
+      "enemies": ["GRUNT", "ICE_MAGE", "FROST_ARCHER"], "gold": 6, "difficulty": 2
     },
     {
       "id": 2, "type": "BATTLE", "name": "Ice Cave",
       "x": 250, "y": 455, "next": [4],
-      "enemies": ["YETI", "FROST_ARCHER"], "gold": 22, "difficulty": 2
+      "enemies": ["YETI", "FROST_ARCHER"], "gold": 5, "difficulty": 2
     },
     {
       "id": 3, "type": "SHOP", "name": "Mountain Trader",
@@ -29,12 +29,12 @@
     {
       "id": 5, "type": "BATTLE", "name": "Avalanche Pass",
       "x": 540, "y": 310, "next": [6, 7],
-      "enemies": ["YETI", "ICE_MAGE", "FROST_ARCHER", "GRUNT"], "gold": 32, "difficulty": 3
+      "enemies": ["YETI", "ICE_MAGE", "FROST_ARCHER", "GRUNT"], "gold": 8, "difficulty": 3
     },
     {
       "id": 6, "type": "ELITE", "name": "Frost Giant's Lair",
       "x": 680, "y": 175, "next": [8],
-      "enemies": ["YETI", "YETI", "ICE_MAGE", "FROST_ARCHER"], "gold": 42, "difficulty": 3
+      "enemies": ["YETI", "YETI", "ICE_MAGE", "FROST_ARCHER"], "gold": 10, "difficulty": 3
     },
     {
       "id": 7, "type": "TREASURE", "name": "Frozen Vault",
@@ -52,7 +52,7 @@
     {
       "id": 10, "type": "BATTLE", "name": "Glacier Bridge",
       "x": 940, "y": 310, "next": [11, 12],
-      "enemies": ["YETI", "ICE_MAGE", "FROST_ARCHER", "GRUNT", "HEALER"], "gold": 38, "difficulty": 4
+      "enemies": ["YETI", "ICE_MAGE", "FROST_ARCHER", "GRUNT", "HEALER"], "gold": 10, "difficulty": 4
     },
     {
       "id": 11, "type": "EVENT", "name": "Oracle's Cave",
@@ -61,7 +61,7 @@
     {
       "id": 12, "type": "BATTLE", "name": "Summit Assault",
       "x": 1050, "y": 420, "next": [14],
-      "enemies": ["YETI", "ICE_MAGE", "FROST_ARCHER", "FROST_ARCHER"], "gold": 35, "difficulty": 3
+      "enemies": ["YETI", "ICE_MAGE", "FROST_ARCHER", "FROST_ARCHER"], "gold": 9, "difficulty": 3
     },
     {
       "id": 13, "type": "SHOP", "name": "Peak Bazaar",
@@ -70,12 +70,12 @@
     {
       "id": 14, "type": "BATTLE", "name": "Frozen Throne",
       "x": 1140, "y": 420, "next": [15],
-      "enemies": ["YETI", "YETI", "ICE_MAGE", "FROST_ARCHER", "HEALER"], "gold": 48, "difficulty": 4
+      "enemies": ["YETI", "YETI", "ICE_MAGE", "FROST_ARCHER", "HEALER"], "gold": 12, "difficulty": 4
     },
     {
       "id": 15, "type": "BOSS", "name": "The Frost Wyrm",
       "x": 1220, "y": 310, "next": [],
-      "enemies": ["YETI", "YETI", "YETI", "ICE_MAGE", "ICE_MAGE", "ICE_MAGE", "FROST_ARCHER", "FROST_ARCHER", "FROST_ARCHER"], "gold": 90, "difficulty": 5
+      "enemies": ["YETI", "YETI", "YETI", "ICE_MAGE", "ICE_MAGE", "ICE_MAGE", "FROST_ARCHER", "FROST_ARCHER", "FROST_ARCHER"], "gold": 22, "difficulty": 5
     }
   ]
 }

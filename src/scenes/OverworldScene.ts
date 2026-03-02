@@ -11,7 +11,7 @@ import { calculateRunScore } from '@/systems/ScoreSystem';
 import { buildSettingsGear, buildCurrencyBar, type CurrencyBarResult } from '@/ui/TopBar';
 import { createRelicIcon } from '@/ui/RelicIcon';
 import { Hero } from '@/entities/Hero';
-import { getAscensionModifiers, getAscensionShardMult } from '@/systems/AscensionSystem';
+import { getAscensionModifiers } from '@/systems/AscensionSystem';
 
 const MAP_SPREAD = 2.0;       // Horizontal spread factor for node positions
 const MAP_PADDING_X = 200;    // World padding beyond outermost nodes
@@ -2190,9 +2190,8 @@ export class OverworldScene extends Phaser.Scene {
         // Calculate shards earned from this run
         const nodesCompleted = run.completedNodeIds.size;
         const killedBoss = bossDefeated;
-        let shardsEarned = calcShardsEarned({ nodesCompleted, killedBoss, victory: true });
+        let shardsEarned = calcShardsEarned({ nodesCompleted, killedBoss, victory: true, ascensionLevel: run.ascensionLevel });
         shardsEarned += getMetaBonuses().bonusShardsPerRun;
-        shardsEarned = Math.floor(shardsEarned * getAscensionShardMult(run.ascensionLevel));
         if (shardsEarned > 0) earnShards(shardsEarned);
         this.cameras.main.fadeOut(400, 0, 0, 0, (_: unknown, p: number) => {
           if (p === 1) this.scene.start('MainMenuScene', { shardsEarned });

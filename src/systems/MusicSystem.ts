@@ -174,6 +174,19 @@ export class MusicSystem {
 
     this.currentCategory = category;
 
+    // Verify the URL is reachable before creating an Audio element.
+    // This prevents "Invalid URI" console errors when music files are missing
+    // (e.g. gitignored assets not present in the deployed build).
+    try {
+      const probe = await fetch(url, { method: 'HEAD' });
+      if (!probe.ok) return; // file missing on server — stay silent
+    } catch {
+      return; // network error — stay silent
+    }
+
+    // Re-check generation after the async probe
+    if (gen !== this._gen) return;
+
     const el = new Audio(url);
     el.loop    = true;
     el.volume  = 0; // start silent; fade in after play() resolves
@@ -184,6 +197,16 @@ export class MusicSystem {
     if (outgoing) {
       this.fadeOut(outgoing, 600, () => { outgoing.pause(); outgoing.src = ''; });
     }
+
+    // Handle load errors (404, network issues) — clean up without console noise.
+    const onError = () => {
+      if (this.currentEl === el) {
+        this.currentEl = null;
+        this.currentCategory = null;
+      }
+      el.removeAttribute('src');
+    };
+    el.addEventListener('error', onError, { once: true });
 
     // Kick off playback once enough data is buffered.
     const startPlay = () => {
