@@ -107,15 +107,33 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: '10px', fontFamily: 'monospace', color: '#555555',
     }).setOrigin(1, 1).setDepth(100).setAlpha(0.5);
 
+    this.events.once('shutdown', this.onShutdown, this);
+    this.events.off('resume', this.onResume, this); // prevent accumulation
     this.events.on('resume', this.onResume, this);
-    this.events.on('shutdown', this.onShutdown, this);
+
+    // Enter key opens chat (desktop shortcut)
+    this._chatKeyHandler = (e: KeyboardEvent) => {
+      // Don't capture if chat input is already focused or a dialog is open
+      if (document.activeElement === this._chatInput) return;
+      if (e.key === 'Enter' && this._chatInputBar) {
+        e.preventDefault();
+        this.showChatInput();
+      }
+    };
+    document.addEventListener('keydown', this._chatKeyHandler);
   }
+
+  private _chatKeyHandler: ((e: KeyboardEvent) => void) | null = null;
 
   private onShutdown() {
     unsubscribeFromChat();
     if (this._chatInputBar) { this._chatInputBar.remove(); this._chatInputBar = null; }
     if (this._chatInput) { this._chatInput.remove(); this._chatInput = null; }
     this._chatPlaceholder = null;
+    if (this._chatKeyHandler) {
+      document.removeEventListener('keydown', this._chatKeyHandler);
+      this._chatKeyHandler = null;
+    }
   }
 
   update(_time: number, _delta: number) {
@@ -1522,22 +1540,34 @@ export class MainMenuScene extends Phaser.Scene {
       -webkit-appearance: none;
     `;
 
+    let sending = false;
+    let sendBtnTouched = false; // flag to prevent iOS blur-before-click race
+
     const doSend = () => {
+      if (sending) return;
       const text = input.value.trim();
       if (!text) return;
+      sending = true;
       sendBtn.disabled = true;
       sendChatMessage(text).then((ok) => {
+        if (!this.scene.isActive()) return;
         if (ok) {
           input.value = '';
           input.blur();
           this.hideChatInput();
         }
+      }).catch(() => {}).finally(() => {
+        sending = false;
         sendBtn.disabled = false;
       });
     };
 
+    // Use touchstart/mousedown to set flag before blur fires (iOS fix)
+    sendBtn.addEventListener('touchstart', () => { sendBtnTouched = true; }, { passive: true });
+    sendBtn.addEventListener('mousedown', () => { sendBtnTouched = true; });
     sendBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      sendBtnTouched = false;
       doSend();
     });
 
@@ -1554,12 +1584,13 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     input.addEventListener('blur', () => {
-      // Delay hide so send button click can register first
+      // Delay hide — if send button was touched, skip the dismiss
       setTimeout(() => {
+        if (sendBtnTouched) { sendBtnTouched = false; return; }
         if (document.activeElement !== sendBtn && document.activeElement !== input) {
           this.hideChatInput();
         }
-      }, 150);
+      }, 300);
     });
 
     bar.appendChild(input);
